@@ -1,0 +1,6 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+sudachipy>=0.6.10
+sudachidict_core>=20241021
+python-dotenv>=1.0.0
+zstandard>=0.25.0
