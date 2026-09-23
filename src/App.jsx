@@ -1,21 +1,34 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpenCheck, Bot, Check, ChevronDown, ChevronRight, CircleAlert, Heart, LoaderCircle, MousePointer2, Pause, Pencil, Play, Plus, Save, Search, Sparkles, Upload, UserRound, Volume2, WandSparkles, X } from 'lucide-react'
+import { BookOpenCheck, Bot, Check, ChevronDown, ChevronRight, Circle, CircleAlert, Heart, LoaderCircle, MousePointer2, Pause, Pencil, Play, Plus, Save, Search, Sparkles, Trash2, Upload, UserRound, Volume2, WandSparkles, X } from 'lucide-react'
 import AnnotatedLine from './components/AnnotatedLine'
 import { importedSongs } from './data/songs.generated'
 import { demoSongs } from './data/demoSongs'
 import { songArtworkBySource } from './data/songArtwork'
 import twilightStation from './assets/uta-twilight-station.png'
-import { annotateSongLines, explainSelectionWithAi, reviewSongWithAi } from './lib/annotationApi'
-import { createAndStoreLocalSong, loadLocalSongs } from './lib/localSongStore'
+import { annotateSongLines, explainSelectionWithAi, reviewSongWithAi, searchSongArtwork } from './lib/annotationApi'
+import { createAndStoreLocalSong, deleteLocalSong, loadLocalSongs, parseLrcFile, updateLocalSongMetadata } from './lib/localSongStore'
 import { correctionKey, hasKanji } from './lib/ruby'
 
 const PROGRESS_KEY = 'uta-pronunciation-progress-v2'
-const ANNOTATION_KEY = 'uta-auto-annotations-v4'
+const ANNOTATION_KEY = 'uta-auto-annotations-v5'
 const AI_REVIEW_KEY = 'uta-ai-reviews-v1'
 const LINE_PLAYBACK_LEAD_IN_SECONDS = 0.5
 
 function loadLocal(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback } catch { return fallback }
+}
+
+function normalizeSongSearch(value) {
+  return String(value || '').normalize('NFKC').toLocaleLowerCase().replace(/\s+/g, '')
+}
+
+async function findArtworkWithRetry(title, artist) {
+  try {
+    return await searchSongArtwork(title, artist)
+  } catch {
+    await new Promise((resolve) => window.setTimeout(resolve, 900))
+    try { return await searchSongArtwork(title, artist) } catch { return null }
+  }
 }
 
 function initialSong() {
@@ -26,7 +39,7 @@ function fallbackTokens(text) {
   return [{
     index: 0, surface: text, reading: '', base: text, ruby: '', suffix: '',
     part_of_speech: '待注音', dictionary_form: text, normalized_form: text,
-    inflection_type: '待分析', inflection_form: '待分析', meaning: null, examples: [], needs_review: true,
+    inflection_type: '待分析', inflection_form: '待分析', meaning: null, examples: [], needs_review: true, is_symbol: false,
   }]
 }
 
@@ -39,6 +52,7 @@ export default function App() {
     learnedBySong: {}, reviewItems: [], favoriteSongIds: [], corrections: {}, meaningOverrides: {},
   }), [])
   const [activeSongId, setActiveSongId] = useState(initialSong().id)
+  const [activePage, setActivePage] = useState('lesson')
   const [activeLineId, setActiveLineId] = useState(0)
   const [mode, setMode] = useState('reading')
   const [learnedBySong, setLearnedBySong] = useState(savedProgress.learnedBySong || {})
@@ -71,6 +85,8 @@ export default function App() {
   const [importAudioFile, setImportAudioFile] = useState(null)
   const [importBusy, setImportBusy] = useState(false)
   const [importError, setImportError] = useState('')
+  const [librarySearch, setLibrarySearch] = useState('')
+  const [deletingSongId, setDeletingSongId] = useState('')
   const [toast, setToast] = useState('')
   const dragSelectionRef = useRef(null)
   const suppressNextTokenClick = useRef(false)
@@ -78,8 +94,14 @@ export default function App() {
   const clipEndRef = useRef(null)
   const pendingClipRef = useRef(null)
   const localAudioUrlRef = useRef({})
+  const artworkLookupRef = useRef(new Set())
 
   const allSongs = useMemo(() => [...importedSongs, ...localSongs, ...demoSongs], [localSongs])
+  const visibleLibrarySongs = useMemo(() => {
+    const query = normalizeSongSearch(librarySearch)
+    if (!query) return allSongs
+    return allSongs.filter((song) => normalizeSongSearch(`${song.title}${song.artist}`).includes(query))
+  }, [allSongs, librarySearch])
   const activeSong = allSongs.find((song) => song.id === activeSongId) || initialSong()
   const audioUrl = activeSong.isLocal
     ? localAudioUrls[activeSong.id] || ''
@@ -93,8 +115,9 @@ export default function App() {
     () => activeAnnotation?.tokens || fallbackTokens(activeLine.text),
     [activeAnnotation, activeLine.text],
   )
-  const focusToken = activeTokens.find((token) => token.index === selectedTokenIndex)
-    || activeTokens.find((token) => hasKanji(token.surface)) || activeTokens[0]
+  const lexicalActiveTokens = activeTokens.filter((token) => !token.is_symbol)
+  const focusToken = lexicalActiveTokens.find((token) => token.index === selectedTokenIndex)
+    || lexicalActiveTokens.find((token) => hasKanji(token.surface)) || lexicalActiveTokens[0] || activeTokens[0]
   const focusKey = correctionKey(activeSong.id, activeLine.id, focusToken.index)
   const focusReading = corrections[focusKey] || focusToken.reading
   const meaningKey = `${focusToken.dictionary_form || focusToken.surface}:${focusToken.reading}`
@@ -135,6 +158,19 @@ export default function App() {
   useEffect(() => () => {
     Object.values(localAudioUrlRef.current).forEach((url) => URL.revokeObjectURL(url))
   }, [])
+  useEffect(() => {
+    const missingArtwork = localSongs.filter((song) => song.isLocal && !song.artworkUrl && song.title && !artworkLookupRef.current.has(song.id))
+    missingArtwork.forEach((song) => {
+      artworkLookupRef.current.add(song.id)
+      findArtworkWithRetry(song.title, song.artist)
+        .then(async (artwork) => {
+          if (!artwork) return
+          await updateLocalSongMetadata(song.id, artwork)
+          setLocalSongs((previous) => previous.map((item) => item.id === song.id ? { ...item, ...artwork } : item))
+        })
+        .catch(() => { /* The fallback card remains usable if online lookup fails. */ })
+    })
+  }, [localSongs])
   useEffect(() => {
     if (!toast) return undefined
     const timer = window.setTimeout(() => setToast(''), 2600)
@@ -181,7 +217,8 @@ export default function App() {
   }, [activeSong.id, annotations])
 
   useEffect(() => {
-    const firstToken = activeTokens.find((token) => hasKanji(token.surface)) || activeTokens[0]
+    const firstToken = activeTokens.find((token) => !token.is_symbol && hasKanji(token.surface))
+      || activeTokens.find((token) => !token.is_symbol) || activeTokens[0]
     if (firstToken) setSelectedTokenIndex(firstToken.index)
   }, [activeSong.id, activeLine.id, activeTokens])
 
@@ -205,8 +242,22 @@ export default function App() {
 
   function chooseSongFromLibrary(songId) {
     chooseSong(songId)
+    setActivePage('lesson')
     window.requestAnimationFrame(() => {
       document.getElementById('lesson')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
+
+  function showLessonPage() {
+    setActivePage('lesson')
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
+  }
+
+  function showLibraryPage({ focusSearch = false } = {}) {
+    setActivePage('library')
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      if (focusSearch) window.setTimeout(() => document.getElementById('library-search')?.focus(), 100)
     })
   }
 
@@ -221,6 +272,10 @@ export default function App() {
     setImportError('')
   }
 
+  function focusLibrarySearch() {
+    showLibraryPage({ focusSearch: true })
+  }
+
   async function importLocalSong() {
     if (!importLrcFile || !importAudioFile) {
       setImportError('请选择一个 LRC 歌词文件和一个音频文件。')
@@ -229,7 +284,12 @@ export default function App() {
     setImportBusy(true)
     setImportError('')
     try {
-      const record = await createAndStoreLocalSong(importLrcFile, importAudioFile)
+      const parsed = await parseLrcFile(importLrcFile)
+      let artwork = null
+      try {
+        artwork = await findArtworkWithRetry(parsed.title, parsed.artist)
+      } catch { /* Keep the generated fallback cover. */ }
+      const record = await createAndStoreLocalSong(parsed, importAudioFile, artwork || {})
       const { audioBlob, ...song } = record
       const audioObjectUrl = URL.createObjectURL(audioBlob)
       localAudioUrlRef.current = { ...localAudioUrlRef.current, [song.id]: audioObjectUrl }
@@ -238,15 +298,42 @@ export default function App() {
       setImportLrcFile(null)
       setImportAudioFile(null)
       setImportOpen(false)
-      chooseSong(song.id)
-      window.requestAnimationFrame(() => {
-        document.getElementById('lesson')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      })
-      setToast(`已导入《${song.title}》，现在可以开始学习。`)
+      chooseSongFromLibrary(song.id)
+      setToast(artwork ? `已导入《${song.title}》并匹配封面，现在可以开始学习。` : `已导入《${song.title}》，但未找到可靠的封面匹配。`)
     } catch (error) {
       setImportError(error instanceof Error ? error.message : '导入失败，请检查歌词和音频文件。')
     } finally {
       setImportBusy(false)
+    }
+  }
+
+  async function removeImportedSong(song) {
+    if (!song.isLocal || deletingSongId) return
+    if (!window.confirm(`确定删除《${song.title}》吗？歌词、音频和这首歌的学习进度都会从当前浏览器移除。`)) return
+    setDeletingSongId(song.id)
+    try {
+      await deleteLocalSong(song.id)
+      const audioObjectUrl = localAudioUrlRef.current[song.id]
+      if (audioObjectUrl) URL.revokeObjectURL(audioObjectUrl)
+      const { [song.id]: removedUrl, ...remainingUrls } = localAudioUrlRef.current
+      localAudioUrlRef.current = remainingUrls
+      setLocalAudioUrls(remainingUrls)
+      setLocalSongs((previous) => previous.filter((item) => item.id !== song.id))
+      setAnnotationsBySong((previous) => { const { [song.id]: removed, ...rest } = previous; return rest })
+      setAiReviews((previous) => { const { [song.id]: removed, ...rest } = previous; return rest })
+      setLearnedBySong((previous) => { const { [song.id]: removed, ...rest } = previous; return rest })
+      setReviewItems((previous) => previous.filter((item) => item.songId !== song.id))
+      setFavoriteSongIds((previous) => previous.filter((songId) => songId !== song.id))
+      setCorrections((previous) => Object.fromEntries(Object.entries(previous).filter(([key]) => !key.startsWith(`${song.id}:`))))
+      if (song.id === activeSong.id) {
+        const nextSong = allSongs.find((item) => item.id !== song.id) || initialSong()
+        chooseSong(nextSong.id)
+      }
+      setToast(`已删除《${song.title}》及其本机保存的数据。`)
+    } catch {
+      setToast('删除失败：浏览器未能更新本地歌曲库。')
+    } finally {
+      setDeletingSongId('')
     }
   }
 
@@ -316,11 +403,11 @@ export default function App() {
     setPlayingLineId(null)
   }
 
-  function toggleLearned() {
+  function toggleLearnedLine(lineId) {
     setLearnedBySong((previous) => {
       const next = new Set(previous[activeSong.id] || [])
-      next.has(activeLine.id) ? next.delete(activeLine.id) : next.add(activeLine.id)
-      setToast(next.has(activeLine.id) ? '本句已标记为掌握。' : '已取消本句掌握状态。')
+      next.has(lineId) ? next.delete(lineId) : next.add(lineId)
+      setToast(next.has(lineId) ? '本句已标记为掌握。' : '本句已改为未掌握。')
       return { ...previous, [activeSong.id]: [...next] }
     })
   }
@@ -503,12 +590,13 @@ export default function App() {
     <div className="page-grain" aria-hidden="true" />
     <audio ref={audioRef} src={audioUrl || undefined} preload="metadata" onLoadedMetadata={handleAudioLoadedMetadata} onTimeUpdate={handleAudioTimeUpdate} onEnded={() => { clipEndRef.current = null; setPlayingLineId(null) }} onError={() => { setPlayingLineId(null); setAudioError(`未能加载《${activeSong.title}》的音频文件。`) }} />
     <header className="topbar">
-      <a className="brand" href="#top" aria-label="UTA 首页"><span className="brand-mark">う</span><span>UTA<span className="brand-dot">.</span></span></a>
-      <nav className="main-nav" aria-label="主导航"><a className="active" href="#lesson">发音学习</a><a href="#library">歌曲库</a><a href="#review">复习</a></nav>
-      <div className="top-actions"><button className="icon-button" type="button" aria-label="搜索"><Search size={20} /></button><button className="avatar" type="button" aria-label="个人中心"><UserRound size={15} /></button></div>
+      <button className="brand" type="button" onClick={showLessonPage} aria-label="UTA 首页"><span className="brand-mark">う</span><span>UTA<span className="brand-dot">.</span></span></button>
+      <nav className="main-nav" aria-label="主导航"><button className={activePage === 'lesson' ? 'active' : ''} type="button" onClick={showLessonPage}>发音学习</button><button className={activePage === 'library' ? 'active' : ''} type="button" onClick={() => showLibraryPage()}>歌曲库</button><button type="button" onClick={showLessonPage}>复习</button></nav>
+      <div className="top-actions"><button className="icon-button" type="button" onClick={focusLibrarySearch} aria-label="搜索歌曲"><Search size={20} /></button><button className="avatar" type="button" aria-label="个人中心"><UserRound size={15} /></button></div>
     </header>
 
     <main id="top">
+      {activePage === 'lesson' && <>
       <section className="hero anime-hero" aria-labelledby="song-title" style={{ '--hero-art': `url(${twilightStation})` }}>
         <div className="hero-art" aria-hidden="true" />
         <div className="hero-wash" aria-hidden="true" />
@@ -533,7 +621,7 @@ export default function App() {
               <p className="hero-focus-label">NOW PLAYING</p>
               <div className="hero-focus-title"><span>{String(allSongs.indexOf(activeSong) + 1).padStart(2, '0')}</span><div><b>{activeSong.title}</b><small>{activeSong.artist}</small></div></div>
               <div className="hero-progress"><div><span>读音掌握</span><strong>{progress}%</strong></div><div className="progress-track"><span style={{ width: `${progress}%` }} /></div><p>{learnedLines.size} / {activeSong.lines.length} 句已掌握</p></div>
-              <button type="button" onClick={() => document.getElementById('library')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>换一首歌 <ChevronDown size={14} /></button>
+              <button type="button" onClick={() => showLibraryPage()}>换一首歌 <ChevronDown size={14} /></button>
             </aside>
           </div>
         </div>
@@ -561,15 +649,17 @@ export default function App() {
               const lineTokens = annotation?.tokens
               const current = line.id === activeLine.id
               const isPlaying = playingLineId === line.id
-              const lineReading = lineTokens?.map((token) => corrections[correctionKey(activeSong.id, line.id, token.index)] || token.reading).join(' ')
+              const isLearned = learnedLines.has(line.id)
+              const lexicalTokens = lineTokens?.filter((token) => !token.is_symbol)
+              const lineReading = lexicalTokens?.map((token) => corrections[correctionKey(activeSong.id, line.id, token.index)] || token.reading).filter(Boolean).join(' ')
               return <article id={`lyric-row-${activeSong.id}-${line.id}`} className={`lyric-row ${current ? 'active' : ''}`} onClick={() => chooseLine(line.id)} key={`${activeSong.id}-${line.id}`}>
                 <span className="line-number">{String(line.id + 1).padStart(2, '0')}</span>
-                <div className="auto-line-wrap"><div className="japanese"><AnnotatedLine tokens={lineTokens} corrections={corrections} songId={activeSong.id} lineId={line.id} mode={mode} selectedIndex={current ? selectedTokenIndex : -1} selectionRange={dragSelection?.lineId === line.id ? dragSelection : selectedPhraseRange?.lineId === line.id ? selectedPhraseRange : null} showSelectionAction={selectedText?.lineId === line.id && selectedPhraseRange?.lineId === line.id} onStartSelection={(tokenIndex) => beginTokenSelection(line.id, tokenIndex)} onExtendSelection={(tokenIndex) => extendTokenSelection(line.id, tokenIndex)} onFinishSelection={finishTokenSelection} onExplainSelection={() => askAiToExplain(selectedText)} onSelectToken={(tokenIndex) => handleTokenClick(line.id, tokenIndex)} /></div><div className={`reading ${lineTokens ? '' : 'needs-review'}`}>{mode === 'reading' ? lineReading || '正在生成假名…' : mode === 'practice' ? '假名已隐藏，尝试自己读出这一句' : '切换到“假名”查看自动标注'}</div><div className="translation">{lineTokens ? `${lineTokens.length} 个词素 · ${lineTokens.some((token) => token.needs_review) ? '含待复核词' : '自动初稿已就绪'}` : '等待自动分词'}</div></div>
-                <button className={`line-action line-play ${isPlaying ? 'playing' : ''}`} type="button" onClick={(event) => { event.stopPropagation(); playLine(line.id) }} aria-label={`${isPlaying ? '暂停' : '播放'}第 ${line.id + 1} 句`} title={`${isPlaying ? '暂停' : '播放'}这一句`}>{isPlaying ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}</button>
+                <div className="auto-line-wrap"><div className="japanese"><AnnotatedLine tokens={lineTokens} corrections={corrections} songId={activeSong.id} lineId={line.id} mode={mode} selectedIndex={current ? selectedTokenIndex : -1} selectionRange={dragSelection?.lineId === line.id ? dragSelection : selectedPhraseRange?.lineId === line.id ? selectedPhraseRange : null} showSelectionAction={selectedText?.lineId === line.id && selectedPhraseRange?.lineId === line.id} onStartSelection={(tokenIndex) => beginTokenSelection(line.id, tokenIndex)} onExtendSelection={(tokenIndex) => extendTokenSelection(line.id, tokenIndex)} onFinishSelection={finishTokenSelection} onExplainSelection={() => askAiToExplain(selectedText)} onSelectToken={(tokenIndex) => handleTokenClick(line.id, tokenIndex)} /></div><div className={`reading ${lineTokens ? '' : 'needs-review'}`}>{mode === 'reading' ? lineReading || '正在生成假名…' : mode === 'practice' ? '假名已隐藏，尝试自己读出这一句' : '切换到“假名”查看自动标注'}</div>{line.translation && <div className="translation lyric-translation">{line.translation}</div>}</div>
+                <div className="line-actions"><button className={`line-action line-play ${isPlaying ? 'playing' : ''}`} type="button" onClick={(event) => { event.stopPropagation(); playLine(line.id) }} aria-label={`${isPlaying ? '暂停' : '播放'}第 ${line.id + 1} 句`} title={`${isPlaying ? '暂停' : '播放'}这一句`}>{isPlaying ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}</button><button className={`line-mastery ${isLearned ? 'mastered' : ''}`} type="button" aria-pressed={isLearned} onClick={(event) => { event.stopPropagation(); toggleLearnedLine(line.id) }} title={isLearned ? '点击改为未掌握' : '点击标记为已掌握'}>{isLearned ? <Check size={12} /> : <Circle size={11} />}<span>{isLearned ? '已掌握' : '未掌握'}</span></button></div>
               </article>
             })}
           </div>
-          <div className="lyrics-footer"><span>点击任一词即可在右侧校对；选中短语可请求 AI 解释</span><button type="button" onClick={toggleLearned}>{learnedLines.has(activeLine.id) ? <><Check size={14} /> 已掌握本句</> : <><Check size={14} /> 标记本句已掌握</>}</button></div>
+          <div className="lyrics-footer"><span>点击任一词即可在右侧校对；选中短语可请求 AI 解释</span><span>每句右侧可切换掌握状态</span></div>
         </section>
 
         <aside className="word-panel" aria-labelledby="word-heading">
@@ -593,14 +683,16 @@ export default function App() {
 
       <section className="method-section"><div className="method-title"><p className="eyebrow">THE CORRECTION LOOP</p><h2>自动起稿，<br />由学习者校准。</h2></div><div className="method-cards"><article><span>01</span><h3>全曲自动注音</h3><p>导入任意日语歌词后，由 Sudachi 词典逐词生成读音初稿。</p></article><article><span>02</span><h3>AI 复核与人工确认</h3><p>AI 只标出可能不合理的读法；采用、修改或忽略建议始终由你决定。</p></article><article><span>03</span><h3>按语境理解词汇</h3><p>选中词或短语再请求讲解，结合相邻歌词学习词义和变形。</p></article></div></section>
 
-      <section className="library-section" id="library" aria-labelledby="library-title">
-        <div className="library-top"><div><p className="eyebrow">YOUR IMPORTED SONGS</p><h2 id="library-title">歌曲库</h2><p>从已导入的歌词中选一首，继续练习发音与词汇。</p></div><div className="library-top-actions"><span className="library-count">已导入 {allSongs.length} 首</span><button className="library-import-trigger" type="button" onClick={openImportDialog}><Upload size={14} /> 导入歌曲</button></div></div>
-        <div className="song-library-grid">{allSongs.map((song, index) => {
-          const artwork = songArtworkBySource[song.sourceFile]
+      </>}
+
+      {activePage === 'library' && <section className="library-section library-page" id="library" aria-labelledby="library-title">
+        <div className="library-top"><div><p className="eyebrow">YOUR IMPORTED SONGS</p><h2 id="library-title">歌曲库</h2><p>从已导入的歌词中选一首，继续练习发音与词汇。</p></div><div className="library-top-actions"><label className="library-search"><Search size={14} /><input id="library-search" type="search" value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} placeholder="搜索歌名或歌手" aria-label="搜索歌名或歌手" />{librarySearch && <button type="button" onClick={() => setLibrarySearch('')} aria-label="清除搜索"><X size={13} /></button>}</label><span className="library-count">{librarySearch ? `找到 ${visibleLibrarySongs.length} / ${allSongs.length} 首` : `已导入 ${allSongs.length} 首`}</span><button className="library-import-trigger" type="button" onClick={openImportDialog}><Upload size={14} /> 导入歌曲</button></div></div>
+        {visibleLibrarySongs.length ? <div className="song-library-grid">{visibleLibrarySongs.map((song, index) => {
+          const artwork = song.artworkUrl ? { artworkUrl: song.artworkUrl, sourceUrl: song.artworkSourceUrl, provider: song.artworkProvider } : songArtworkBySource[song.sourceFile]
           const learnedCount = (learnedBySong[song.id] || []).length
           const isCurrentSong = song.id === activeSong.id
           return <article className={`library-song-card ${isCurrentSong ? 'current' : ''}`} key={song.id}>
-            <button type="button" onClick={() => chooseSongFromLibrary(song.id)} aria-label={`学习 ${song.title}，${song.artist}`}>
+            <button className="library-song-open" type="button" onClick={() => chooseSongFromLibrary(song.id)} aria-label={`学习 ${song.title}，${song.artist}`}>
               <span className="library-cover">
                 <span className="library-cover-fallback" aria-hidden="true">{song.title.slice(0, 2)}</span>
                 {artwork?.artworkUrl && <img src={artwork.artworkUrl} alt={`${song.title} 的发行封面`} loading="lazy" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true }} />}
@@ -611,17 +703,18 @@ export default function App() {
               </span>
               <span className="library-card-copy"><b>{song.title}</b><small>{song.artist}</small><span><BookOpenCheck size={13} /> {learnedCount} / {song.lines.length} 句已掌握</span></span>
             </button>
-            {artwork?.sourceUrl && <a className="library-artwork-source" href={artwork.sourceUrl} target="_blank" rel="noreferrer">封面来源 · Apple Music</a>}
+            {artwork?.sourceUrl && <a className="library-artwork-source" href={artwork.sourceUrl} target="_blank" rel="noreferrer">封面来源 · {artwork.provider || 'Apple Music'}</a>}
+            {song.isLocal && <button className="library-delete-button" type="button" disabled={deletingSongId === song.id} onClick={() => removeImportedSong(song)} aria-label={`删除 ${song.title}`} title="删除这首本地导入歌曲"><Trash2 size={13} /> {deletingSongId === song.id ? '删除中' : '删除'}</button>}
           </article>
-        })}</div>
-      </section>
+        })}</div> : <div className="library-empty-search"><Search size={20} /><p>没有找到匹配的歌曲</p><button type="button" onClick={() => setLibrarySearch('')}>清除搜索</button></div>}
+      </section>}
     </main>
 
     <footer><span>UTA. Learn Japanese, one lyric at a time.</span><span>自动注音在本机生成 · 词义数据：<a href="https://github.com/tomoshi-app/tomoshi-dict-data" target="_blank" rel="noreferrer">Tomoshi / EDRDG</a> · AI 请求仅在你主动点击后发起</span></footer>
 
     {importOpen && <div className="song-import-backdrop" role="presentation" onClick={closeImportDialog}><form className="song-import-dialog" onSubmit={(event) => { event.preventDefault(); importLocalSong() }} onClick={(event) => event.stopPropagation()}>
       <button className="song-import-close" type="button" onClick={closeImportDialog} aria-label="关闭导入窗口"><X size={18} /></button>
-      <p className="eyebrow">ADD A LOCAL SONG</p><h2>导入歌曲开始学习</h2><p className="song-import-intro">选择带时间轴的 LRC 歌词和对应音频。它们只保存在当前浏览器中，不会上传。</p>
+      <p className="eyebrow">ADD A LOCAL SONG</p><h2>导入歌曲开始学习</h2><p className="song-import-intro">选择带时间轴的 LRC 歌词和对应音频。它们只保存在当前浏览器中，不会上传；系统会按歌名和歌手查询 Apple Music 封面，查询失败则使用默认卡面。</p>
       <label className={`song-file-field ${importLrcFile ? 'selected' : ''}`}><span>01 · 歌词文件</span><strong>{importLrcFile?.name || '选择 .lrc 文件'}</strong><small>需要每句开头的时间戳，例如 [01:23.45]</small><input key={importLrcFile?.name || 'empty-lrc'} type="file" accept=".lrc,text/plain" onChange={(event) => { setImportLrcFile(event.target.files?.[0] || null); setImportError('') }} /></label>
       <label className={`song-file-field ${importAudioFile ? 'selected' : ''}`}><span>02 · 原声音频</span><strong>{importAudioFile?.name || '选择 MP3、M4A、WAV、OGG 等音频'}</strong><small>播放时会根据 LRC 时间戳逐句截取</small><input key={importAudioFile?.name || 'empty-audio'} type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.webm" onChange={(event) => { setImportAudioFile(event.target.files?.[0] || null); setImportError('') }} /></label>
       {importError && <p className="song-import-error"><CircleAlert size={14} /> {importError}</p>}

@@ -20,6 +20,7 @@ export default function AnnotatedLine({
   return <span className="auto-lyric">
     {tokens.map((token) => {
       const key = `${songId}:${lineId}:${token.index}`
+      if (token.is_symbol) return <span className="lyric-symbol" key={key}>{token.surface}</span>
       const reading = corrections[key] || token.reading
       const ruby = splitRuby(token.surface, reading)
       const annotatable = hasKanji(token.surface)

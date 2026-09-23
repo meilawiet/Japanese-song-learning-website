@@ -10,6 +10,19 @@ export async function annotateSongLines(lines) {
   return response.json()
 }
 
+export async function searchSongArtwork(title, artist = '') {
+  const params = new URLSearchParams({ title, artist })
+  const response = await fetch(`${apiOrigin}/api/artwork/search?${params.toString()}`)
+  if (!response.ok) throw new Error('封面查询服务暂不可用')
+  const result = await response.json().catch(() => ({}))
+  if (!result.artwork_url) return null
+  return {
+    artworkUrl: result.artwork_url,
+    artworkSourceUrl: result.source_url || '',
+    artworkProvider: result.provider || 'Apple Music',
+  }
+}
+
 async function postAi(path, payload) {
   const response = await fetch(`${apiOrigin}${path}`, {
     method: 'POST',
