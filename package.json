@@ -9,6 +9,7 @@
     "web": "vite",
     "dev": "npm run lyrics:sync && concurrently --kill-others-on-fail -n api,web \"npm run api\" \"npm run web\"",
     "build": "npm run lyrics:sync && vite build",
+    "test:backup": "node --test tests/learningBackup.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

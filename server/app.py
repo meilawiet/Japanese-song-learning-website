@@ -14,6 +14,7 @@ import re
 import sqlite3
 import threading
 import time
+import unicodedata
 from collections import defaultdict, deque
 from functools import lru_cache
 from pathlib import Path
@@ -489,6 +490,25 @@ def text_field(value: Any, *, limit: int = 240) -> str:
     return value.strip()[:limit] if isinstance(value, str) else ""
 
 
+def song_heading_key(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value)
+    normalized = re.sub(r"\([^)]*\)|（[^）]*）|【[^】]*】|\[[^\]]*\]", "", normalized)
+    normalized = re.sub(r"\s+", "", normalized).casefold()
+    return re.sub(r"[‐‑‒–—－]", "-", normalized)
+
+
+def is_song_heading_line(text: str, title: str, artist: str) -> bool:
+    if re.match(r"^(?:歌名|歌曲名|曲名|歌曲|歌手|歌唱|演唱|アーティスト|artist|singer|vocal|title|song)\s*[:：]", text.strip(), re.I):
+        return True
+    heading = song_heading_key(text)
+    title_key = song_heading_key(title)
+    artist_key = song_heading_key(artist)
+    if not title_key or not artist_key:
+        return False
+    return any(heading in (f"{title_key}{separator}{artist_key}", f"{artist_key}{separator}{title_key}")
+               for separator in ("-", "·", "・", "/", "|", "｜"))
+
+
 def artwork_search_key(value: str) -> str:
     """Make a forgiving comparison key for Japanese, Latin, and spaced metadata."""
     return "".join(character for character in value.casefold() if character.isalnum())
@@ -603,16 +623,21 @@ def annotate_batch(request: AnnotationRequest) -> list[AnnotatedLine]:
 @app.post("/api/ai/review-song")
 def review_song_with_ai(payload: SongReviewRequest, request: Request) -> dict[str, Any]:
     """Ask AI to flag only questionable readings; it never updates lyric data itself."""
-    annotated_lines = [AnnotatedLine(id=line.id, tokens=annotate_text(line.text)) for line in payload.lines]
-    lookup = {(line.id, token.index): token for line in annotated_lines for token in line.tokens}
+    lyric_lines = [line for line in payload.lines if not is_song_heading_line(line.text, payload.title, payload.artist)]
+    annotated_lines = [AnnotatedLine(id=line.id, tokens=annotate_text(line.text)) for line in lyric_lines]
+    lookup = {(line.id, token.index): token for line in annotated_lines for token in line.tokens
+              if token.reading and token.surface.strip() and not token.is_symbol}
     review_lines = [
         {"id": source_line.id, "text": source_line.text, "tokens": [
             {"index": token.index, "surface": token.surface, "reading": token.reading, "dictionary_form": token.dictionary_form, "part_of_speech": token.part_of_speech}
-            for token in annotated.tokens if token.reading and token.surface.strip()
+            for token in annotated.tokens if token.reading and token.surface.strip() and not token.is_symbol
         ]}
-        for source_line, annotated in zip(payload.lines, annotated_lines)
+        for source_line, annotated in zip(lyric_lines, annotated_lines)
     ]
-    ai_input = {"title": payload.title, "artist": payload.artist, "lines": review_lines}
+    if not lookup:
+        return {"suggestions": [], "reviewed_token_count": 0,
+                "notice": "没有可复核的歌词读音；歌名和歌手资料行已跳过。"}
+    ai_input = {"lines": review_lines}
     prompt = (
         "Review the proposed Japanese readings for song lyrics. Flag ONLY a reading that is likely wrong, "
         "non-standard in this lyric context, a proper noun, or a deliberate lyric reading needing a human check. "

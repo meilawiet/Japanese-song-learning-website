@@ -1,5 +1,6 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, extname, join } from 'node:path'
+import { isCreditLine, isSongHeadingLine } from '../src/lib/songMetadata.js'
 
 const sourceDirectory = join(process.cwd(), 'geci')
 const audioDirectory = join(process.cwd(), 'song')
@@ -19,34 +20,13 @@ function indexAudioFiles() {
 
 function parseTimestamp(minutes, seconds) { return Number(minutes) * 60 + Number(seconds) }
 function cleanMetadata(value) { return value.replace(/\s*\(.+?\)\s*/g, '').trim() }
-function timestampKey(seconds) { return Math.round(seconds * 1000) }
-function isCreditLine(text) { return /^(?:词|曲|编曲|作词|作曲|中文翻译|翻译|译者|lyrics?|composer|arrangement)\s*[:：]/iu.test(text) }
-
-function parseLrc(buffer, fileName, index, audioFiles) {
-  const content = new TextDecoder('gbk').decode(buffer)
-  const metadata = Object.fromEntries([...content.matchAll(/^\[(ti|ar|al):(.+)]$/gm)].map(([, key, value]) => [key, value.trim()]))
-  const seen = new Set()
-  const lines = []
-  content.split(/\r?\n/).forEach((sourceLine) => {
-    const stamps = [...sourceLine.matchAll(/\[(\d{1,2}):(\d{2}(?:\.\d+)?)\]/g)]
-    if (!stamps.length) return
-    const text = sourceLine.slice(stamps.at(-1).index + stamps.at(-1)[0].length).trim().replace(/\s+/g, ' ')
-    const isJapanese = /[\u3040-\u30ff]/u.test(text)
-    const isCredit = /^(?:词|曲|編曲|作詞|作曲|歌|翻译|中文翻译)[:：]/u.test(text)
-    if (!text || !isJapanese || isCredit) return
-    stamps.forEach(([, minutes, seconds]) => {
-      const start = parseTimestamp(minutes, seconds)
-      const key = `${start}-${text}`
-      if (!seen.has(key)) { seen.add(key); lines.push({ id: lines.length, text, start }) }
-    })
-  })
-  const titleFromFile = basename(fileName, '.lrc').split('-').at(-1)
-  return { id: `song-${index + 1}`, sourceFile: fileName, audioFile: audioFiles.get(basename(fileName, '.lrc')) || null, title: cleanMetadata(metadata.ti || titleFromFile), artist: cleanMetadata(metadata.ar || basename(fileName, '.lrc').split('-')[0]), album: metadata.al || '', duration: lines.at(-1)?.start || 0, lines }
-}
 
 function parseLrcWithTranslations(buffer, fileName, index, audioFiles) {
   const content = new TextDecoder('gbk').decode(buffer)
   const metadata = Object.fromEntries([...content.matchAll(/^\[(ti|ar|al):(.+)]$/gm)].map(([, key, value]) => [key, value.trim()]))
+  const titleFromFile = basename(fileName, '.lrc').split('-').at(-1)
+  const title = cleanMetadata(metadata.ti || titleFromFile)
+  const artist = cleanMetadata(metadata.ar || basename(fileName, '.lrc').split('-')[0])
   const seen = new Set()
   const lyricEntries = []
 
@@ -57,11 +37,13 @@ function parseLrcWithTranslations(buffer, fileName, index, audioFiles) {
     const isJapanese = /[\u3040-\u30ff]/u.test(text)
     const isChinese = /[\u3400-\u9fff]/u.test(text)
     if (!text || isCreditLine(text)) return
+    const isHeading = isSongHeadingLine(text, title, artist)
+    if (isHeading && !isJapanese) return
     stamps.forEach(([, minutes, seconds]) => {
       const start = parseTimestamp(minutes, seconds)
       if (isJapanese) {
         const key = `${start}-${text}`
-        if (!seen.has(key)) { seen.add(key); lyricEntries.push({ text, start }) }
+        if (!seen.has(key)) { seen.add(key); lyricEntries.push({ text, start, isHeading }) }
       } else if (isChinese) {
         // This LRC source puts a translation immediately after the Japanese
         // line it explains, but gives it the next line's timestamp.
@@ -72,9 +54,13 @@ function parseLrcWithTranslations(buffer, fileName, index, audioFiles) {
   })
 
   lyricEntries.sort((left, right) => left.start - right.start)
-  const lines = lyricEntries.map((line, id) => ({ id, ...line, translation: line.translation || '' }))
-  const titleFromFile = basename(fileName, '.lrc').split('-').at(-1)
-  return { id: `song-${index + 1}`, sourceFile: fileName, audioFile: audioFiles.get(basename(fileName, '.lrc')) || null, title: cleanMetadata(metadata.ti || titleFromFile), artist: cleanMetadata(metadata.ar || basename(fileName, '.lrc').split('-')[0]), album: metadata.al || '', duration: lines.at(-1)?.start || 0, lines }
+  // Keep the original IDs of lyric rows so existing saved corrections and progress
+  // do not shift when a formerly visible title/artist row is removed.
+  const lines = lyricEntries
+    .map(({ isHeading, ...line }, id) => ({ id, ...line, isHeading, translation: line.translation || '' }))
+    .filter((line) => !line.isHeading)
+    .map(({ isHeading, ...line }) => line)
+  return { id: `song-${index + 1}`, sourceFile: fileName, audioFile: audioFiles.get(basename(fileName, '.lrc')) || null, title, artist, album: metadata.al || '', duration: lines.at(-1)?.start || 0, lines }
 }
 
 const lrcFiles = readdirSync(sourceDirectory).filter((file) => file.endsWith('.lrc')).sort((a, b) => a.localeCompare(b, 'zh-CN'))

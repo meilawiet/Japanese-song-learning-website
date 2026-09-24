@@ -1,3 +1,5 @@
+import { isCreditLine, isSongHeadingLine } from './songMetadata.js'
+
 const DATABASE_NAME = 'uta-local-song-library'
 const DATABASE_VERSION = 1
 const SONG_STORE = 'songs'
@@ -35,9 +37,6 @@ function fileBaseName(fileName) {
   return fileName.replace(/\.[^.]+$/, '').trim()
 }
 
-function timestampKey(seconds) { return Math.round(seconds * 1000) }
-function isCreditLine(text) { return /^(?:词|曲|编曲|作词|作曲|中文翻译|翻译|译者|lyrics?|composer|arrangement)\s*[:：]/iu.test(text) }
-
 async function decodeLrcFile(file) {
   const buffer = await file.arrayBuffer()
   const encodings = ['utf-8', 'gb18030', 'gbk']
@@ -47,45 +46,12 @@ async function decodeLrcFile(file) {
   return new TextDecoder('utf-8').decode(buffer)
 }
 
-async function parseLrcFileLegacy(file) {
-  const content = await decodeLrcFile(file)
-  const metadata = {}
-  for (const match of content.matchAll(/^\[(ti|ar):(.+)]$/gim)) metadata[match[1].toLowerCase()] = match[2].trim()
-
-  const seen = new Set()
-  const lines = []
-  for (const sourceLine of content.split(/\r?\n/)) {
-    const timestamps = [...sourceLine.matchAll(/\[(\d{1,3}):(\d{2}(?:\.\d{1,3})?)\]/g)]
-    if (!timestamps.length) continue
-    const lastTimestamp = timestamps.at(-1)
-    const text = sourceLine.slice(lastTimestamp.index + lastTimestamp[0].length).replace(/\s+/g, ' ').trim()
-    // Kana is the most reliable signal for discarding translated and credit-only LRC lines.
-    if (!text || !/[\u3040-\u30ff]/u.test(text)) continue
-    for (const [, minutes, seconds] of timestamps) {
-      const start = Number(minutes) * 60 + Number(seconds)
-      const key = `${start}-${text}`
-      if (!seen.has(key)) {
-        seen.add(key)
-        lines.push({ text, start })
-      }
-    }
-  }
-  lines.sort((left, right) => left.start - right.start)
-  if (!lines.length) throw new Error('未在 LRC 中找到带时间轴的日语歌词。请确认文件是 .lrc 格式。')
-  return {
-    title: cleanMetadata(metadata.ti) || fileBaseName(file.name),
-    artist: cleanMetadata(metadata.ar) || '本地导入',
-    album: '',
-    sourceFile: file.name,
-    duration: lines.at(-1)?.start || 0,
-    lines: lines.map((line, index) => ({ ...line, id: index })),
-  }
-}
-
 export async function parseLrcFile(file) {
   const content = await decodeLrcFile(file)
   const metadata = {}
   for (const match of content.matchAll(/^\[(ti|ar):(.+)]$/gim)) metadata[match[1].toLowerCase()] = match[2].trim()
+  const title = cleanMetadata(metadata.ti) || fileBaseName(file.name)
+  const artist = cleanMetadata(metadata.ar) || '本地导入'
 
   const seen = new Set()
   const lyricEntries = []
@@ -96,7 +62,7 @@ export async function parseLrcFile(file) {
     const text = sourceLine.slice(lastTimestamp.index + lastTimestamp[0].length).replace(/\s+/g, ' ').trim()
     const isJapanese = /[\u3040-\u30ff]/u.test(text)
     const isChinese = /[\u3400-\u9fff]/u.test(text)
-    if (!text || isCreditLine(text)) continue
+    if (!text || isCreditLine(text) || isSongHeadingLine(text, title, artist)) continue
     for (const [, minutes, seconds] of timestamps) {
       const start = Number(minutes) * 60 + Number(seconds)
       if (isJapanese) {
@@ -114,8 +80,8 @@ export async function parseLrcFile(file) {
   const lines = lyricEntries.map((line, id) => ({ id, ...line, translation: line.translation || '' }))
   if (!lines.length) throw new Error('未在 LRC 中找到带时间轴的日语歌词。请确认文件是 .lrc 格式。')
   return {
-    title: cleanMetadata(metadata.ti) || fileBaseName(file.name),
-    artist: cleanMetadata(metadata.ar) || '本地导入',
+    title,
+    artist,
     album: '',
     sourceFile: file.name,
     duration: lines.at(-1)?.start || 0,
@@ -163,4 +129,11 @@ export async function updateLocalSongMetadata(songId, metadata) {
 
 export async function deleteLocalSong(songId) {
   await runTransaction('readwrite', (store) => store.delete(songId))
+}
+
+export async function replaceLocalSongs(records) {
+  await runTransaction('readwrite', (store) => {
+    store.clear()
+    records.forEach((record) => store.put(record))
+  })
 }
