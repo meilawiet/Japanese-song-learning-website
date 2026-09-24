@@ -46,3 +46,7 @@ export function reviewSongWithAi(song) {
 export function explainSelectionWithAi(payload) {
   return postAi('/api/ai/explain-selection', payload)
 }
+
+export function explainSentenceBatchWithAi(lines) {
+  return postAi('/api/ai/explain-sentences', { lines })
+}

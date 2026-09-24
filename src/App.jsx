@@ -5,7 +5,7 @@ import { importedSongs } from './data/songs.generated'
 import { demoSongs } from './data/demoSongs'
 import { songArtworkBySource } from './data/songArtwork'
 import twilightStation from './assets/uta-twilight-station.png'
-import { annotateSongLines, explainSelectionWithAi, reviewSongWithAi, searchSongArtwork } from './lib/annotationApi'
+import { annotateSongLines, explainSelectionWithAi, explainSentenceBatchWithAi, reviewSongWithAi, searchSongArtwork } from './lib/annotationApi'
 import { createAndStoreLocalSong, deleteLocalSong, loadLocalSongs, parseLrcFile, replaceLocalSongs, updateLocalSongMetadata } from './lib/localSongStore'
 import { BACKUP_STORAGE_KEYS, createLearningBackup, inspectLearningBackup, songsFromLearningBackup } from './lib/learningBackup'
 import { correctionKey, hasKanji } from './lib/ruby'
@@ -14,7 +14,9 @@ import { isSongHeadingLine, withoutSongHeadingLines } from './lib/songMetadata'
 const PROGRESS_KEY = BACKUP_STORAGE_KEYS.progress
 const ANNOTATION_KEY = BACKUP_STORAGE_KEYS.annotations
 const AI_REVIEW_KEY = BACKUP_STORAGE_KEYS.aiReviews
+const SENTENCE_EXPLANATION_KEY = BACKUP_STORAGE_KEYS.sentenceExplanations
 const LINE_PLAYBACK_LEAD_IN_SECONDS = 0.5
+const SENTENCE_BATCH_SIZE = 8
 
 function loadLocal(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback } catch { return fallback }
@@ -47,6 +49,22 @@ function fallbackTokens(text) {
 
 function cleanSelectedText(value) {
   return value.replace(/\s+/g, '').trim().slice(0, 100)
+}
+
+function hasCachedSentenceExplanation(cache, line) {
+  const entry = cache?.[line.id]
+  return entry?.text === line.text && typeof entry.explanation?.meaning === 'string' && Boolean(entry.explanation.meaning.trim())
+}
+
+function SentenceAnalysis({ explanation, id }) {
+  return <section className="sentence-inline-analysis" id={id} aria-label="整句解析" onClick={(event) => event.stopPropagation()}>
+    <h3><Sparkles size={14} /> 整句解析</h3>
+    <div className="sentence-analysis-section"><h4>整句意思</h4><p>{explanation.meaning}</p></div>
+    {explanation.vocabulary?.length > 0 && <div className="sentence-analysis-section"><h4>关键表达</h4><dl>{explanation.vocabulary.map((item, index) => <div key={`${item.surface}-${index}`}><dt lang="ja">{item.surface}</dt><dd>{item.meaning}</dd></div>)}</dl></div>}
+    {explanation.grammar?.length > 0 && <div className="sentence-analysis-section"><h4>语法与语境</h4><ul>{explanation.grammar.map((point, index) => <li key={`${point}-${index}`}>{point}</li>)}</ul></div>}
+    {explanation.pronunciation_tip && <div className="sentence-analysis-section"><h4>发音提示</h4><p>{explanation.pronunciation_tip}</p></div>}
+    <p className="sentence-analysis-footnote">AI 解析仅供学习参考；想了解具体词句，仍可在歌词中选中后单独提问。</p>
+  </section>
 }
 
 function formatLrcTimestamp(seconds) {
@@ -84,6 +102,10 @@ export default function App() {
   const [localAudioUrls, setLocalAudioUrls] = useState({})
   const [annotationsBySong, setAnnotationsBySong] = useState(() => loadLocal(ANNOTATION_KEY, {}))
   const [aiReviews, setAiReviews] = useState(() => loadLocal(AI_REVIEW_KEY, {}))
+  const [sentenceExplanationsBySong, setSentenceExplanationsBySong] = useState(() => loadLocal(SENTENCE_EXPLANATION_KEY, {}))
+  const [sentenceExplanationOpen, setSentenceExplanationOpen] = useState(null)
+  const [sentenceExplanationJob, setSentenceExplanationJob] = useState(null)
+  const [sentenceExplanationError, setSentenceExplanationError] = useState(null)
   const [annotating, setAnnotating] = useState(false)
   const [annotationError, setAnnotationError] = useState('')
   const [selectedTokenIndex, setSelectedTokenIndex] = useState(0)
@@ -103,6 +125,7 @@ export default function App() {
   const [importLrcFile, setImportLrcFile] = useState(null)
   const [importAudioFile, setImportAudioFile] = useState(null)
   const [importBusy, setImportBusy] = useState(false)
+  const [importAiProgress, setImportAiProgress] = useState(null)
   const [importPreparing, setImportPreparing] = useState(false)
   const [importDraft, setImportDraft] = useState(null)
   const [importArtworkStatus, setImportArtworkStatus] = useState('idle')
@@ -125,6 +148,7 @@ export default function App() {
   const importPreviewRequestRef = useRef(0)
   const importArtworkRequestRef = useRef(0)
   const backupInputRef = useRef(null)
+  const sentenceExplanationJobRef = useRef(null)
 
   const allSongs = useMemo(() => [...importedSongs, ...localSongs, ...demoSongs].map(withoutSongHeadingLines).filter((song) => song.lines.length), [localSongs])
   const visibleLibrarySongs = useMemo(() => {
@@ -172,6 +196,8 @@ export default function App() {
   const aiReview = aiReviews[activeSong.id]
   const pendingAiSuggestions = (aiReview?.suggestions || []).filter((suggestion) => activeSong.lines.some((line) => line.id === suggestion.line_id) && !corrections[correctionKey(activeSong.id, suggestion.line_id, suggestion.token_index)])
   const focusSuggestion = pendingAiSuggestions.find((item) => item.line_id === activeLine.id && item.token_index === focusToken.index)
+  const currentSentenceCache = sentenceExplanationsBySong[activeSong.id] || {}
+  const readySentenceCount = activeSong.lines.filter((line) => hasCachedSentenceExplanation(currentSentenceCache, line)).length
 
   useEffect(() => {
     localStorage.setItem(PROGRESS_KEY, JSON.stringify({ learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate }))
@@ -179,6 +205,7 @@ export default function App() {
 
   useEffect(() => { localStorage.setItem(ANNOTATION_KEY, JSON.stringify(annotationsBySong)) }, [annotationsBySong])
   useEffect(() => { localStorage.setItem(AI_REVIEW_KEY, JSON.stringify(aiReviews)) }, [aiReviews])
+  useEffect(() => { localStorage.setItem(SENTENCE_EXPLANATION_KEY, JSON.stringify(sentenceExplanationsBySong)) }, [sentenceExplanationsBySong])
   useEffect(() => {
     let disposed = false
     loadLocalSongs()
@@ -285,6 +312,8 @@ export default function App() {
     setSelectedPhraseRange(null)
     setAiExplanation(null)
     setAiError('')
+    setSentenceExplanationOpen(null)
+    setSentenceExplanationError(null)
     setToast('已切换歌词，正在准备自动读音。')
   }
 
@@ -309,6 +338,7 @@ export default function App() {
     setPracticePosition(position)
     setActiveLineId(lineIds[position])
     setPracticeRevealed(false)
+    setSentenceExplanationOpen(null)
     setPracticeActive(true)
     window.requestAnimationFrame(() => document.getElementById('guided-practice')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
@@ -320,6 +350,7 @@ export default function App() {
     setPracticePosition(position)
     setActiveLineId(lineId)
     setPracticeRevealed(false)
+    setSentenceExplanationOpen(null)
   }
 
   function gradePracticeLine(learned) {
@@ -497,6 +528,81 @@ export default function App() {
     showLibraryPage({ focusSearch: true })
   }
 
+  async function generateSentenceExplanations(song, requestedLines = song.lines, onProgress) {
+    const cache = { ...(sentenceExplanationsBySong[song.id] || {}) }
+    const pending = requestedLines.filter((line) => !hasCachedSentenceExplanation(cache, line))
+    const countReady = () => song.lines.filter((line) => hasCachedSentenceExplanation(cache, line)).length
+    if (!pending.length) return { cache, complete: true, ready: countReady(), error: '' }
+    if (sentenceExplanationJobRef.current) {
+      return { cache, complete: false, ready: countReady(), error: '已有一首歌曲正在生成解析，请稍后重试。' }
+    }
+    sentenceExplanationJobRef.current = song.id
+    setSentenceExplanationError(null)
+    setSentenceExplanationJob({ songId: song.id, ready: countReady(), total: song.lines.length })
+    onProgress?.(countReady(), song.lines.length)
+    let failure = ''
+    try {
+      for (let offset = 0; offset < pending.length; offset += SENTENCE_BATCH_SIZE) {
+        const batch = pending.slice(offset, offset + SENTENCE_BATCH_SIZE)
+        const contextLines = batch.map((line) => {
+          const index = song.lines.findIndex((item) => item.id === line.id)
+          return {
+            id: line.id, text: line.text, translation: line.translation || '',
+            previous_line: song.lines[index - 1]?.text || '',
+            next_line: song.lines[index + 1]?.text || '',
+          }
+        })
+        try {
+          const result = await explainSentenceBatchWithAi(contextLines)
+          const knownIds = new Set(batch.map((line) => line.id))
+          const lineById = new Map(batch.map((line) => [line.id, line]))
+          for (const explanation of result.explanations || []) {
+            if (!knownIds.has(explanation.line_id) || !explanation.meaning) continue
+            const line = lineById.get(explanation.line_id)
+            cache[line.id] = { text: line.text, explanation }
+          }
+          setSentenceExplanationsBySong((previous) => ({ ...previous, [song.id]: { ...(previous[song.id] || {}), ...cache } }))
+          const ready = countReady()
+          setSentenceExplanationJob({ songId: song.id, ready, total: song.lines.length })
+          onProgress?.(ready, song.lines.length)
+        } catch (error) {
+          failure = error instanceof Error ? error.message : 'AI 整句解析暂时不可用。'
+          break
+        }
+      }
+      const complete = requestedLines.every((line) => hasCachedSentenceExplanation(cache, line))
+      if (!complete && !failure) failure = '部分句子的解析未生成，可稍后重试。'
+      if (failure) setSentenceExplanationError({ songId: song.id, message: failure })
+      return { cache, complete, ready: countReady(), error: failure }
+    } finally {
+      sentenceExplanationJobRef.current = null
+      setSentenceExplanationJob(null)
+    }
+  }
+
+  async function showSentenceExplanation(line) {
+    const songId = activeSong.id
+    if (sentenceExplanationOpen?.songId === songId && sentenceExplanationOpen.line.id === line.id) {
+      setSentenceExplanationOpen(null)
+      return
+    }
+    const cached = sentenceExplanationsBySong[activeSong.id]?.[line.id]
+    if (hasCachedSentenceExplanation(sentenceExplanationsBySong[activeSong.id], line)) {
+      setSentenceExplanationOpen({ songId, line, explanation: cached.explanation })
+      return
+    }
+    const result = await generateSentenceExplanations(activeSong, [line])
+    const prepared = result.cache[line.id]
+    if (hasCachedSentenceExplanation(result.cache, line)) setSentenceExplanationOpen({ songId, line, explanation: prepared.explanation })
+    else setToast(result.error || '这句的解析暂未生成，请稍后重试。')
+  }
+
+  async function generateCurrentSongExplanations() {
+    const result = await generateSentenceExplanations(activeSong)
+    setToast(result.complete ? `《${activeSong.title}》的 ${result.ready} 句解析已准备好。`
+      : `${result.error || '部分句子未完成'}：已准备 ${result.ready} / ${activeSong.lines.length} 句，可重试。`)
+  }
+
   async function exportLearningData() {
     if (backupBusy) return
     setBackupBusy('export')
@@ -506,6 +612,7 @@ export default function App() {
       const progressState = { learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate }
       const blob = createLearningBackup(records, {
         progress: progressState, annotations: annotationsBySong, aiReviews,
+        sentenceExplanations: sentenceExplanationsBySong,
       })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -550,6 +657,7 @@ export default function App() {
         [PROGRESS_KEY]: JSON.stringify(manifest.progress),
         [ANNOTATION_KEY]: JSON.stringify(manifest.annotations),
         [AI_REVIEW_KEY]: JSON.stringify(manifest.aiReviews),
+        [SENTENCE_EXPLANATION_KEY]: JSON.stringify(manifest.sentenceExplanations),
       }
       previousSongs = await loadLocalSongs()
       await replaceLocalSongs(songsFromLearningBackup(backupPreview))
@@ -609,6 +717,7 @@ export default function App() {
       : importArtworkStatus === 'manual' ? { artworkUrl: importArtworkUrl.trim(), artworkSourceUrl: '', artworkProvider: '手动填写' }
       : null
     setImportBusy(true)
+    setImportAiProgress(null)
     setImportError('')
     try {
       const record = await createAndStoreLocalSong(parsed, importAudioFile, artwork || {})
@@ -617,17 +726,28 @@ export default function App() {
       localAudioUrlRef.current = { ...localAudioUrlRef.current, [song.id]: audioObjectUrl }
       setLocalSongs((previous) => [song, ...previous])
       setLocalAudioUrls((previous) => ({ ...previous, [song.id]: audioObjectUrl }))
+      let explanationResult
+      try {
+        explanationResult = await generateSentenceExplanations(song, song.lines, (ready, total) => setImportAiProgress({ ready, total }))
+      } catch (error) {
+        explanationResult = { complete: false, ready: 0, error: error instanceof Error ? error.message : 'AI 解析暂时不可用。' }
+      }
       setImportLrcFile(null)
       setImportAudioFile(null)
       setImportDraft(null)
+      setImportAiProgress(null)
       setImportArtworkStatus('idle')
       setImportArtwork(null)
       setImportArtworkUrl('')
       setImportOpen(false)
       chooseSongFromLibrary(song.id)
-      setToast(artwork ? `已导入《${song.title}》并匹配封面，现在可以开始学习。` : `已导入《${song.title}》，但未找到可靠的封面匹配。`)
+      if (explanationResult.error) setSentenceExplanationError({ songId: song.id, message: explanationResult.error })
+      setToast(explanationResult.complete
+        ? `已导入《${song.title}》，${song.lines.length} 句 AI 解析已准备好。`
+        : `已导入《${song.title}》；AI 解析完成 ${explanationResult.ready} / ${song.lines.length} 句，可稍后重试。`)
     } catch (error) {
       setImportError(error instanceof Error ? error.message : '导入失败，请检查歌词和音频文件。')
+      setImportAiProgress(null)
     } finally {
       setImportBusy(false)
     }
@@ -647,6 +767,7 @@ export default function App() {
       setLocalSongs((previous) => previous.filter((item) => item.id !== song.id))
       setAnnotationsBySong((previous) => { const { [song.id]: removed, ...rest } = previous; return rest })
       setAiReviews((previous) => { const { [song.id]: removed, ...rest } = previous; return rest })
+      setSentenceExplanationsBySong((previous) => { const { [song.id]: removed, ...rest } = previous; return rest })
       setLearnedBySong((previous) => { const { [song.id]: removed, ...rest } = previous; return rest })
       setReviewItems((previous) => previous.filter((item) => item.songId !== song.id))
       setFavoriteSongIds((previous) => previous.filter((songId) => songId !== song.id))
@@ -968,6 +1089,9 @@ export default function App() {
           <div className="panel-head"><div><p className="eyebrow">{practiceActive ? 'LISTEN, RECALL, REVEAL' : 'AUTO ANNOTATE, THEN VERIFY'}</p><h2 id="lyrics-heading">{practiceActive ? '逐句练习' : '逐句读音'}</h2></div>{!practiceActive && <div className="view-toggle" role="group" aria-label="读音显示方式">{[['original', '原文'], ['reading', '假名'], ['practice', '遮住练习']].map(([value, label]) => <button className={mode === value ? 'selected' : ''} onClick={() => setMode(value)} type="button" key={value}>{label}</button>)}</div>}</div>
           {!practiceActive && <div className="pronunciation-strip"><div><span className="strip-index">{annotating ? 'ANNOTATING' : annotationError ? 'OFFLINE' : 'AUTO READY'}</span><b>{annotating ? '正在为整首歌词生成读音…' : annotationError || '点击带假名的汉字词，可在右侧修改读音'}</b></div><span className="source-badge"><WandSparkles size={13} /> SudachiPy + 本地日中词典</span></div>}
           <div className="audio-tools"><p className="audio-play-tip"><Volume2 size={13} /> {audioUrl ? practiceActive ? '先听这一句，再尝试自己读出歌词。' : '点击每句右侧的播放按钮，系统会提前 0.5 秒进入本句，并播到下一句。' : '未找到同名音频，仍可练习读音与词义。'}</p><label className="speed-control"><span>慢放</span><select value={playbackRate} onChange={(event) => choosePlaybackRate(Number(event.target.value))} aria-label="逐句播放速度"><option value={1}>1×</option><option value={0.75}>0.75×</option><option value={0.5}>0.5×</option><option value={0.25}>0.25×</option></select></label></div>
+          {!practiceActive && <div className="sentence-explanation-status"><div><Sparkles size={15} /><span>{sentenceExplanationJob?.songId === activeSong.id ? `正在生成整句解析 ${sentenceExplanationJob.ready} / ${sentenceExplanationJob.total}` : readySentenceCount === activeSong.lines.length ? `整首歌的 ${readySentenceCount} 句解析已就绪` : `整句解析已准备 ${readySentenceCount} / ${activeSong.lines.length} 句`}</span></div>{readySentenceCount < activeSong.lines.length && <button type="button" disabled={Boolean(sentenceExplanationJob)} onClick={generateCurrentSongExplanations}>{sentenceExplanationJob?.songId === activeSong.id ? '生成中…' : '生成剩余解析'}</button>}</div>}
+          {!practiceActive && readySentenceCount < activeSong.lines.length && <p className="sentence-explanation-disclosure">生成时会将歌词及已有译文发送给 DeepSeek，可能产生 API 调用费用。</p>}
+          {!practiceActive && sentenceExplanationError?.songId === activeSong.id && <p className="sentence-explanation-error" role="alert"><CircleAlert size={13} /> {sentenceExplanationError.message}</p>}
           {!practiceActive && <div className="practice-launch"><div><b>把这一句真正练会</b><span>先听、自己读并猜意思，再揭晓答案。</span></div><div><button className="practice-start" type="button" onClick={() => startPractice('all', activeSong.id, activeLine.id)}><BookOpenCheck size={15} /> 开始逐句练习</button>{currentSongReviewCount > 0 && <button className="practice-review-start" type="button" onClick={() => startPractice('review')}>只练待复习的 {currentSongReviewCount} 句</button>}</div></div>}
           {practiceActive && <section className="guided-card" id="guided-practice" aria-label="逐句练习卡片">
             <div className="guided-card-top"><span>{practiceScope === 'review' ? '待复习句练习' : '全曲逐句练习'}</span><button type="button" onClick={exitPractice}>退出练习 <X size={13} /></button></div>
@@ -977,7 +1101,7 @@ export default function App() {
               <p className="guided-prompt">先听原声，自己读一遍，并猜猜这句的意思。答案在你点击前不会显示。</p>
               <div className="guided-listen"><button type="button" disabled={!audioUrl} onClick={() => playLine(activeLine.id)}>{playingLineId === activeLine.id ? <Pause size={14} /> : <Play size={14} />} {playingLineId === activeLine.id ? '暂停原声' : '听这一句'}</button><span>{audioUrl ? `当前 ${playbackRate}× 速度` : '这首歌尚无音频'}</span></div>
               {audioError && <p className="guided-error" role="alert">{audioError}</p>}
-              {practiceRevealed ? <div className="guided-answer" aria-live="polite"><span>读音</span><p lang="ja">{activeLineReading || '自动读音尚未准备好，请先到校对页面确认。'}</p><span>中文释义</span><p>{activeLine.translation || '原 LRC 未提供中文译文，请结合词汇理解这一句。'}</p><div className="guided-grade"><button type="button" onClick={() => gradePracticeLine(false)}>还要再练 · 加入复习</button><button type="button" onClick={() => gradePracticeLine(true)}>我会了 · 下一句 <Check size={14} /></button></div></div> : <button className="guided-reveal" type="button" disabled={!activeLineReading} onClick={() => setPracticeRevealed(true)}>{activeLineReading ? '揭晓读音与译文' : annotationError || '正在准备自动读音…'}</button>}
+              {practiceRevealed ? <div className="guided-answer" aria-live="polite"><span>读音</span><p lang="ja">{activeLineReading || '自动读音尚未准备好，请先到校对页面确认。'}</p><span>中文释义</span><p>{activeLine.translation || '原 LRC 未提供中文译文，请结合词汇理解这一句。'}</p><button className="guided-sentence-explain" type="button" aria-expanded={sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === activeLine.id} aria-controls={`guided-sentence-analysis-${activeSong.id}-${activeLine.id}`} onClick={() => showSentenceExplanation(activeLine)}><Sparkles size={13} /> {sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === activeLine.id ? '收起整句解析' : '查看整句解析'}</button>{sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === activeLine.id && <SentenceAnalysis explanation={sentenceExplanationOpen.explanation} id={`guided-sentence-analysis-${activeSong.id}-${activeLine.id}`} />}<div className="guided-grade"><button type="button" onClick={() => gradePracticeLine(false)}>还要再练 · 加入复习</button><button type="button" onClick={() => gradePracticeLine(true)}>我会了 · 下一句 <Check size={14} /></button></div></div> : <button className="guided-reveal" type="button" disabled={!activeLineReading} onClick={() => setPracticeRevealed(true)}>{activeLineReading ? '揭晓读音与译文' : annotationError || '正在准备自动读音…'}</button>}
               <div className="guided-navigation"><button type="button" disabled={practicePosition === 0} onClick={() => goToPracticePosition(practicePosition - 1)}>← 上一句</button><button type="button" disabled={practicePosition + 1 >= practiceSessionLineIds.length} onClick={() => goToPracticePosition(practicePosition + 1)}>跳过这一句 →</button></div>
             </>}
           </section>}
@@ -996,10 +1120,17 @@ export default function App() {
               const isLearned = learnedLines.has(line.id)
               const lexicalTokens = lineTokens?.filter((token) => !token.is_symbol)
               const lineReading = lexicalTokens?.map((token) => corrections[correctionKey(activeSong.id, line.id, token.index)] || token.reading).filter(Boolean).join(' ')
+              const hasSentenceExplanation = hasCachedSentenceExplanation(currentSentenceCache, line)
+              const sentenceExpanded = sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === line.id
               return <article id={`lyric-row-${activeSong.id}-${line.id}`} className={`lyric-row ${current ? 'active' : ''}`} onClick={() => chooseLine(line.id)} key={`${activeSong.id}-${line.id}`}>
                 <span className="line-number">{String(line.displayNumber).padStart(2, '0')}</span>
-                <div className="auto-line-wrap"><div className="japanese"><AnnotatedLine tokens={lineTokens} corrections={corrections} songId={activeSong.id} lineId={line.id} mode={mode} selectedIndex={current ? selectedTokenIndex : -1} selectionRange={dragSelection?.lineId === line.id ? dragSelection : selectedPhraseRange?.lineId === line.id ? selectedPhraseRange : null} showSelectionAction={selectedText?.lineId === line.id && selectedPhraseRange?.lineId === line.id} onStartSelection={(tokenIndex) => beginTokenSelection(line.id, tokenIndex)} onExtendSelection={(tokenIndex) => extendTokenSelection(line.id, tokenIndex)} onFinishSelection={finishTokenSelection} onExplainSelection={() => askAiToExplain(selectedText)} onSelectToken={(tokenIndex) => handleTokenClick(line.id, tokenIndex)} /></div><div className={`reading ${lineTokens ? '' : 'needs-review'}`}>{mode === 'reading' ? lineReading || '正在生成假名…' : mode === 'practice' ? '假名已隐藏，尝试自己读出这一句' : '切换到“假名”查看自动标注'}</div>{line.translation && <div className="translation lyric-translation">{line.translation}</div>}</div>
-                <div className="line-actions"><button className={`line-action line-play ${isPlaying ? 'playing' : ''}`} type="button" onClick={(event) => { event.stopPropagation(); playLine(line.id) }} aria-label={`${isPlaying ? '暂停' : '播放'}第 ${line.displayNumber} 句`} title={`${isPlaying ? '暂停' : '播放'}这一句`}>{isPlaying ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}</button><button className={`line-mastery ${isLearned ? 'mastered' : ''}`} type="button" aria-pressed={isLearned} onClick={(event) => { event.stopPropagation(); toggleLearnedLine(line.id) }} title={isLearned ? '点击改为未掌握' : '点击标记为已掌握'}>{isLearned ? <Check size={12} /> : <Circle size={11} />}<span>{isLearned ? '已掌握' : '未掌握'}</span></button></div>
+                <div className="auto-line-wrap">
+                  <div className="japanese"><AnnotatedLine tokens={lineTokens} corrections={corrections} songId={activeSong.id} lineId={line.id} mode={mode} selectedIndex={current ? selectedTokenIndex : -1} selectionRange={dragSelection?.lineId === line.id ? dragSelection : selectedPhraseRange?.lineId === line.id ? selectedPhraseRange : null} showSelectionAction={selectedText?.lineId === line.id && selectedPhraseRange?.lineId === line.id} onStartSelection={(tokenIndex) => beginTokenSelection(line.id, tokenIndex)} onExtendSelection={(tokenIndex) => extendTokenSelection(line.id, tokenIndex)} onFinishSelection={finishTokenSelection} onExplainSelection={() => askAiToExplain(selectedText)} onSelectToken={(tokenIndex) => handleTokenClick(line.id, tokenIndex)} /></div>
+                  <div className={`reading ${lineTokens ? '' : 'needs-review'}`}>{mode === 'reading' ? lineReading || '正在生成假名…' : mode === 'practice' ? '假名已隐藏，尝试自己读出这一句' : '切换到“假名”查看自动标注'}</div>
+                  {line.translation && <div className="translation lyric-translation">{line.translation}</div>}
+                </div>
+                <div className="line-actions"><button className={`line-action line-play ${isPlaying ? 'playing' : ''}`} type="button" onClick={(event) => { event.stopPropagation(); playLine(line.id) }} aria-label={`${isPlaying ? '暂停' : '播放'}第 ${line.displayNumber} 句`} title={`${isPlaying ? '暂停' : '播放'}这一句`}>{isPlaying ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}</button><button className={`line-mastery ${isLearned ? 'mastered' : ''}`} type="button" aria-pressed={isLearned} onClick={(event) => { event.stopPropagation(); toggleLearnedLine(line.id) }} title={isLearned ? '点击改为未掌握' : '点击标记为已掌握'}>{isLearned ? <Check size={12} /> : <Circle size={11} />}<span>{isLearned ? '已掌握' : '未掌握'}</span></button><button className="sentence-explain-link" type="button" aria-expanded={sentenceExpanded} aria-controls={`sentence-analysis-${activeSong.id}-${line.id}`} disabled={!hasSentenceExplanation && Boolean(sentenceExplanationJob)} onClick={(event) => { event.stopPropagation(); showSentenceExplanation(line) }}><Sparkles size={11} /> {sentenceExpanded ? '收起解析' : hasSentenceExplanation ? '查看解析' : sentenceExplanationJob ? '生成中…' : '生成解析'}</button></div>
+                {sentenceExpanded && <SentenceAnalysis explanation={sentenceExplanationOpen.explanation} id={`sentence-analysis-${activeSong.id}-${line.id}`} />}
               </article>
             })}
           </div>
@@ -1087,8 +1218,10 @@ export default function App() {
         <div className="import-lines-heading"><div><b>歌词与时间轴</b><span>可修改时间、日文、中文译文；保存时会按时间排序。</span></div><button type="button" onClick={addImportLine}><Plus size={13} /> 添加一句</button></div>
         <ol className="import-preview-lines">{importDraft.lines.map((line, index) => <li key={line.draftId}><span>{String(index + 1).padStart(2, '0')}</span><div><label>时间戳<input value={line.timeText} onChange={(event) => updateImportLine(line.draftId, 'timeText', event.target.value)} placeholder="00:12.345" aria-label={`第 ${index + 1} 句时间戳`} /></label><label>日文歌词<input value={line.text} onChange={(event) => updateImportLine(line.draftId, 'text', event.target.value)} maxLength={500} lang="ja" aria-label={`第 ${index + 1} 句日文歌词`} /></label><label>中文译文<input value={line.translation} onChange={(event) => updateImportLine(line.draftId, 'translation', event.target.value)} maxLength={500} aria-label={`第 ${index + 1} 句中文译文`} placeholder="没有译文可留空" /></label></div><button className="import-remove-line" type="button" onClick={() => removeImportLine(line.draftId)} aria-label={`删除第 ${index + 1} 句`} title="删除这一句"><Trash2 size={14} /></button></li>)}</ol>
       </section>}
+      <p className="import-ai-disclosure"><Sparkles size={14} /> 点击确认后，会把这首歌的歌词分批发送给 DeepSeek 生成逐句解析，可能产生 API 调用费用。生成期间请保持页面打开；若中途失败，歌曲仍会保存，可在学习页继续生成。</p>
+      {importAiProgress && <p className="import-ai-progress" role="status"><LoaderCircle className="spin" size={14} /> 歌曲已保存，正在生成整句解析：{importAiProgress.ready} / {importAiProgress.total} 句</p>}
       {importError && <p className="song-import-error"><CircleAlert size={14} /> {importError}</p>}
-      <div className="song-import-actions"><button type="button" onClick={closeImportDialog}>取消</button><button className="song-import-submit" type="submit" disabled={importBusy || importPreparing || importArtworkStatus === 'loading'}>{importBusy ? <LoaderCircle className="spin" size={14} /> : <Upload size={14} />}{importBusy ? '正在导入…' : '确认导入并学习'}</button></div>
+      <div className="song-import-actions"><button type="button" onClick={closeImportDialog} disabled={importBusy}>取消</button><button className="song-import-submit" type="submit" disabled={importBusy || importPreparing || importArtworkStatus === 'loading'}>{importBusy ? <LoaderCircle className="spin" size={14} /> : <Upload size={14} />}{importBusy ? importAiProgress ? '正在生成解析…' : '正在导入…' : '确认导入并生成解析'}</button></div>
     </form></div>}
 
     {detailOpen && <div className="detail-backdrop" role="presentation" onClick={closeDetail}><section className={`word-detail ${detailView === 'ai' ? 'ai-only-detail' : ''}`} role="dialog" aria-modal="true" aria-labelledby="detail-title" onClick={(event) => event.stopPropagation()}>

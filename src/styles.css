@@ -282,3 +282,36 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .backup-dialog-actions button:last-child { color:#fff; background:#315b4e; }
 .backup-dialog-actions button:disabled { cursor:wait; opacity:.6; }
 @media (max-width:650px) { .library-backup-bar { align-items:stretch; flex-direction:column; gap:13px; }.library-backup-actions { flex-wrap:wrap; }.backup-backdrop { align-items:end; padding:0; }.backup-dialog { width:100%; max-height:88vh; padding:26px 22px; box-shadow:none; } }
+
+/* Precomputed whole-line AI explanations */
+.sentence-explanation-status { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:17px; padding:10px 12px; border:1px solid #c4d9ca; color:#476b5a; background:#edf6ee; font-size:11px; }
+.sentence-explanation-status > div { display:flex; align-items:center; gap:7px; }
+.sentence-explanation-status svg { flex:0 0 auto; }
+.sentence-explanation-status button { flex:0 0 auto; padding:5px 7px; border:1px solid #688a77; color:#345c4c; background:transparent; font-size:10px; }
+.sentence-explanation-status button:disabled { cursor:wait; opacity:.6; }
+.sentence-explanation-disclosure { margin:6px 0 0; color:#879188; font-size:10px; line-height:1.5; }
+.sentence-explanation-error { display:flex; align-items:center; gap:6px; margin:8px 0 0; color:#ad5337; font-size:10px; line-height:1.5; }
+.sentence-explain-link,.guided-sentence-explain { display:inline-flex; align-items:center; justify-content:center; gap:3px; border:0; color:#9d6242; background:transparent; }
+.sentence-explain-link { width:66px; min-height:24px; padding:4px 1px; border:1px solid #d6b79f; background:rgba(255,250,240,.72); font-size:9px; white-space:nowrap; }
+.sentence-explain-link[aria-expanded="true"] { color:#fff; border-color:#a65b3e; background:#a65b3e; }
+.sentence-explain-link:hover,.guided-sentence-explain:hover { color:#c45132; }
+.sentence-explain-link[aria-expanded="true"]:hover { color:#fff; background:#be6243; }
+.sentence-explain-link:disabled { cursor:wait; opacity:.6; }
+.guided-sentence-explain { width:max-content; margin-top:0; padding:3px 0; font-size:11px; }
+.sentence-inline-analysis { grid-column:2 / -1; min-width:0; margin:15px 0 2px; padding:16px 19px; border-left:3px solid #be7657; color:#2b3d34; background:rgba(255,250,240,.83); cursor:auto; }
+.guided-answer .sentence-inline-analysis { margin:14px 0 0; background:rgba(255,253,247,.87); }
+.sentence-inline-analysis h3 { display:flex; align-items:center; gap:6px; margin:0; color:#8d563e; font:600 14px var(--serif); }
+.sentence-analysis-section { margin-top:13px; padding-top:12px; border-top:1px solid #e4dfd4; }
+.sentence-analysis-section h4 { margin:0 0 6px; color:#4a6757; font:600 12px var(--serif); }
+.sentence-analysis-section p,.sentence-analysis-section li { margin:0; font-size:12px; line-height:1.75; }
+.sentence-analysis-section ul { margin:0; padding-left:19px; }
+.sentence-analysis-section li + li { margin-top:4px; }
+.sentence-analysis-section dl { margin:0; }
+.sentence-analysis-section dl > div { display:grid; grid-template-columns:minmax(76px,1fr) 3fr; gap:12px; padding:6px 0; border-top:1px solid #eceee5; font-size:12px; line-height:1.6; }
+.sentence-analysis-section dt { font-weight:600; }
+.sentence-analysis-section dd { margin:0; color:#586a5e; }
+.sentence-analysis-footnote { margin:14px 0 0; color:#829086; font-size:10px; line-height:1.7; }
+.import-ai-disclosure { display:flex; align-items:flex-start; gap:7px; margin:16px 0 0; padding:10px 12px; color:#5a705f; background:#edf5e9; font-size:10px; line-height:1.7; }
+.import-ai-disclosure svg { flex:0 0 auto; margin-top:2px; }
+.import-ai-progress { display:flex; align-items:center; gap:7px; margin:13px 0 0; color:#ae5937; font-size:11px; }
+@media (max-width:650px) { .sentence-explanation-status { align-items:flex-start; flex-direction:column; }.sentence-explain-link { width:58px; font-size:8px; }.sentence-inline-analysis { padding:14px 12px; }.sentence-analysis-section dl > div { grid-template-columns:minmax(60px,1fr) 2fr; gap:7px; } }

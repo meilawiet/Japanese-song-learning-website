@@ -9,6 +9,7 @@ export const BACKUP_STORAGE_KEYS = {
   progress: 'uta-pronunciation-progress-v2',
   annotations: 'uta-auto-annotations-v5',
   aiReviews: 'uta-ai-reviews-v1',
+  sentenceExplanations: 'uta-sentence-explanations-v1',
 }
 
 function isRecord(value) {
@@ -16,7 +17,8 @@ function isRecord(value) {
 }
 
 function checkState(manifest) {
-  if (!isRecord(manifest.progress) || !isRecord(manifest.annotations) || !isRecord(manifest.aiReviews)) {
+  if (!isRecord(manifest.progress) || !isRecord(manifest.annotations)
+    || !isRecord(manifest.aiReviews) || !isRecord(manifest.sentenceExplanations)) {
     throw new Error('备份中的学习数据格式不正确。')
   }
   const progress = manifest.progress
@@ -35,6 +37,14 @@ function checkState(manifest) {
       || lines.some((line) => !isRecord(line) || !Number.isSafeInteger(line.id) || !Array.isArray(line.tokens)
         || line.tokens.some((token) => !isRecord(token) || !Number.isSafeInteger(token.index)
           || typeof token.surface !== 'string' || typeof token.reading !== 'string')))
+    || Object.values(manifest.sentenceExplanations).some((songEntries) => !isRecord(songEntries)
+      || Object.values(songEntries).some((entry) => !isRecord(entry) || typeof entry.text !== 'string'
+        || !isRecord(entry.explanation) || typeof entry.explanation.meaning !== 'string'
+        || !Array.isArray(entry.explanation.grammar)
+        || entry.explanation.grammar.some((point) => typeof point !== 'string')
+        || !Array.isArray(entry.explanation.vocabulary)
+        || entry.explanation.vocabulary.some((item) => !isRecord(item)
+          || typeof item.surface !== 'string' || typeof item.meaning !== 'string')))
     || Object.values(manifest.aiReviews).some((review) => !isRecord(review) || !Array.isArray(review.suggestions)
       || review.suggestions.some((item) => !isRecord(item) || !Number.isSafeInteger(item.line_id)
         || !Number.isSafeInteger(item.token_index) || typeof item.surface !== 'string'
@@ -82,6 +92,7 @@ export function createLearningBackup(songs, state) {
     progress: state.progress,
     annotations: state.annotations,
     aiReviews: state.aiReviews,
+    sentenceExplanations: state.sentenceExplanations || {},
     songs: songEntries,
   }
   checkState(manifest)
@@ -113,6 +124,8 @@ export async function inspectLearningBackup(file) {
     || typeof manifest.createdAt !== 'string' || Number.isNaN(Date.parse(manifest.createdAt))) {
     throw new Error('不支持此备份版本。')
   }
+  // Backups created before whole-line explanations were added remain restorable.
+  if (!Object.hasOwn(manifest, 'sentenceExplanations')) manifest.sentenceExplanations = {}
   checkState(manifest)
   if (manifest.songs.length > 1000) throw new Error('备份中的歌曲数量超出限制。')
   const ids = new Set()

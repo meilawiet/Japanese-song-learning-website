@@ -275,6 +275,18 @@ class ExplainSelectionRequest(BaseModel):
     token: TokenContext | None = None
 
 
+class SentenceContextLine(BaseModel):
+    id: int
+    text: str = Field(min_length=1, max_length=500)
+    translation: str = Field(default="", max_length=500)
+    previous_line: str = Field(default="", max_length=500)
+    next_line: str = Field(default="", max_length=500)
+
+
+class ExplainSentenceBatchRequest(BaseModel):
+    lines: list[SentenceContextLine] = Field(min_length=1, max_length=8)
+
+
 @lru_cache(maxsize=1)
 def get_tokenizer():
     return dictionary.Dictionary().create()
@@ -677,6 +689,69 @@ def review_song_with_ai(payload: SongReviewRequest, request: Request) -> dict[st
             break
     return {"suggestions": suggestions, "reviewed_token_count": len(lookup),
             "notice": "AI 只提供复核建议；请确认后再应用到你的读音版本。"}
+
+
+@app.post("/api/ai/explain-sentences")
+def explain_sentences_with_ai(payload: ExplainSentenceBatchRequest, request: Request) -> dict[str, Any]:
+    """Prepare concise whole-line explanations for a user-confirmed song import."""
+    line_lookup = {line.id: line for line in payload.lines}
+    if len(line_lookup) != len(payload.lines):
+        raise HTTPException(status_code=422, detail="歌词句子编号不能重复。")
+    ai_input = {"lines": [line.model_dump() for line in payload.lines]}
+    prompt = (
+        "Explain EACH Japanese lyric line to a Chinese-speaking learner with some Japanese foundation. "
+        "Use adjacent lines and any supplied Chinese translation only as context; correct the translation if needed. "
+        "Focus on the meaning of the WHOLE sentence, notable vocabulary and grammar, and a useful pronunciation "
+        "or singing note only when there is one. Do not invent readings or song facts. Keep every field concise. "
+        "Return exactly one JSON object with this schema: "
+        '{"explanations":[{"line_id":number,"meaning":"Chinese whole-line meaning",'
+        '"grammar":["brief Chinese point"],"vocabulary":[{"surface":"Japanese expression",'
+        '"meaning":"Chinese contextual meaning"}],"pronunciation_tip":"brief Chinese note or empty string"}]}. '
+        "Include one entry for every input line_id; at most 3 grammar points and 4 vocabulary items per line."
+    )
+    result = call_deepseek_json(
+        "explain-sentences-v1", prompt, ai_input, client_host=client_host(request),
+        max_tokens=3400, thinking="disabled",
+    )
+    raw_items = result.get("explanations", [])
+    explanations: list[dict[str, Any]] = []
+    seen: set[int] = set()
+    for raw in raw_items if isinstance(raw_items, list) else []:
+        if not isinstance(raw, dict) or type(raw.get("line_id")) is not int:
+            continue
+        line_id = raw["line_id"]
+        if line_id not in line_lookup or line_id in seen:
+            continue
+        meaning = text_field(raw.get("meaning"), limit=320)
+        if not meaning:
+            continue
+        raw_grammar = raw.get("grammar", [])
+        raw_vocabulary = raw.get("vocabulary", [])
+        grammar = [text_field(item, limit=180) for item in raw_grammar if text_field(item, limit=180)][:3] if isinstance(raw_grammar, list) else []
+        vocabulary: list[dict[str, str]] = []
+        if isinstance(raw_vocabulary, list):
+            for item in raw_vocabulary:
+                if not isinstance(item, dict):
+                    continue
+                surface = text_field(item.get("surface"), limit=80)
+                word_meaning = text_field(item.get("meaning"), limit=160)
+                if surface and word_meaning:
+                    vocabulary.append({"surface": surface, "meaning": word_meaning})
+                if len(vocabulary) == 4:
+                    break
+        explanations.append({
+            "line_id": line_id,
+            "meaning": meaning,
+            "grammar": grammar,
+            "vocabulary": vocabulary,
+            "pronunciation_tip": text_field(raw.get("pronunciation_tip"), limit=240),
+        })
+        seen.add(line_id)
+    if not explanations:
+        with AI_CACHE_LOCK:
+            AI_CACHE.pop(ai_cache_key("explain-sentences-v1", ai_input), None)
+        raise HTTPException(status_code=502, detail="AI 未返回可用的整句解析，请稍后重试。")
+    return {"explanations": explanations, "requested_count": len(payload.lines)}
 
 
 @app.post("/api/ai/explain-selection")
