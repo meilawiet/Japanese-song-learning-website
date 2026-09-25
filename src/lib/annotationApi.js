@@ -1,4 +1,6 @@
-const apiOrigin = import.meta.env.VITE_ANNOTATION_API_URL || 'http://127.0.0.1:8000'
+import { getAiRequestHeaders } from './aiSettings.js'
+
+const apiOrigin = import.meta.env?.VITE_ANNOTATION_API_URL || 'http://127.0.0.1:8000'
 
 export async function annotateSongLines(lines) {
   const response = await fetch(`${apiOrigin}/api/annotate/batch`, {
@@ -26,7 +28,7 @@ export async function searchSongArtwork(title, artist = '') {
 async function postAi(path, payload) {
   const response = await fetch(`${apiOrigin}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAiRequestHeaders() },
     body: JSON.stringify(payload),
   })
   const body = await response.json().catch(() => ({}))

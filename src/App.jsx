@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpenCheck, Bot, Check, ChevronDown, ChevronRight, Circle, CircleAlert, Download, Heart, LoaderCircle, MousePointer2, Pause, Pencil, Play, Plus, Save, Search, Sparkles, Trash2, Upload, UserRound, Volume2, WandSparkles, X } from 'lucide-react'
+import { BookOpenCheck, Bot, Check, ChevronDown, ChevronRight, Circle, CircleAlert, Download, Heart, LoaderCircle, MousePointer2, Pause, Pencil, Play, Plus, Save, Search, Settings, Sparkles, Trash2, Upload, Volume2, WandSparkles, X } from 'lucide-react'
 import AnnotatedLine from './components/AnnotatedLine'
+import AiSettingsDialog from './components/AiSettingsDialog'
 import { importedSongs } from './data/songs.generated'
 import { demoSongs } from './data/demoSongs'
 import { songArtworkBySource } from './data/songArtwork'
@@ -138,6 +139,7 @@ export default function App() {
   const [backupPreview, setBackupPreview] = useState(null)
   const [backupError, setBackupError] = useState('')
   const [toast, setToast] = useState('')
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const dragSelectionRef = useRef(null)
   const suppressNextTokenClick = useRef(false)
   const audioRef = useRef(null)
@@ -1043,8 +1045,10 @@ export default function App() {
     <header className="topbar">
       <button className="brand" type="button" onClick={showLessonPage} aria-label="UTA 首页"><span className="brand-mark">う</span><span>UTA<span className="brand-dot">.</span></span></button>
       <nav className="main-nav" aria-label="主导航"><button className={activePage === 'lesson' ? 'active' : ''} type="button" onClick={showLessonPage}>发音学习</button><button className={activePage === 'library' ? 'active' : ''} type="button" onClick={() => showLibraryPage()}>歌曲库</button><button type="button" onClick={showReviewQueue}>复习</button></nav>
-      <div className="top-actions"><button className="icon-button" type="button" onClick={focusLibrarySearch} aria-label="搜索歌曲"><Search size={20} /></button><button className="avatar" type="button" aria-label="个人中心"><UserRound size={15} /></button></div>
+      <div className="top-actions"><button className="icon-button" type="button" onClick={focusLibrarySearch} aria-label="搜索歌曲"><Search size={20} /></button><button className="avatar" type="button" aria-label="设置" title="AI 设置" onClick={() => setSettingsOpen(true)}><Settings size={17} /></button></div>
     </header>
+
+    {settingsOpen && <AiSettingsDialog onClose={() => setSettingsOpen(false)} onSaved={(message) => { setSettingsOpen(false); setToast(message) }} />}
 
     <main id="top">
       {activePage === 'lesson' && <>
