@@ -1,8 +1,9 @@
 """Local API for generating reviewable Japanese lyric readings with SudachiPy.
 
 The optional DeepSeek routes deliberately live here, rather than in the Vite
-client: browsers must never receive an API key. AI output is advisory only;
-the learner remains in control of every reading correction.
+client: server credentials stay private, and user-provided credentials are used
+only for their request. AI output is advisory only; the learner remains in
+control of every reading correction.
 """
 
 from __future__ import annotations
@@ -425,6 +426,17 @@ def read_json_text(response_body: dict[str, Any]) -> dict[str, Any]:
     return parsed
 
 
+def resolve_deepseek_api_key(browser_key: str | None) -> str:
+    """Resolve a request-local override without changing server credentials."""
+    api_key = (browser_key or "").strip()
+    if api_key and (len(api_key) > 512 or any(not "!" <= character <= "~" for character in api_key)):
+        raise HTTPException(status_code=422, detail="DeepSeek API Key 格式无效，请在设置中重新填写（最多 512 个可打印 ASCII 字符）。")
+    api_key = api_key or os.getenv("DEEPSEEK_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(status_code=503, detail="尚未配置 DeepSeek API。请在页面“设置”中填写 API Key，或在 server/.env 配置 DEEPSEEK_API_KEY。")
+    return api_key
+
+
 def call_deepseek_json(
     action: str,
     prompt: str,
@@ -433,6 +445,7 @@ def call_deepseek_json(
     client_host: str,
     max_tokens: int,
     thinking: Literal["enabled", "disabled"] = "disabled",
+    api_key: str | None = None,
 ) -> dict[str, Any]:
     """Call DeepSeek's Chat API with resilient JSON validation.
 
@@ -442,14 +455,12 @@ def call_deepseek_json(
     retry once in non-thinking mode instead of showing a cryptic empty-response
     error to the learner.
     """
+    api_key = resolve_deepseek_api_key(api_key)
     cache_key = ai_cache_key(action, payload)
     cached = get_cached_ai_result(cache_key)
     if cached is not None:
         return cached
 
-    api_key = os.getenv("DEEPSEEK_API_KEY", "").strip()
-    if not api_key:
-        raise HTTPException(status_code=503, detail="尚未配置 DeepSeek API。请在 server/.env 填写 DEEPSEEK_API_KEY。")
     enforce_ai_rate_limit(client_host)
 
     last_error: Exception | None = None
@@ -660,6 +671,7 @@ def review_song_with_ai(payload: SongReviewRequest, request: Request) -> dict[st
     result = call_deepseek_json(
         "review-song", prompt, ai_input, client_host=client_host(request),
         max_tokens=1800, thinking="disabled",
+        api_key=request.headers.get("x-deepseek-api-key"),
     )
     suggestions: list[dict[str, Any]] = []
     seen: set[tuple[int, int]] = set()
@@ -712,6 +724,7 @@ def explain_sentences_with_ai(payload: ExplainSentenceBatchRequest, request: Req
     result = call_deepseek_json(
         "explain-sentences-v1", prompt, ai_input, client_host=client_host(request),
         max_tokens=3400, thinking="disabled",
+        api_key=request.headers.get("x-deepseek-api-key"),
     )
     raw_items = result.get("explanations", [])
     explanations: list[dict[str, Any]] = []
@@ -783,6 +796,7 @@ def explain_selection_with_ai(payload: ExplainSelectionRequest, request: Request
     result = call_deepseek_json(
         "explain-selection", prompt, ai_input, client_host=client_host(request),
         max_tokens=4000, thinking="enabled",
+        api_key=request.headers.get("x-deepseek-api-key"),
     )
     usages = result.get("usages", [])
     if not isinstance(usages, list):

@@ -1,0 +1,21 @@
+.ai-settings-dialog { width:min(540px,calc(100% - 32px)); max-height:calc(100dvh - 32px); overflow:auto; padding:32px; border:1px solid var(--line); color:var(--ink); background:#fffaf0; box-shadow:9px 10px 0 rgba(13,23,20,.28); }
+.ai-settings-dialog::backdrop { background:rgba(21,30,28,.58); }
+.ai-settings-dialog h2 { margin:8px 28px 12px 0; font:600 30px var(--serif); }
+.ai-settings-close { position:absolute; top:15px; right:15px; display:grid; place-items:center; padding:6px; border:0; color:#607069; background:transparent; }
+.ai-settings-copy,.ai-settings-help { color:#61716a; font-size:12px; line-height:1.75; }
+.ai-settings-status { margin:18px 0 24px; padding:10px 12px; color:#365247; background:#e7f0eb; font-size:12px; line-height:1.6; }
+.ai-settings-label { display:block; margin-bottom:8px; font-size:13px; font-weight:600; }
+.ai-settings-input-row { display:flex; border:1px solid #aebfb6; background:#fffdf7; }
+.ai-settings-input-row:focus-within { border-color:var(--orange); box-shadow:0 0 0 2px rgba(226,92,56,.12); }
+.ai-settings-input-row input { width:100%; min-width:0; border:0; padding:12px; outline:none; color:var(--ink); background:transparent; font:14px var(--mono); }
+.ai-settings-input-row button { display:grid; place-items:center; flex:0 0 44px; border:0; color:#527065; background:transparent; }
+.ai-settings-remember { display:flex; align-items:center; gap:8px; margin-top:22px; font-size:13px; }
+.ai-settings-remember input { width:16px; height:16px; accent-color:#31564b; }
+.ai-settings-privacy { margin-top:20px; padding-top:15px; border-top:1px solid var(--line); color:#61716a; font-size:12px; line-height:1.75; }
+.ai-settings-error { color:#bd4d34; font-size:12px; line-height:1.6; }
+.ai-settings-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:10px; margin-top:25px; }
+.ai-settings-actions button { display:flex; align-items:center; gap:6px; min-height:38px; padding:9px 11px; border:0; color:#61716a; background:transparent; font-size:12px; }
+.ai-settings-actions .ai-settings-clear { margin-right:auto; color:#b24c36; }
+.ai-settings-actions .ai-settings-save { color:#fff; background:#31564b; }
+.ai-settings-dialog button:focus-visible,.ai-settings-remember input:focus-visible { outline:2px solid var(--orange); outline-offset:3px; }
+@media (max-width:650px) { .ai-settings-dialog { padding:24px 20px; box-shadow:none; }.ai-settings-dialog h2 { font-size:26px; }.ai-settings-input-row input { font-size:16px; } }

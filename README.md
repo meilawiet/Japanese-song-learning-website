@@ -58,6 +58,7 @@ npm.cmd run dev
 
 ```powershell
 npm.cmd run build
+npm.cmd test
 npm.cmd run test:backup
 server\.venv\Scripts\python.exe -m unittest discover -s server\tests
 ```
@@ -147,6 +148,20 @@ LRC 中的歌名、歌手资料行不会作为歌词参与读音标注或 AI 全
 
 默认读音完全由本地 SudachiPy 生成。点击“确认导入并生成解析”“生成剩余解析”“生成解析”“AI 复核全曲”或片段的“AI 解释”时，才会向 DeepSeek 发送必要的歌词上下文。没有配置 Key 时歌曲仍能导入，但整句解析暂时无法生成。
 
+### 在网页设置中填写（推荐个人使用）
+
+1. 点击页眉右上角的齿轮“设置”。
+2. 填写自己的 **DeepSeek API Key**，点击“保存设置”。默认隐藏 Key，可切换显示以核对。
+3. 再点击歌词解析、片段讲解或全曲复核，即会使用该 Key。保存设置本身不会调用 DeepSeek，也不会验证 Key 是否有效。
+
+默认 Key 仅保存在当前标签页的 Session Storage 中，刷新页面后仍可使用，关闭标签页后通常会清除（浏览器恢复会话时可能保留）。勾选“在此浏览器记住 API Key”后，将以明文保存在此站点的 Local Storage 中；仅在自己的可信设备上使用。可随时点击“清除 Key”，或留空并保存以清除当前标签页和此浏览器保存的 Key。
+
+浏览器 Key 仅随 AI 请求发送到当前配置的标注 API，由它转发给 DeepSeek；不会写入服务端 `.env`，也不包含在歌曲备份中。默认标注 API 是本机 `http://127.0.0.1:8000`；如通过 `VITE_ANNOTATION_API_URL` 指向远程服务，请仅使用可信的 HTTPS 服务。Key 不会用于自动注音和封面搜索。
+
+浏览器 Key 优先于服务端配置，未填写或清除后将使用服务端的 `DEEPSEEK_API_KEY`（如有）。该设置仅支持项目现有的 DeepSeek 接口，模型仍由服务端 `DEEPSEEK_MODEL` 配置。
+
+### 在服务端配置（保留原有方式）
+
 在 `server/` 下复制 `.env.example` 为 `.env`：
 
 ```powershell
@@ -167,6 +182,7 @@ DEEPSEEK_MODEL=deepseek-flash
 | 内容 | 保存位置 | 是否上传 |
 | --- | --- | --- |
 | 学习进度、读音与词义修正 | 浏览器 Local Storage | 否 |
+| 网页填写的 DeepSeek API Key | 默认 Session Storage；选择记住后为 Local Storage | 仅随 AI 请求经配置的标注 API 转发给 DeepSeek；不写入服务端配置或备份 |
 | 网页导入的 LRC 与音频 | 浏览器 IndexedDB | 否 |
 | 自动注音、词典释义 | 本机 FastAPI 服务 | 否 |
 | 封面检索所需的歌名、歌手名 | 本机 FastAPI 服务转发给 Apple Music | 是，仅导入或补查封面时 |
