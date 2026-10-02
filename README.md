@@ -31,9 +31,15 @@
 
 - Windows 10/11（当前项目已在 Windows 上验证）
 - Node.js 20.19+ 或 22.12+（建议使用仍受支持的 LTS 版本）
-- Python 3.10 或更高版本
+- Python 3.10–3.13
 
-## 本地启动
+## 一键安装（Windows）
+
+下载或解压完整项目后，双击项目根目录的 [安装 UTA 网站.cmd](安装%20UTA%20网站.cmd)。脚本会检查电脑里符合要求的 Node.js、Python；如果缺少，会下载便携版 Node.js 24.21.0 或项目内的 Python 3.12，创建 `server/.venv`，安装前端与后端依赖。安装结束后双击 [启动 UTA 网站.cmd](启动%20UTA%20网站.cmd)。已安装过时可以再次运行安装程序，以补齐或更新依赖；不会删除网页中保存的歌曲和学习进度。
+
+脚本只向项目内的 `.tools/`、`node_modules/`、`server/.venv/` 和各缓存目录安装或下载文件，不改系统 PATH，也不要求管理员权限；如复用电脑里已经安装的 Node.js/Python，也不会向它们的全局目录安装包。请确保项目所在磁盘有足够空间，首次安装需要访问 Node.js 官网、GitHub、npm 与 Python 包索引。网络或代理阻断时，脚本会停下并显示出错步骤，可检查网络后重试；不会自动安装可选的大型日中词典。Windows 以外的系统请按下方手动步骤安装。
+
+## 手动安装与启动
 
 在项目根目录打开 PowerShell：
 
@@ -67,11 +73,11 @@ npm.cmd run test:readings
 server\.venv\Scripts\python.exe -m unittest discover -s server\tests
 ```
 
-所有 npm 依赖放在项目的 `node_modules/`，Python 依赖放在 `server/.venv/`，不会安装到系统全局目录。
+所有 npm 依赖放在项目的 `node_modules/`，Python 依赖放在 `server/.venv/`，不会安装到系统全局目录。使用手动步骤时，`npm.cmd` 和 `py` 需事先可用；如果它们没有安装，请使用上方的一键安装程序。
 
 ### 以后不用输入命令
 
-首次完成上述安装后，直接双击项目根目录的 [启动 UTA 网站.cmd](启动%20UTA%20网站.cmd)。它会启动本地服务并自动打开浏览器。不要关闭标题为 `UTA local server` 的命令窗口；关闭它即可停止网站。
+首次完成上述安装后，直接双击项目根目录的 [启动 UTA 网站.cmd](启动%20UTA%20网站.cmd)。它会自动识别安装程序放在项目内的 Node.js，启动本地服务并打开浏览器。不要关闭标题为 `UTA local server` 的命令窗口；关闭它即可停止网站。
 
 ## 逐句练习与复习
 

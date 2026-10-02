@@ -1,5 +1,8 @@
 node_modules
 .npm-cache
+.tools/
+.setup-cache/
+.uv-cache/
 .pip-cache
 .pip-temp
 server/.venv
