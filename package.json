@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "lyrics:sync": "node scripts/sync-lyrics.mjs",
-    "api": "server\\.venv\\Scripts\\python.exe -m uvicorn app:app --app-dir server --reload",
+    "api": "server\\.venv\\Scripts\\python.exe -m uvicorn app:app --app-dir server",
     "web": "vite",
     "dev": "npm run lyrics:sync && concurrently --kill-others-on-fail -n api,web \"npm run api\" \"npm run web\"",
     "build": "npm run lyrics:sync && vite build",

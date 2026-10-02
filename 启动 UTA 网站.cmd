@@ -39,9 +39,17 @@ if not errorlevel 1 goto openBrowser
 
 if not defined UTA_WAIT_SECONDS set UTA_WAIT_SECONDS=0
 set /a UTA_WAIT_SECONDS+=1
-if %UTA_WAIT_SECONDS% GEQ 15 goto openBrowser
+if %UTA_WAIT_SECONDS% GEQ 30 goto startupFailed
 timeout /t 1 /nobreak >nul
 goto waitForWeb
+
+:startupFailed
+echo.
+echo [UTA] The web service did not start within 30 seconds.
+echo Check the "UTA local server" window for the actual error.
+echo.
+pause
+exit /b 1
 
 :openBrowser
 start "" "http://localhost:5173"

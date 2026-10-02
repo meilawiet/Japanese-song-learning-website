@@ -39,6 +39,8 @@
 
 脚本只向项目内的 `.tools/`、`node_modules/`、`server/.venv/` 和各缓存目录安装或下载文件，不改系统 PATH，也不要求管理员权限；如复用电脑里已经安装的 Node.js/Python，也不会向它们的全局目录安装包。请确保项目所在磁盘有足够空间，首次安装需要访问 Node.js 官网、GitHub、npm 与 Python 包索引。网络或代理阻断时，脚本会停下并显示出错步骤，可检查网络后重试；不会自动安装可选的大型日中词典。Windows 以外的系统请按下方手动步骤安装。
 
+旧版安装脚本若在下载 Node.js 后提示 `Downloaded Node.js is not usable`，更新项目文件后直接重新双击安装程序即可；已验证的下载缓存会复用，不用手工删除 `.tools/`。若仍失败，请保留安装窗口中显示的完整报错，方便定位解压位置或系统兼容问题。
+
 ## 手动安装与启动
 
 在项目根目录打开 PowerShell：
@@ -70,6 +72,8 @@ npm.cmd run test:backup
 node --test tests/aiSettings.test.mjs
 npm.cmd run test:lyrics
 npm.cmd run test:readings
+node --test tests\startup.test.mjs
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\setup.ps1
 server\.venv\Scripts\python.exe -m unittest discover -s server\tests
 ```
 
@@ -77,7 +81,9 @@ server\.venv\Scripts\python.exe -m unittest discover -s server\tests
 
 ### 以后不用输入命令
 
-首次完成上述安装后，直接双击项目根目录的 [启动 UTA 网站.cmd](启动%20UTA%20网站.cmd)。它会自动识别安装程序放在项目内的 Node.js，启动本地服务并打开浏览器。不要关闭标题为 `UTA local server` 的命令窗口；关闭它即可停止网站。
+首次完成上述安装后，直接双击项目根目录的 [启动 UTA 网站.cmd](启动%20UTA%20网站.cmd)。它会自动识别安装程序放在项目内的 Node.js，启动本地服务并打开浏览器。不要关闭标题为 `UTA local server` 的命令窗口；关闭它即可停止网站。Windows 下本地 API 不启用自动重载，修改后端 Python 代码后请关闭窗口再重新启动；网页前端仍保留 Vite 的热更新。
+
+首次启动时显示“从 `geci` 同步 0 首歌曲”是正常的：公开仓库没有附带商业歌曲，网页会显示内置原创短句；也可进入“歌曲库”自行导入 LRC 和音频。如果浏览器打开后始终空白，先确认服务窗口里的 `[web]` 没有退出；若启动程序等待 30 秒后提示失败，请保留该窗口的完整报错。旧版本若显示 `WatchFiles detected changes in '.uv-cache'`，请更新项目文件并重新启动，勿把 `.uv-cache` 当作歌词文件处理。
 
 ## 逐句练习与复习
 

@@ -47,7 +47,9 @@ function Get-VerifiedDownload([string]$url, [string]$hashUrl, [string]$fileName,
   if (-not [IO.Path]::GetFullPath($target).StartsWith($cachePrefix, [StringComparison]::OrdinalIgnoreCase)) {
     throw 'Refusing to write a download outside the project setup cache.'
   }
-  $hashText = (Invoke-WebRequest -Uri $hashUrl -UseBasicParsing).Content
+  $hashContent = (Invoke-WebRequest -Uri $hashUrl -UseBasicParsing).Content
+  # GitHub serves some .sha256 assets as bytes in Windows PowerShell 5.1.
+  $hashText = if ($hashContent -is [byte[]]) { [Text.Encoding]::UTF8.GetString($hashContent) } else { [string]$hashContent }
   $matchingLine = @($hashText -split "`n" | Where-Object { $_ -match [regex]::Escape($fileName) }) | Select-Object -First 1
   if (-not $matchingLine -and $hashUrl.EndsWith('.sha256')) { $matchingLine = ($hashText -split "`n" | Select-Object -First 1) }
   $checksumMatch = [regex]::Match([string]$matchingLine, '[a-fA-F0-9]{64}')
@@ -75,9 +77,13 @@ function Get-VerifiedDownload([string]$url, [string]$hashUrl, [string]$fileName,
 function Test-Node([string]$nodeExe, [string]$npmCmd) {
   if (-not (Test-Path -LiteralPath $nodeExe) -or -not (Test-Path -LiteralPath $npmCmd)) { return $false }
   try {
-    $versionText = (& $nodeExe --version 2>$null | Select-Object -First 1)
-    if ($LASTEXITCODE -ne 0 -or $versionText -notmatch '^v(\d+)\.(\d+)\.') { return $false }
-    $major = [int]$Matches[1]; $minor = [int]$Matches[2]
+    # Keep the native invocation outside a pipeline: a fresh PowerShell process
+    # can otherwise leave LASTEXITCODE unset even when node.exe succeeds.
+    $versionText = & $nodeExe --version 2>$null
+    if ($LASTEXITCODE -ne 0) { return $false }
+    $versionMatch = [regex]::Match([string]$versionText, '^v(\d+)\.(\d+)\.')
+    if (-not $versionMatch.Success) { return $false }
+    $major = [int]$versionMatch.Groups[1].Value; $minor = [int]$versionMatch.Groups[2].Value
     return (($major -eq 20 -and $minor -ge 19) -or ($major -eq 22 -and $minor -ge 12) -or ($major -ge 24 -and $major % 2 -eq 0))
   } catch { return $false }
 }
@@ -87,7 +93,7 @@ function Find-Python {
   if ($candidate) {
     foreach ($version in @('3.13', '3.12', '3.11', '3.10')) {
       try {
-        & $candidate.Source "-$version" -c 'import sys; print(sys.executable)' 2>$null | Out-Null
+        $null = & $candidate.Source "-$version" -c 'import sys; print(sys.executable)' 2>$null
         if ($LASTEXITCODE -eq 0) { return @{ File = $candidate.Source; Prefix = @("-$version") } }
       } catch { }
     }
@@ -95,7 +101,7 @@ function Find-Python {
   $candidate = Get-Command python.exe -ErrorAction SilentlyContinue
   if ($candidate) {
     try {
-      & $candidate.Source -c 'import sys; exit(0 if sys.version_info[:2] in [(3, 10), (3, 11), (3, 12), (3, 13)] else 1)' 2>$null | Out-Null
+      $null = & $candidate.Source -c 'import sys; exit(0 if sys.version_info[:2] in [(3, 10), (3, 11), (3, 12), (3, 13)] else 1)' 2>$null
       if ($LASTEXITCODE -eq 0) {
         return @{ File = $candidate.Source; Prefix = @() }
       }
@@ -128,7 +134,9 @@ try {
     $archive = Join-Path $setupCache $fileName
     Get-VerifiedDownload "$baseUrl/$fileName" "$baseUrl/SHASUMS256.txt" $fileName $archive
     Expand-Archive -LiteralPath $archive -DestinationPath $toolsDir -Force
-    if (-not (Test-Node $localNode $localNpm)) { throw 'Downloaded Node.js is not usable.' }
+    if (-not (Test-Node $localNode $localNpm)) {
+      throw "Downloaded Node.js failed its version check. Verify $localNode and $localNpm, then retry setup."
+    }
     $nodeDir = $localNodeDir
     Write-Host '[UTA] Node.js installed inside .tools.'
   }
@@ -137,7 +145,7 @@ try {
   $npm = if (Test-Path -LiteralPath $selectedNpm) { $selectedNpm } else { (Get-Command npm.cmd).Source }
 
   if (Test-Path -LiteralPath $venvPython) {
-    & $venvPython --version 2>$null | Out-Null
+    $null = & $venvPython --version 2>$null
     if ($LASTEXITCODE -ne 0) { throw 'The existing server/.venv is damaged. Back it up and remove that folder, then retry setup.' }
     Write-Host '[UTA] Using existing project Python environment.'
   } else {
@@ -161,7 +169,7 @@ try {
       Expand-Archive -LiteralPath $uvArchive -DestinationPath $uvDir -Force
       $uv = Join-Path $uvDir 'uv.exe'
       if (-not (Test-Path -LiteralPath $uv)) { throw "uv.exe was not found in $uvDir." }
-      Invoke-Step 'Installing Python 3.12 inside .tools' { & $uv python install 3.12 --install-dir $env:UV_PYTHON_INSTALL_DIR }
+      Invoke-Step 'Installing Python 3.12 inside .tools' { & $uv python install 3.12 --install-dir $env:UV_PYTHON_INSTALL_DIR --no-bin }
       Invoke-Step 'Creating server/.venv' { & $uv venv --managed-python --python 3.12 --seed (Join-Path $projectRoot 'server\.venv') }
       Write-Host '[UTA] Python installed inside .tools; environment created in server/.venv.'
     }
@@ -189,6 +197,7 @@ try {
 } catch {
   Write-Host ''
   Write-Host "[UTA] Setup stopped: $($_.Exception.Message)" -ForegroundColor Red
-  Write-Host '[UTA] Check network/proxy access to nodejs.org, github.com and the package registries, then run setup again.'
+  Write-Host '[UTA] If a download failed, check access to nodejs.org, github.com and package registries.'
+  Write-Host '[UTA] Otherwise, keep this full error message and retry with the latest setup script.'
   exit 1
 }
