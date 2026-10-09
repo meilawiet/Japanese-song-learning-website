@@ -34,13 +34,13 @@ from ai_provider import Provider, default_provider, provider_from_request, reque
 from artwork_sources import fetch_artwork_image, search_artwork_candidates
 
 
-load_dotenv(Path(__file__).with_name(".env"))
+load_dotenv(Path(os.getenv("UTA_ENV_FILE", str(Path(__file__).with_name(".env")))))
 
 
 # The optional Tomoshi database is kept beside the API rather than embedded in
 # the client bundle.  It supplies local Chinese definitions for ordinary words,
 # while Sudachi remains responsible for segmentation and readings.
-TOMOSHI_DB_PATH = Path(__file__).with_name("data") / "tomoshi-dict-open.db"
+TOMOSHI_DB_PATH = Path(os.getenv("UTA_TOMOSHI_DB", str(Path(__file__).with_name("data") / "tomoshi-dict-open.db")))
 TOMOSHI_LOCAL = threading.local()
 
 

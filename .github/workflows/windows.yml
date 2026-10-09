@@ -1,0 +1,49 @@
+name: Build UTA Windows
+on:
+  workflow_dispatch:
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare project-local environments
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .cache/electron, .npm-cache, .pip-cache, work/tmp | Out-Null
+          $env:electron_config_cache = Join-Path $PWD '.cache/electron'
+          $env:npm_config_cache = Join-Path $PWD '.npm-cache'
+          $env:PIP_CACHE_DIR = Join-Path $PWD '.pip-cache'
+          $env:TEMP = Join-Path $PWD 'work/tmp'
+          $env:TMP = $env:TEMP
+          npm.cmd ci --no-audit --no-fund
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m venv server/.venv
+          server/.venv/Scripts/python.exe -m pip install -r server/requirements-desktop.txt
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          server/.venv/Scripts/python.exe -B scripts/download-tomoshi.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Build and verify
+        shell: pwsh
+        run: |
+          npm.cmd run windows:package
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          npm.cmd test
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          server/.venv/Scripts/python.exe -B -m unittest discover -s server/tests
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          npm.cmd run test:desktop
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          server/.venv/Scripts/python.exe -B scripts/archive-windows.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UTA-Windows-x64
+          path: |
+            release/UTA-*-Windows-x64.zip
+            release/UTA-*-Windows-x64.zip.sha256

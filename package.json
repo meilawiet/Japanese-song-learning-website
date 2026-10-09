@@ -13,12 +13,13 @@
     "test:lyrics": "node --test tests/lrcEncoding.test.mjs tests/learningIdentity.test.mjs",
     "test:readings": "node --test tests/readingDisplay.test.mjs tests/readingComponents.test.mjs",
     "preview": "vite preview",
-    "android:build": "vite build --config vite.android.config.js",
-    "android:sync": "npm run android:build && cap sync android",
-    "android:run": "npm run android:sync && cap run android --no-sync"
+    "test": "node --test tests/*.test.mjs",
+    "desktop:dev": "node node_modules/vite/bin/vite.js build --config vite.desktop.config.js && electron .",
+    "desktop:build": "node scripts/build-desktop.mjs",
+    "windows:package": "npm run desktop:build && node scripts/package-windows.mjs && server\\.venv\\Scripts\\python.exe -B scripts\\archive-windows.py",
+    "test:desktop": "node tests/desktop.smoke.mjs"
   },
   "dependencies": {
-    "@capacitor/android": "8.5.3",
     "@capacitor/app": "8.1.2",
     "@capacitor/browser": "8.0.1",
     "@capacitor/core": "8.5.3",
@@ -29,9 +30,13 @@
     "wanakana": "^5.3.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.5.3",
     "@vitejs/plugin-react": "^5.0.2",
     "concurrently": "^9.2.1",
+    "electron": "44.5.1",
+    "playwright": "1.58.0",
+    "rcedit": "5.0.2",
     "vite": "^7.1.7"
-  }
+  },
+  "description": "UTA Windows app for learning Japanese with song lyrics",
+  "main": "desktop/main.cjs"
 }

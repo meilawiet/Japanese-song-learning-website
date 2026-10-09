@@ -2,9 +2,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import './styles.css'
+import { loadAiSettingsFromDevice } from './lib/aiSettings'
 
-createRoot(document.getElementById('root')).render(
+function renderApp() { createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
   </StrictMode>,
 )
+
+}
+if (window.utaDesktop) loadAiSettingsFromDevice().catch(() => {}).finally(renderApp)
+else renderApp()

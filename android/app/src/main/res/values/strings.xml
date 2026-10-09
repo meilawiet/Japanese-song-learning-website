@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <!-- 旧名称为 UTA 日语歌学习；按用户要求统一显示为 UTA。 -->
-    <string name="app_name">UTA</string>
-    <string name="title_activity_main">UTA</string>
-    <string name="package_name">com.uta.songlearning</string>
-    <string name="custom_url_scheme">com.uta.songlearning</string>
-</resources>

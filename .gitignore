@@ -26,3 +26,13 @@ dist
 ANDROID_APP_HANDOFF.md
 *.p12
 *.idsig
+
+# Windows runtime, caches, private data, and generated artifacts
+.cache/
+work/
+release/
+uta-data/
+dist-desktop/
+*.log
+server/data/*.partial.db
+verification/

@@ -52,6 +52,7 @@ const RECENT_LEARN_KEY = 'uta-recent-learn-v1'
 const RECENT_SING_KEY = 'uta-recent-sing-v1'
 // 手机上的导入入口增加来源选择；电脑网页仍保留原来的文件导入流程。
 const IS_ANDROID_APP = Capacitor.isNativePlatform()
+const IS_DESKTOP_APP = Boolean(globalThis.window?.utaDesktop)
 
 function loadLocal(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback } catch { return fallback }
@@ -1818,7 +1819,7 @@ export default function App() {
         {IS_ANDROID_APP && <AndroidSongLibrary songs={androidLibrarySongs} total={androidLibraryTotal} search={librarySearch} onSearch={setLibrarySearch} onImport={openImportDialog} artworkFor={artworkForSong} learnedBySong={learnedBySong} onOpen={chooseSongFromLibrary} onDelete={removeImportedSong} onArtwork={openArtworkEditor} onEdit={setEditingDetailsSong} deletingSongId={deletingSongId} activeSongId={activeSong.id} />}
         {/* 原网页歌曲库保留作对照；安卓使用上方独立的简洁布局。 */}
         {!IS_ANDROID_APP && <>
-        <div className="library-top"><div><p className="eyebrow">YOUR IMPORTED SONGS</p><h2 id="library-title">歌曲库</h2><p>从已导入的歌词中选一首，继续练习发音与词汇。</p></div><div className="library-top-actions"><label className="library-search"><Search size={14} /><input id="library-search" type="search" value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} placeholder="搜索歌名或歌手" aria-label="搜索歌名或歌手" />{librarySearch && <button type="button" onClick={() => setLibrarySearch('')} aria-label="清除搜索"><X size={13} /></button>}</label><span className="library-count">{librarySearch ? `找到 ${visibleLibrarySongs.length} / ${allSongs.length} 首` : `已导入 ${allSongs.length} 首`}</span><button className="library-import-trigger" type="button" onClick={openImportDialog}><Upload size={14} /> 导入歌曲</button>{!IS_ANDROID_APP && <button className="library-import-trigger" type="button" onClick={shareComputerSongs}><Upload size={14} /> 共享到手机</button>}</div></div>
+        <div className="library-top"><div><p className="eyebrow">YOUR IMPORTED SONGS</p><h2 id="library-title">歌曲库</h2><p>从已导入的歌词中选一首，继续练习发音与词汇。</p></div><div className="library-top-actions"><label className="library-search"><Search size={14} /><input id="library-search" type="search" value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} placeholder="搜索歌名或歌手" aria-label="搜索歌名或歌手" />{librarySearch && <button type="button" onClick={() => setLibrarySearch('')} aria-label="清除搜索"><X size={13} /></button>}</label><span className="library-count">{librarySearch ? `找到 ${visibleLibrarySongs.length} / ${allSongs.length} 首` : `已导入 ${allSongs.length} 首`}</span><button className="library-import-trigger" type="button" onClick={openImportDialog}><Upload size={14} /> 导入歌曲</button>{!IS_ANDROID_APP && !IS_DESKTOP_APP && <button className="library-import-trigger" type="button" onClick={shareComputerSongs}><Upload size={14} /> 共享到手机</button>}</div></div>
         <div className="library-backup-bar"><div><b>保存你的学习记录</b><span>在设置中统一管理数据备份与 AI 服务。</span></div><div className="library-backup-actions"><button type="button" onClick={() => setSettingsOpen(true)}><Settings size={14} /> 数据管理</button></div></div>
         {/* 电脑网页主动开启一次性传歌，手机才能看见网页缓存中的歌曲。 */}
         {!IS_ANDROID_APP && computerShare && <div className="computer-share-card" role="status">

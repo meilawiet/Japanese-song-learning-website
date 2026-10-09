@@ -5,10 +5,11 @@ const SECRET_KEY = 'uta-ai-key-v1'
 // Android 持久密钥由系统 Keystore 加密；会话内只保留在内存或 sessionStorage。
 const credentialStore = registerPlugin('UtaAiCredential')
 let mobileKey = ''
+const isDesktop = () => Boolean(globalThis.window?.utaDesktop)
 
 export const DEFAULT_AI_SETTINGS = {
   // Android 没有电脑本机后端，默认要求用户填写自己的 AI 服务。
-  useServerDefault: !Capacitor.isNativePlatform(), name: 'DeepSeek', protocol: 'deepseek',
+  useServerDefault: !Capacitor.isNativePlatform() && !isDesktop(), name: 'DeepSeek', protocol: 'deepseek',
   base_url: 'https://api.deepseek.com', model: 'deepseek-flash',
   api_key: '', json_mode: true, rememberKey: false,
   // 默认关闭联网查询，开启后可能增加模型和搜索调用费用。
@@ -19,16 +20,22 @@ export function loadAiSettings() {
   try {
     const config = JSON.parse(localStorage.getItem(CONFIG_KEY) || 'null') || {}
     // 旧实现保留作对照：网页端记住的 API Key 存在 localStorage，手机端改用系统加密存储。
-    const api_key = Capacitor.isNativePlatform()
+    const api_key = Capacitor.isNativePlatform() || isDesktop()
       ? (config.rememberKey ? mobileKey : sessionStorage.getItem(SECRET_KEY))
       : (config.rememberKey ? localStorage.getItem(SECRET_KEY) : sessionStorage.getItem(SECRET_KEY))
     return { ...DEFAULT_AI_SETTINGS, ...config,
-      useServerDefault: Capacitor.isNativePlatform() ? false : (config.useServerDefault ?? true),
+      useServerDefault: Capacitor.isNativePlatform() ? false : (config.useServerDefault ?? DEFAULT_AI_SETTINGS.useServerDefault),
       api_key: api_key || '' }
   } catch { return { ...DEFAULT_AI_SETTINGS } }
 }
 
 export async function loadAiSettingsFromDevice() {
+  if (isDesktop()) {
+    const config = JSON.parse(localStorage.getItem(CONFIG_KEY) || 'null') || {}
+    if (config.rememberKey) mobileKey = await window.utaDesktop.loadCredential()
+    localStorage.removeItem(SECRET_KEY)
+    return loadAiSettings()
+  }
   if (!Capacitor.isNativePlatform()) return loadAiSettings()
   const config = JSON.parse(localStorage.getItem(CONFIG_KEY) || 'null') || {}
   if (config.rememberKey) {
@@ -44,6 +51,21 @@ export async function loadAiSettingsFromDevice() {
 
 export async function saveAiSettings(settings) {
   const { api_key, ...config } = settings
+  if (isDesktop()) {
+    const value = settings.useServerDefault ? '' : api_key.trim()
+    if (settings.rememberKey) {
+      await window.utaDesktop.saveCredential(value)
+      sessionStorage.removeItem(SECRET_KEY)
+    } else {
+      await window.utaDesktop.clearCredential()
+      sessionStorage.setItem(SECRET_KEY, value)
+    }
+    mobileKey = value
+    localStorage.removeItem(SECRET_KEY)
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(config))
+    window.dispatchEvent(new Event('uta:ai-settings'))
+    return
+  }
   if (Capacitor.isNativePlatform()) {
     mobileKey = api_key.trim()
     if (settings.rememberKey) {
@@ -67,6 +89,7 @@ export async function saveAiSettings(settings) {
 }
 
 export async function clearAiSettings() {
+  if (isDesktop()) { await window.utaDesktop.clearCredential(); mobileKey = '' }
   if (Capacitor.isNativePlatform()) { mobileKey = ''; await credentialStore.clear() }
   localStorage.removeItem(CONFIG_KEY)
   localStorage.removeItem(SECRET_KEY)

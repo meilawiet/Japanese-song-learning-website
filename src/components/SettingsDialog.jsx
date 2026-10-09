@@ -30,7 +30,7 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
     const controller = new AbortController()
     getAiStatus(controller.signal).then(setServerStatus).catch(() => {})
     // 手机从 Android Keystore 异步读取用户选择记住的 AI Key。
-    if (isAndroid) loadAiSettingsFromDevice().then(setDraft).catch(() => setMessage({ kind: 'error', text: '无法读取手机保存的 AI Key，请重新填写。' }))
+    if (isAndroid || window.utaDesktop) loadAiSettingsFromDevice().then(setDraft).catch(() => setMessage({ kind: 'error', text: '无法读取保存的 AI Key，请重新填写。' }))
     function onKey(event) {
       if (event.key === 'Escape') { event.preventDefault(); closeRef.current() }
       if (event.key !== 'Tab') return
