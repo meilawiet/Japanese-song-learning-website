@@ -56,7 +56,10 @@ public class WebDavPlugin extends Plugin {
         } catch(Exception failure){target.delete();throw failure;}
         files.put(id,target);JSObject result=new JSObject();result.put("id",id);result.put("size",target.length());return result;
     });}
-    @PluginMethod public void read(PluginCall call) {run(call,()->{File target=file(call);long offset=call.getLong("offset",0L);if(offset<0||offset>target.length())throw new IOException("读取位置无效。");byte[] bytes=new byte[(int)Math.min(256*1024,target.length()-offset)];try(RandomAccessFile input=new RandomAccessFile(target,"r")){input.seek(offset);input.readFully(bytes);}JSObject result=new JSObject();result.put("data",Base64.encodeToString(bytes,Base64.NO_WRAP));return result;});}
+    // 旧实现保留供对照：getLong 只接受 Long，小于 2 GB 的 JSON 整数实际是 Integer，导致每块都从 0 读取。
+    // @PluginMethod public void read(PluginCall call) {run(call,()->{File target=file(call);long offset=call.getLong("offset",0L);if(offset<0||offset>target.length())throw new IOException("读取位置无效。");byte[] bytes=new byte[(int)Math.min(256*1024,target.length()-offset)];try(RandomAccessFile input=new RandomAccessFile(target,"r")){input.seek(offset);input.readFully(bytes);}JSObject result=new JSObject();result.put("data",Base64.encodeToString(bytes,Base64.NO_WRAP));return result;});}
+    // 兼容桥接传入的 Integer 与 Long，并拒绝缺失、字符串、小数或越界位置。
+    @PluginMethod public void read(PluginCall call) {run(call,()->{byte[] bytes=WebDavFileChunks.read(file(call),call.getData().opt("offset"));JSObject result=new JSObject();result.put("data",Base64.encodeToString(bytes,Base64.NO_WRAP));return result;});}
     @PluginMethod public void release(PluginCall call) {run(call,()->{File target=files.remove(call.getString("id",""));if(target!=null)target.delete();return new JSObject();});}
     // 只用于清理本轮自动创建的测试备份，产品界面不提供删除用户云文件操作。
     @PluginMethod public void deleteTest(PluginCall call) {run(call,()->{if(!call.getString("name","").startsWith("_uta-test-"))throw new IOException("仅可清理 UTA 临时测试文件。");try(Response response=client.newCall(request(call,"DELETE",null,false).build()).execute()){check(response);}return new JSObject();});}

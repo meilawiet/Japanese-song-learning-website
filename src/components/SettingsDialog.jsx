@@ -110,6 +110,8 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
         </>}
         {/* 安卓数据管理只保留完整的本机云备份。 */}
         {isAndroid && <WebDavPanel onCreateBackup={onCloudExport} onRestore={onRestore}/>}
+        {/* 安卓同样展示备份解析错误，避免下载完成但预览失败时没有任何反馈。 */}
+        {isAndroid && backupError && <p className="settings-message error" role="alert">{backupError}</p>}
       </div> : <form className="settings-content" onSubmit={save}>
         <fieldset disabled={busy} className="settings-fields">
           {!isAndroid && <label className="settings-checkbox"><input type="checkbox" checked={draft.useServerDefault} onChange={(event) => update('useServerDefault', event.target.checked)} /> 使用服务端默认配置</label>}

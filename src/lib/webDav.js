@@ -30,7 +30,20 @@ export async function webDavUpload(config,blob,name,progress=()=>{}) {
 }
 export async function webDavDownload(config,name,progress=()=>{}) {
   const value=validateWebDav(config),{id,size}=await native.download({config:value,name}),parts=[]
-  try {for(let offset=0;offset<size;offset+=256*1024){const {data}=await native.read({id,offset});parts.push(Uint8Array.from(atob(data),c=>c.charCodeAt(0)));progress(Math.round(Math.min(offset+256*1024,size)/size*100))}return new Blob(parts,{type:'application/octet-stream'})}finally{await native.release({id}).catch(()=>{})}
+  // 旧流程只拼接数据，不核对每块长度，桥接偏移异常时仍显示下载完成。
+  // try {for(let offset=0;offset<size;offset+=256*1024){const {data}=await native.read({id,offset});parts.push(Uint8Array.from(atob(data),c=>c.charCodeAt(0)));progress(Math.round(Math.min(offset+256*1024,size)/size*100))}return new Blob(parts,{type:'application/octet-stream'})}finally{await native.release({id}).catch(()=>{})}
+  try {
+    if(!Number.isSafeInteger(size)||size<=0||size>500*1024*1024)throw new Error('云备份文件大小无效。')
+    for(let offset=0;offset<size;offset+=256*1024){
+      const {data}=await native.read({id,offset})
+      const chunk=Uint8Array.from(atob(data),c=>c.charCodeAt(0))
+      // 最后一块按剩余大小校验，不允许缺失或重复多余字节进入备份解析。
+      if(chunk.length!==Math.min(256*1024,size-offset))throw new Error('云备份下载不完整，请重试。')
+      parts.push(chunk)
+      progress(Math.round((offset+chunk.length)/size*100))
+    }
+    return new Blob(parts,{type:'application/octet-stream'})
+  }finally{await native.release({id}).catch(()=>{})}
 }
 // 所有入口共用锁，避免自动备份与手动下载同时操作本机数据。
 let running=false

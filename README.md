@@ -2,7 +2,7 @@
 
 用自己的歌曲练习日语：逐句听、看注音、慢速练习，再跟着原唱连续唱。支持安卓应用与电脑网页。
 
-**当前版本：1.0.0**
+**安卓当前版本：1.0.1** · 当前分支：`android-dev`（安卓开发）
 
 [安卓下载与使用](#安卓端下载与安装) · [网页安装与使用](#网页端安装与使用) · [开发交接](WEB_APP_DEVELOPMENT_HANDOFF.md)
 
@@ -10,7 +10,7 @@
 
 ### 1. 下载 APK
 
-**[下载 UTA 1.0.0 APK](https://github.com/meilawiet/Japanese-song-learning-website/releases/download/v1.0.0/UTA-Android-1.0.0.apk)** · [查看发布记录](https://github.com/meilawiet/Japanese-song-learning-website/releases)
+**[下载 UTA 1.0.1 APK](https://github.com/meilawiet/Japanese-song-learning-website/releases/download/v1.0.1/UTA-Android-1.0.1.apk)** · [查看发布记录](https://github.com/meilawiet/Japanese-song-learning-website/releases)
 
 打开版本页面，展开 **Assets（附件）**，下载以 **.apk** 结尾的安装包。
 
@@ -24,7 +24,15 @@
 
 支持 Android 7.0 及以上；目前已在 Android 13 手机测试。正常安装和使用无需开启 USB 调试，无需电脑。
 
-下方安卓说明对应 1.0.0，更新内容可在版本发布记录中查看。
+下方安卓说明对应 1.0.1。可直接覆盖安装 1.0.0，无需卸载，保留本机数据。
+
+### 1.0.1 更新
+
+- 修复 WebDAV 备份下载完成后没有出现预览、无法恢复歌曲与个人资料的问题。
+- 修复三星手机重复选择头像图片时偶发读取失败的问题。
+- 备份解析与头像读取失败时显示中文红色错误提示。
+
+云备份下载完成后仍需在预览中确认“覆盖当前数据并恢复”，才会替换本机数据。
 
 ## 第一次使用
 
@@ -428,6 +436,9 @@ scripts/sync-lyrics.mjs
 <details>
 <summary>开发者与合作者文档</summary>
 
+- 安卓开发与 APK 发布使用 [`android-dev`](https://github.com/meilawiet/Japanese-song-learning-website/tree/android-dev)，后续安卓修改仅推送这个分支。
+- 网页合作者可从共同基线创建并维护自己的网页分支；`main` 保留共同基线，未经沟通不合并。不同分支中的 `src/` 修改互不影响，共享修复需要双方主动引入。
+- 克隆安卓开发分支：`git clone --branch android-dev https://github.com/meilawiet/Japanese-song-learning-website.git`。已有仓库请先保存自己的工作，再执行 `git fetch origin`、`git switch --track origin/android-dev`；已有本地分支直接 `git switch android-dev`。
 - [网页端后续开发交接](WEB_APP_DEVELOPMENT_HANDOFF.md)：安卓与网页差异、代码入口、开发顺序及验收要求。
 - [网页安装与开发说明存档](docs/PROJECT_SETUP_ARCHIVE.md)：网页启动、电脑传歌、构建和原有技术说明；部分版本信息为历史记录。
 - [第三方数据声明](THIRD_PARTY_DATA_NOTICES.md)。

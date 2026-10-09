@@ -14,6 +14,12 @@ export default function ProfilePanel({ editable = false }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const generation = useRef(0)
+  // 安卓原生选图复制失败时，使用同一处红色错误提示，不把取消选图当成错误。
+  useEffect(() => {
+    const failed = event => { setError(event.detail || '无法读取头像，请重新选择。'); setNotice('') }
+    window.addEventListener('uta:avatar-picker-error', failed)
+    return () => window.removeEventListener('uta:avatar-picker-error', failed)
+  }, [])
   useEffect(() => {
     let alive = true, currentUrl
     const refresh = async () => {

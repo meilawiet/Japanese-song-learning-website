@@ -7,7 +7,10 @@ import { renderToStaticMarkup } from 'react-dom/server'
 let server, AnnotatedLine, SettingsDialog
 let AndroidSingAlong
 before(async () => {
-  server = await createServer({ ssr: { external: ['@faanau/kuromoji'] }, server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' })
+  // 旧测试服务会监听本机测试浏览器缓存，Windows 锁定的 Cookie 文件会导致测试异常。
+  // server = await createServer({ ssr: { external: ['@faanau/kuromoji'] }, server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' })
+  // 排除不属于源码的工具与虚拟环境目录，避免锁文件干扰组件回归测试。
+  server = await createServer({ ssr: { external: ['@faanau/kuromoji'] }, server: { middlewareMode: true, watch: { ignored: ['**/.tools/**', '**/server/.venv/**'] } }, appType: 'custom', logLevel: 'silent' })
   AnnotatedLine = (await server.ssrLoadModule('/src/components/AnnotatedLine.jsx')).default
   SettingsDialog = (await server.ssrLoadModule('/src/components/SettingsDialog.jsx')).default
   AndroidSingAlong = (await server.ssrLoadModule('/src/components/AndroidSingAlong.jsx')).default
