@@ -753,3 +753,8 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .app-update-dialog header { display:flex; align-items:center; justify-content:space-between; gap:12px; }.app-update-dialog header h3 { margin:0; font-size:22px; }.app-update-dialog header button { border:0; padding:8px; background:none; color:inherit; }
 .app-update-dialog p { font-size:14px; line-height:1.8; }.app-update-notes { white-space:pre-wrap; max-height:35dvh; overflow:auto; }.app-update-dialog footer { display:flex; justify-content:end; gap:12px; margin-top:22px; }.app-update-dialog footer button { padding:12px 16px; border:0; border-radius:12px; color:#426550; background:#eaf0e4; font:inherit; }.app-update-dialog footer button:last-child { background:#426550; color:white; }
 @media(max-width:380px) { .uta-android-font .settings-tabs button,.uta-android-font .settings-tabs .profile-settings-tab { font-size:13px; gap:4px; }.uta-android-font .settings-tabs svg { width:15px; height:15px; } }
+
+/* 安卓更新安装入口保持紧凑，下载进度与原生安装授权提示在同一区域显示。 */
+.update-install-controls { display:grid; gap:10px; margin:14px 0; }
+.update-install-controls p { margin:0; line-height:1.6; }
+.update-install-controls button { min-height:44px; padding:10px 14px; border:1px solid #d2dec9; border-radius:10px; background:#e6eee7; color:#365843; }

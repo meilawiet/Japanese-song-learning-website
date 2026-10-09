@@ -13,6 +13,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AiCredentialPlugin.class);
         // 云备份使用原生 WebDAV，绕过网页跨域限制并分块传输音频。
         registerPlugin(WebDavPlugin.class);
+        // 原生下载并校验更新包，提供系统安装器和其他安装方式选择。
+        registerPlugin(AppUpdatePlugin.class);
         super.onCreate(savedInstanceState);
         // 头像选图先复制到应用缓存，避免三星相册重复选图时 WebView 读不到临时文件。
         bridge.getWebView().setWebChromeClient(new AvatarWebChromeClient(bridge));

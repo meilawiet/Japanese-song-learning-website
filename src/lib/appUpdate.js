@@ -22,5 +22,7 @@ export function selectAppRelease(release,current) {
   })
   if(!assets.length)return {available:false,message:'暂未发布可下载安装的更新。'}
   const asset=assets.find(a=>/universal/i.test(a.name))||assets[0]
-  return {available:true,newer:newerAppVersion(release.tag_name,current),version:release.tag_name,url:asset.browser_download_url,notes:typeof release.body==='string'?release.body.slice(0,4000):'',message:newerAppVersion(release.tag_name,current)?'发现新版本。':'当前已是最新版本。'}
+  // 保留 GitHub 附件的校验值，原生下载器校验完整性后才开放安装入口。
+  // return {available:true,newer:newerAppVersion(release.tag_name,current),version:release.tag_name,url:asset.browser_download_url,notes:typeof release.body==='string'?release.body.slice(0,4000):'',message:newerAppVersion(release.tag_name,current)?'发现新版本。':'当前已是最新版本。'}
+  return {available:true,newer:newerAppVersion(release.tag_name,current),version:release.tag_name,url:asset.browser_download_url,sha256:/^sha256:[0-9a-f]{64}$/.test(asset.digest||'')?asset.digest.slice(7):'',notes:typeof release.body==='string'?release.body.slice(0,4000):'',message:newerAppVersion(release.tag_name,current)?'发现新版本。':'当前已是最新版本。'}
 }
