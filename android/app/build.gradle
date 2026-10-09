@@ -1,0 +1,76 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace = "com.uta.songlearning"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.uta.songlearning"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        // 旧测试包：versionCode 1 / versionName "1.0"。新增多来源封面后升级版本，允许覆盖安装。
+        // 旧测试包：versionCode 2 / versionName "1.1-test"。
+        // 本次新增手机端点击整句播放，升级版本以便覆盖安装测试。
+        // 旧测试包：versionCode 3 / versionName "1.2-test"。
+        // 本次采用安卓三栏底部导航和独立入口，升级版本用于覆盖安装。
+        // 旧版：versionCode 4 / versionName "1.3-test"；本版加入安卓字体与简洁歌曲库。
+        // 旧版：versionCode 5 / versionName "1.4-test"；本版让侧滑和系统返回键按页面层级返回。
+        // 旧版：versionCode 6 / versionName "1.5-test"；本版新增逐句与连续跟唱双模式。
+        // 旧版：versionCode 7 / versionName "1.6-test"；本版加入歌曲详情编辑与最近学习展示。
+        // 旧版：versionCode 8 / versionName "1.7-test"；本版将在线封面下载到本机并调整学习页封面。
+        // 旧版：versionCode 9 / versionName "1.8-test"；本版更新图标、启动页与安卓返回规则。
+        // 旧开发版本：versionCode 10 / versionName "1.9-test"。
+        // 首个公开版本命名为 1.0.0；内部编号继续递增，允许原签名旧测试包覆盖安装。
+        // versionCode 10
+        // versionName "1.9-test"
+        versionCode 11
+        versionName "1.0.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    buildTypes {
+        debug {
+            // 调试版与正式版并排安装，保护手机里已有的正式版学习数据。
+            applicationIdSuffix '.dev'
+            versionNameSuffix '-dev'
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    // WebDAV 使用原生流式传输和标准扩展方法，避免大歌曲整包 Base64 导致内存溢出。
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

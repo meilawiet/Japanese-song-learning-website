@@ -1,8 +1,14 @@
+import { Capacitor } from '@capacitor/core'
 import { aiRequestHeaders } from './aiSettings'
 
 const apiOrigin = import.meta.env.VITE_ANNOTATION_API_URL || 'http://127.0.0.1:8000'
 
 export async function annotateSongLines(lines) {
+  // 手机端直接使用随 APK 安装的日语词典；电脑网页仍沿用现有 Python 服务。
+  if (Capacitor.isNativePlatform()) {
+    const { annotateLinesOffline } = await import('./offlineAnnotation')
+    return annotateLinesOffline(lines)
+  }
   const response = await fetch(`${apiOrigin}/api/annotate/batch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -13,6 +19,8 @@ export async function annotateSongLines(lines) {
 }
 
 export async function searchSongArtwork(title, artist = '') {
+  // 封面属于可选联网信息；手机无电脑后端时不阻碍歌曲导入。
+  if (Capacitor.isNativePlatform()) return null
   const params = new URLSearchParams({ title, artist })
   const response = await fetch(`${apiOrigin}/api/artwork/search?${params.toString()}`)
   if (!response.ok) throw new Error('封面查询服务暂不可用')
@@ -26,6 +34,11 @@ export async function searchSongArtwork(title, artist = '') {
 }
 
 async function postAi(path, payload, settings, signal) {
+  // Android 通过原生 HTTP 直接连接用户配置的 AI 服务，绕开电脑本机地址。
+  if (Capacitor.isNativePlatform()) {
+    const mobileAi = await import('./mobileAi')
+    return mobileAi.postMobileAi(path, payload, settings, signal)
+  }
   const response = await fetch(`${apiOrigin}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...aiRequestHeaders(settings) },
@@ -55,6 +68,11 @@ export function explainSentenceBatchWithAi(lines) {
 }
 
 export async function getAiStatus(signal) {
+  // 手机没有默认电脑服务；设置页显示本机的 AI 配置状态。
+  if (Capacitor.isNativePlatform()) {
+    const { mobileAiStatus } = await import('./mobileAi')
+    return mobileAiStatus()
+  }
   const response = await fetch(`${apiOrigin}/api/ai/status`, { signal })
   if (!response.ok) throw new Error('无法读取 AI 服务状态')
   return response.json()

@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="1040" viewBox="0 0 1380 1040">
+  <defs>
+    <style>
+      .zh { font-family: "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; fill:#1f2827; }
+      .muted { fill:#718079; }
+      .serif { font-family: "Microsoft YaHei", "Noto Serif CJK SC", serif; }
+      .tiny { font-size:13px; }
+      .small { font-size:16px; }
+      .body { font-size:19px; }
+      .title { font-size:34px; font-weight:700; }
+      .tab { font-size:14px; font-weight:600; }
+      .caption { font-size:19px; font-weight:700; letter-spacing:1px; }
+    </style>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="14" stdDeviation="17" flood-color="#2d4941" flood-opacity=".13"/>
+    </filter>
+    <g id="brand">
+      <circle cx="0" cy="0" r="17" fill="#1f2827"/>
+      <text x="0" y="6" text-anchor="middle" font-family="Georgia,serif" font-size="19" fill="#fff">う</text>
+      <text x="28" y="8" font-family="Georgia,serif" font-size="25" font-weight="700" fill="#1f2827">UTA<tspan fill="#e25c38">.</tspan></text>
+    </g>
+    <g id="learn-icon" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-13-10c5-2 9-1 13 2v19c-4-3-8-4-13-2zM13-10c-5-2-9-1-13 2v19c4-3 8-4 13-2z"/>
+      <path d="M-10-4h5M5-4h5"/>
+    </g>
+    <g id="review-icon" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10-8a13 13 0 1 0 3 12M10-8v-6M10-8h-6"/>
+      <path d="M0-6v7l5 3"/>
+    </g>
+    <g id="me-icon" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="0" cy="-7" r="6"/><path d="M-13 12c1-8 6-12 13-12s12 4 13 12"/>
+    </g>
+    <g id="chevron" fill="none" stroke="#64766c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M-3-6l6 6-6 6"/></g>
+  </defs>
+  <rect width="1380" height="1040" fill="#e8eee9"/>
+  <path d="M0 0h1380v195H0z" fill="#d9e8e0"/>
+  <circle cx="1270" cy="80" r="145" fill="#f0bd48" opacity=".29"/>
+  <circle cx="70" cy="960" r="210" fill="#c5ded6" opacity=".7"/>
+  <text class="zh" x="74" y="63" font-size="16" font-weight="700" letter-spacing="3" fill="#557066">UTA · ANDROID UI CONCEPT</text>
+  <text class="zh serif title" x="74" y="113" font-size="42">三入口底部导航 · 草图概念稿</text>
+  <text class="zh muted" x="74" y="150" font-size="18">启动进入学习；复习和“我的”可随时从底部切换。页面内容先保留入口，模式细节后续再定。</text>
+
+  <!-- 第一屏：应用启动后进入学习页，学习模式目前只保留一个入口。 -->
+  <text class="zh caption" x="86" y="227">01  学习 / 应用首页</text>
+  <rect x="76" y="249" width="370" height="660" rx="31" fill="#1f2827" filter="url(#shadow)"/>
+  <rect x="84" y="257" width="354" height="644" rx="25" fill="#f5f2eb"/>
+  <rect x="84" y="257" width="354" height="41" rx="25" fill="#f5f2eb"/>
+  <text class="zh" x="108" y="286" font-size="13" font-weight="700">9:41</text>
+  <path d="M381 277h8m4-3v6m7-10v10m7-6v6" stroke="#1f2827" stroke-width="2"/>
+  <rect x="415" y="273" width="15" height="9" rx="2" fill="none" stroke="#1f2827" stroke-width="1.5"/>
+  <rect x="417" y="275" width="10" height="5" rx="1" fill="#1f2827"/>
+  <use href="#brand" transform="translate(116 333)"/>
+  <path d="M108 367h306" stroke="#dce2d9"/>
+  <text class="zh tiny muted" x="108" y="411" letter-spacing="2">LEARN / 学习</text>
+  <text class="zh serif title" x="108" y="459">今天开始学习</text>
+  <text class="zh small muted" x="108" y="491">选择一个入口，开始你的日语歌曲练习。</text>
+  <rect x="108" y="533" width="306" height="181" rx="17" fill="#dcebe4" stroke="#c2d7ca"/>
+  <circle cx="148" cy="578" r="22" fill="#385c50"/>
+  <use href="#learn-icon" transform="translate(148 578) scale(.68)" style="color:#fff"/>
+  <text class="zh" x="122" y="634" font-size="22" font-weight="700">学习模式</text>
+  <text class="zh small muted" x="122" y="660">具体模式与流程稍后确定</text>
+  <rect x="122" y="678" width="277" height="1" fill="#bdd0c4"/>
+  <text class="zh" x="122" y="701" font-size="15" font-weight="700" fill="#315b4a">进入学习</text>
+  <use href="#chevron" transform="translate(382 696)"/>
+  <text class="zh tiny muted" x="108" y="761">当前仅规划入口，不预设模式选项</text>
+  <rect x="84" y="814" width="354" height="87" rx="0" fill="#fffdf8"/>
+  <path d="M84 814h354" stroke="#d9dfd8"/>
+  <rect x="105" y="822" width="96" height="66" rx="13" fill="#e6efe9"/>
+  <use href="#learn-icon" transform="translate(153 846) scale(.65)" style="color:#325b4d"/>
+  <text class="zh tab" x="153" y="877" text-anchor="middle" fill="#325b4d">学习</text>
+  <use href="#review-icon" transform="translate(261 846) scale(.65)" style="color:#8b9990"/>
+  <text class="zh tab muted" x="261" y="877" text-anchor="middle">复习</text>
+  <use href="#me-icon" transform="translate(370 846) scale(.65)" style="color:#8b9990"/>
+  <text class="zh tab muted" x="370" y="877" text-anchor="middle">我的</text>
+
+  <!-- 第二屏：复习页同样只保留模式入口，细节待用户确定。 -->
+  <text class="zh caption" x="504" y="227">02  复习</text>
+  <rect x="494" y="249" width="370" height="660" rx="31" fill="#1f2827" filter="url(#shadow)"/>
+  <rect x="502" y="257" width="354" height="644" rx="25" fill="#f5f2eb"/>
+  <text class="zh" x="526" y="286" font-size="13" font-weight="700">9:41</text>
+  <path d="M799 277h8m4-3v6m7-10v10m7-6v6" stroke="#1f2827" stroke-width="2"/>
+  <rect x="833" y="273" width="15" height="9" rx="2" fill="none" stroke="#1f2827" stroke-width="1.5"/>
+  <rect x="835" y="275" width="10" height="5" rx="1" fill="#1f2827"/>
+  <use href="#brand" transform="translate(534 333)"/>
+  <path d="M526 367h306" stroke="#dce2d9"/>
+  <text class="zh tiny muted" x="526" y="411" letter-spacing="2">REVIEW / 复习</text>
+  <text class="zh serif title" x="526" y="459">巩固已学内容</text>
+  <text class="zh small muted" x="526" y="491">从这里进入复习，熟悉每一句歌词。</text>
+  <rect x="526" y="533" width="306" height="181" rx="17" fill="#f8ebcf" stroke="#efd7a6"/>
+  <circle cx="566" cy="578" r="22" fill="#c38636"/>
+  <use href="#review-icon" transform="translate(566 578) scale(.68)" style="color:#fff"/>
+  <text class="zh" x="540" y="634" font-size="22" font-weight="700">复习模式</text>
+  <text class="zh small muted" x="540" y="660">具体模式与流程稍后确定</text>
+  <rect x="540" y="678" width="277" height="1" fill="#e9d3aa"/>
+  <text class="zh" x="540" y="701" font-size="15" font-weight="700" fill="#9b6325">进入复习</text>
+  <use href="#chevron" transform="translate(800 696)"/>
+  <text class="zh tiny muted" x="526" y="761">当前仅规划入口，不预设模式选项</text>
+  <rect x="502" y="814" width="354" height="87" fill="#fffdf8"/>
+  <path d="M502 814h354" stroke="#d9dfd8"/>
+  <use href="#learn-icon" transform="translate(571 846) scale(.65)" style="color:#8b9990"/>
+  <text class="zh tab muted" x="571" y="877" text-anchor="middle">学习</text>
+  <rect x="630" y="822" width="96" height="66" rx="13" fill="#f7ebd4"/>
+  <use href="#review-icon" transform="translate(679 846) scale(.65)" style="color:#9b6325"/>
+  <text class="zh tab" x="679" y="877" text-anchor="middle" fill="#9b6325">复习</text>
+  <use href="#me-icon" transform="translate(788 846) scale(.65)" style="color:#8b9990"/>
+  <text class="zh tab muted" x="788" y="877" text-anchor="middle">我的</text>
+
+  <!-- 第三屏：“我的”只承载歌曲库与设置两个现有功能的入口。 -->
+  <text class="zh caption" x="922" y="227">03  我的</text>
+  <rect x="912" y="249" width="370" height="660" rx="31" fill="#1f2827" filter="url(#shadow)"/>
+  <rect x="920" y="257" width="354" height="644" rx="25" fill="#f5f2eb"/>
+  <text class="zh" x="944" y="286" font-size="13" font-weight="700">9:41</text>
+  <path d="M1217 277h8m4-3v6m7-10v10m7-6v6" stroke="#1f2827" stroke-width="2"/>
+  <rect x="1251" y="273" width="15" height="9" rx="2" fill="none" stroke="#1f2827" stroke-width="1.5"/>
+  <rect x="1253" y="275" width="10" height="5" rx="1" fill="#1f2827"/>
+  <use href="#brand" transform="translate(952 333)"/>
+  <path d="M944 367h306" stroke="#dce2d9"/>
+  <text class="zh tiny muted" x="944" y="411" letter-spacing="2">ME / 我的</text>
+  <text class="zh serif title" x="944" y="459">我的 UTA</text>
+  <text class="zh small muted" x="944" y="491">歌曲与应用选项集中放在这里。</text>
+  <rect x="944" y="533" width="306" height="100" rx="16" fill="#fffdf8" stroke="#e0e4da"/>
+  <rect x="961" y="552" width="55" height="61" rx="11" fill="#dcebe4"/>
+  <path d="M978 571c6-3 11-2 14 1v21c-4-3-8-4-14-2zM999 571c-3-3-8-4-14-1v21c6-2 10-1 14 2z" fill="none" stroke="#385c50" stroke-width="2.1" stroke-linejoin="round"/>
+  <text class="zh" x="1030" y="574" font-size="21" font-weight="700">歌曲库</text>
+  <text class="zh tiny muted" x="1030" y="600">进入原有歌曲库</text>
+  <use href="#chevron" transform="translate(1228 583)"/>
+  <rect x="944" y="648" width="306" height="100" rx="16" fill="#fffdf8" stroke="#e0e4da"/>
+  <rect x="961" y="667" width="55" height="61" rx="11" fill="#f8ebcf"/>
+  <circle cx="988" cy="697" r="11" fill="none" stroke="#9b6325" stroke-width="2.4"/>
+  <circle cx="988" cy="697" r="4" fill="none" stroke="#9b6325" stroke-width="2.2"/>
+  <path d="M988 680v5m0 24v5m-17-17h5m24 0h5m-29-12 4 4m17 17 4 4m0-25-4 4m-17 17-4 4" stroke="#9b6325" stroke-width="2" stroke-linecap="round"/>
+  <text class="zh" x="1030" y="689" font-size="21" font-weight="700">设置</text>
+  <text class="zh tiny muted" x="1030" y="715">进入原有设置功能</text>
+  <use href="#chevron" transform="translate(1228 698)"/>
+  <rect x="920" y="814" width="354" height="87" fill="#fffdf8"/>
+  <path d="M920 814h354" stroke="#d9dfd8"/>
+  <use href="#learn-icon" transform="translate(989 846) scale(.65)" style="color:#8b9990"/>
+  <text class="zh tab muted" x="989" y="877" text-anchor="middle">学习</text>
+  <use href="#review-icon" transform="translate(1097 846) scale(.65)" style="color:#8b9990"/>
+  <text class="zh tab muted" x="1097" y="877" text-anchor="middle">复习</text>
+  <rect x="1148" y="822" width="106" height="66" rx="13" fill="#e6efe9"/>
+  <use href="#me-icon" transform="translate(1206 846) scale(.65)" style="color:#325b4d"/>
+  <text class="zh tab" x="1206" y="877" text-anchor="middle" fill="#325b4d">我的</text>
+
+  <path d="M77 957h1204" stroke="#c4d3c8"/>
+  <text class="zh" x="80" y="992" font-size="16" font-weight="700">导航关系</text>
+  <text class="zh muted" x="178" y="992" font-size="16">启动应用 → 学习页　｜　底部常驻：学习 · 复习 · 我的　｜　我的 → 歌曲库 / 设置</text>
+  <text class="zh muted" x="80" y="1021" font-size="13">概念稿仅确认信息架构与入口位置；学习、复习模式内部内容以及歌曲库、设置的具体排版尚未改动。</text>
+</svg>

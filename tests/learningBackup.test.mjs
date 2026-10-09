@@ -49,6 +49,16 @@ test('empty song library still backs up learning data', async () => {
   assert.deepEqual(songsFromLearningBackup(inspection), [])
 })
 
+test('uploaded covers and built-in song choices survive backup and restore', async () => {
+  // 上传图片压缩后作为 data URL 保存；备份和电脑传歌都应保留用户选择。
+  const artworkUrl = 'data:image/jpeg;base64,/9j/2Q=='
+  const withArtwork = { ...song, artworkUrl, artworkProvider: '本地上传', artworkChoice: 'selected' }
+  const withOverrides = { ...state, artworkOverrides: { 'demo-song': { artworkUrl, artworkProvider: '本地上传' } } }
+  const inspected = await inspectLearningBackup(createLearningBackup([withArtwork], withOverrides))
+  assert.equal(songsFromLearningBackup(inspected)[0].artworkUrl, artworkUrl)
+  assert.equal(inspected.manifest.artworkOverrides['demo-song'].artworkUrl, artworkUrl)
+})
+
 test('damaged or unrelated files are rejected before restore', async () => {
   const backup = createLearningBackup([song], state)
   await assert.rejects(inspectLearningBackup(new Blob(['not a backup'])), /UTA 备份/)

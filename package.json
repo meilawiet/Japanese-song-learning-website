@@ -1,6 +1,6 @@
 {
   "name": "uta-japanese-song-learning",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,15 +12,24 @@
     "test:backup": "node --test tests/learningBackup.test.mjs",
     "test:lyrics": "node --test tests/lrcEncoding.test.mjs tests/learningIdentity.test.mjs",
     "test:readings": "node --test tests/readingDisplay.test.mjs tests/readingComponents.test.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "android:build": "vite build --config vite.android.config.js",
+    "android:sync": "npm run android:build && cap sync android",
+    "android:run": "npm run android:sync && cap run android --no-sync"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/browser": "8.0.1",
+    "@capacitor/core": "8.5.3",
+    "@faanau/kuromoji": "^0.2.1",
     "lucide-react": "^0.468.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "wanakana": "^5.3.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.3",
     "@vitejs/plugin-react": "^5.0.2",
     "concurrently": "^9.2.1",
     "vite": "^7.1.7"

@@ -4,3 +4,5 @@ sudachipy>=0.6.10
 sudachidict_core>=20241021
 python-dotenv>=1.0.0
 zstandard>=0.25.0
+# 在同一 Wi-Fi 中公布电脑传歌服务，让手机自动发现电脑地址。
+zeroconf>=0.148.0

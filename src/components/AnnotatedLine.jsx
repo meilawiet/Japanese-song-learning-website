@@ -1,5 +1,6 @@
 import { hasKanji, splitRuby } from '../lib/ruby'
 import { displayReading } from '../lib/readingDisplay'
+import ReadingLyric from './ReadingLyric'
 
 export default function AnnotatedLine({
   tokens,
@@ -16,8 +17,12 @@ export default function AnnotatedLine({
   onExtendSelection,
   onFinishSelection,
   onExplainSelection,
+  interactive = true,
 }) {
   if (!tokens?.length) return <span className="auto-lyric loading-lyric">正在生成自动读音…</span>
+
+  // 安卓逐句取消旧选词/拖选入口，静态注音仍使用同一人工校正数据；整句点击由父层播放。
+  if (!interactive) return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>{mode === 'reading' ? <ReadingLyric tokens={tokens} corrections={corrections} songId={songId} lineId={lineId} readingStyle={readingStyle} /> : tokens.map(token => token.surface).join('')}</span>
 
   return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>
     {tokens.map((token) => {
@@ -31,7 +36,9 @@ export default function AnnotatedLine({
         && token.index >= Math.min(selectionRange.startIndex, selectionRange.endIndex)
         && token.index <= Math.max(selectionRange.startIndex, selectionRange.endIndex)
       const isRangeEnd = selectionRange && token.index === Math.max(selectionRange.startIndex, selectionRange.endIndex)
-      return <span className="lyric-token-group" key={key}><button className={`lyric-token ${annotatable ? 'has-ruby' : ''} ${isSelected ? 'selected' : ''} ${isInRange ? 'range-selected' : ''} ${corrections[key] ? 'corrected' : ''}`} type="button" onPointerDown={(event) => {
+      // 按用户要求取消 corrected 变色类；读音数据仍优先使用人工校正。
+      // 原颜色标记保留供对照：${corrections[key] ? 'corrected' : ''}
+      return <span className="lyric-token-group" key={key}><button className={`lyric-token ${annotatable ? 'has-ruby' : ''} ${isSelected ? 'selected' : ''} ${isInRange ? 'range-selected' : ''}`} type="button" onPointerDown={(event) => {
         if (event.button !== 0) return
         event.preventDefault()
         onStartSelection?.(token.index)

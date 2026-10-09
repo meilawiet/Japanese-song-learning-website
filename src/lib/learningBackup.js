@@ -10,6 +10,13 @@ export const BACKUP_STORAGE_KEYS = {
   annotations: 'uta-auto-annotations-v5',
   aiReviews: 'uta-ai-reviews-v1',
   sentenceExplanations: 'uta-sentence-explanations-v1',
+  artworkOverrides: 'uta-artwork-overrides-v1',
+}
+
+// 用户上传的封面已在本地压缩；备份只接收受控 JPEG data URL 或普通图片链接。
+function validArtworkUrl(value) {
+  return typeof value === 'string' && (value.length <= 500_000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/u.test(value)
+    || value.length <= 2048 && /^https?:\/\//iu.test(value))
 }
 
 function isRecord(value) {
@@ -22,6 +29,11 @@ function checkState(manifest) {
     throw new Error('备份中的学习数据格式不正确。')
   }
   const progress = manifest.progress
+  if (manifest.artworkOverrides != null && (!isRecord(manifest.artworkOverrides)
+    || Object.values(manifest.artworkOverrides).some((item) => !isRecord(item)
+      || (item.artworkUrl && !validArtworkUrl(item.artworkUrl))))) {
+    throw new Error('备份中的封面选择格式不正确。')
+  }
   if (!isRecord(progress.learnedBySong) || !Array.isArray(progress.reviewItems)
     || !Array.isArray(progress.favoriteSongIds) || !isRecord(progress.corrections)
     || !isRecord(progress.meaningOverrides)) {
@@ -32,6 +44,10 @@ function checkState(manifest) {
     || progress.favoriteSongIds.some((id) => typeof id !== 'string')
     || Object.values(progress.corrections).some((reading) => typeof reading !== 'string')
     || Object.values(progress.meaningOverrides).some((meaning) => typeof meaning !== 'string')
+    // 项目歌曲的单句人工修改与其他学习记录一起备份。
+    || (progress.lyricEditsBySong != null && (!isRecord(progress.lyricEditsBySong)
+      || Object.values(progress.lyricEditsBySong).some((lines) => !isRecord(lines)
+        || Object.entries(lines).some(([id, text]) => !/^\d+$/.test(id) || typeof text !== 'string' || !text.trim() || text.length > 500))))
     || (progress.playbackRate != null && ![1, 0.75, 0.5, 0.25].includes(progress.playbackRate))
     || (progress.readingStyle != null && !['hiragana', 'romaji'].includes(progress.readingStyle))
     || (progress.lyricSnapshots != null && (!isRecord(progress.lyricSnapshots)
@@ -74,7 +90,8 @@ function checkSong(song) {
     throw new Error('备份中的歌词格式不正确。')
   }
   for (const field of ['artworkUrl', 'artworkSourceUrl']) {
-    if (song[field] && (typeof song[field] !== 'string' || !/^https?:\/\//i.test(song[field]))) {
+    if (song[field] && (field === 'artworkUrl' ? !validArtworkUrl(song[field])
+      : typeof song[field] !== 'string' || !/^https?:\/\//iu.test(song[field]))) {
       throw new Error('备份中的封面链接格式不正确。')
     }
   }
@@ -97,6 +114,7 @@ export function createLearningBackup(songs, state) {
     annotations: state.annotations,
     aiReviews: state.aiReviews,
     sentenceExplanations: state.sentenceExplanations || {},
+    artworkOverrides: state.artworkOverrides || {},
     songs: songEntries,
   }
   checkState(manifest)
@@ -130,6 +148,7 @@ export async function inspectLearningBackup(file) {
   }
   // Backups created before whole-line explanations were added remain restorable.
   if (!Object.hasOwn(manifest, 'sentenceExplanations')) manifest.sentenceExplanations = {}
+  if (!Object.hasOwn(manifest, 'artworkOverrides')) manifest.artworkOverrides = {}
   checkState(manifest)
   if (manifest.songs.length > 1000) throw new Error('备份中的歌曲数量超出限制。')
   const ids = new Set()

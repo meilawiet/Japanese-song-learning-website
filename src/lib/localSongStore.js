@@ -104,6 +104,15 @@ export async function createAndStoreLocalSong(parsed, audioFile, metadata = {}) 
   return record
 }
 
+// 电脑网页传来的歌曲已经有固定 ID；逐首保存，保持电脑与手机的学习记录对应。
+export async function storeTransferredSong(record) {
+  if (!record?.id?.startsWith('local-') || !(record.audioBlob instanceof Blob)) {
+    throw new Error('电脑歌曲资料无效，无法保存到手机。')
+  }
+  await runTransaction('readwrite', (store) => store.put(record))
+  return record
+}
+
 export async function loadLocalSongs() {
   const records = await runTransaction('readonly', (store) => store.getAll())
   return Array.isArray(records) ? records.sort((left, right) => right.createdAt - left.createdAt) : []
@@ -121,6 +130,21 @@ export async function updateLocalSongMetadata(songId, metadata) {
     return request
   })
   return updatedRecord
+}
+
+// 旧版在线封面迁移时只替换仍指向原网址的记录，避免覆盖用户刚手动选择的新封面。
+export async function updateLocalSongArtworkIfUrl(songId, expectedUrl, metadata) {
+  let changed = false
+  await runTransaction('readwrite', (store) => {
+    const request = store.get(songId)
+    request.onsuccess = () => {
+      if (!request.result || (request.result.artworkUrl || '') !== expectedUrl) return
+      store.put({ ...request.result, ...metadata })
+      changed = true
+    }
+    return request
+  })
+  return changed
 }
 
 export async function deleteLocalSong(songId) {

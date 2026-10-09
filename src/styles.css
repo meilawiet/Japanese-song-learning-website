@@ -1,4 +1,9 @@
 :root { --ink:#1f2827; --muted:#707874; --paper:#f5f2eb; --orange:#e25c38; --yellow:#f0bd48; --teal:#c5ded6; --line:rgba(31,40,39,.15); --serif:"Noto Serif JP", Georgia, serif; --sans:"Noto Sans JP", Arial, sans-serif; --mono:"DM Mono", monospace; }
+/* 原网页字体变量保留；安卓端加载用户提供的颜真卿多宝塔碑字体。字体的 vhea 版本已修正为 WebView 可识别值，缺字仍回退到原字体。 */
+@font-face { font-family:"UTA YanZhenQing"; src:url('./assets/fonts/YanZhenQingDuoBaoTaBei.ttf') format('truetype'); font-style:normal; font-weight:400; font-display:swap; }
+:root.uta-android-font { --serif:"UTA YanZhenQing", "Noto Serif JP", Georgia, serif; --sans:"UTA YanZhenQing", "Noto Sans JP", Arial, sans-serif; --mono:"UTA YanZhenQing", "DM Mono", monospace; }
+/* 表单控件有浏览器自带字体，需要单独继承安卓界面的字体。 */
+.uta-android-font button,.uta-android-font input,.uta-android-font select,.uta-android-font textarea { font-family:var(--sans); }
 * { box-sizing:border-box; }
 html { scroll-behavior:smooth; }
 body { margin:0; color:var(--ink); background:var(--paper); font-family:var(--sans); font-size:14px; }
@@ -240,6 +245,42 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .import-cover-controls button:disabled { cursor:wait; opacity:.5; }
 .import-cover-controls input { margin-top:4px; }
 .import-cover-controls a { display:inline-block; margin-top:7px; color:#557567; font-size:10px; text-decoration:underline; }
+/* 网页和手机共用的多来源封面选择器。 */
+.artwork-picker { margin-top:16px; padding:15px; border:1px solid #cfdbcf; background:#f0f6ee; }
+.artwork-picker-heading { display:flex; align-items:start; justify-content:space-between; gap:12px; }
+.artwork-picker-heading b { color:#283b32; font:600 15px var(--serif); }
+.artwork-picker-heading p,.artwork-picker-status,.artwork-picker-selected { margin:5px 0 8px; color:#64786a; font-size:11px; line-height:1.5; }
+.artwork-picker-heading button,.artwork-picker-alternatives button,.artwork-manual button { display:inline-flex; align-items:center; justify-content:center; gap:5px; padding:7px 10px; border:1px solid #a9bcac; background:#fffef9; color:#3d5948; font-size:11px; white-space:nowrap; cursor:pointer; }
+.artwork-picker-heading button:disabled { opacity:.5; cursor:wait; }
+.artwork-candidates { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:9px; max-height:310px; overflow:auto; margin-top:12px; }
+.artwork-candidates button { min-width:0; padding:5px; border:2px solid transparent; background:#fffdf7; text-align:left; cursor:pointer; }
+.artwork-candidates button.selected { border-color:#d06545; }
+.artwork-candidates img { display:block; width:100%; aspect-ratio:1; object-fit:cover; background:#dce7df; }
+.artwork-candidates span,.artwork-candidates strong,.artwork-candidates small,.artwork-candidates em { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.artwork-candidates span { padding:6px 2px 1px; }
+.artwork-candidates strong { color:#2b4035; font-size:11px; }
+.artwork-candidates small { margin-top:2px; color:#64786a; font-size:10px; }
+.artwork-candidates em { margin-top:4px; color:#ac6347; font-size:10px; font-style:normal; }
+.artwork-picker-alternatives { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.artwork-upload { position:relative; display:inline-flex; align-items:center; gap:5px; padding:7px 10px; border:1px solid #a9bcac; color:#3d5948; background:#fffef9; font-size:11px; cursor:pointer; }
+.artwork-upload input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.artwork-manual { display:flex; gap:7px; margin-top:10px; }
+.artwork-manual input { flex:1; min-width:0; padding:7px 9px; border:1px solid #a9bcac; background:#fffef9; color:#263b32; font-size:11px; }
+.artwork-picker-selected a { margin-left:10px; color:#a04d35; }
+.artwork-picker-selected { display:flex; align-items:center; gap:10px; margin-top:12px; }
+.artwork-picker-selected img { width:52px; height:52px; object-fit:cover; }
+.artwork-picker-error { margin:8px 0 0; color:#b33c30; font-size:11px; }
+.library-artwork-edit { position:relative; z-index:2; display:inline-flex; align-items:center; gap:4px; margin:0 14px 12px; padding:5px 7px; border:1px solid rgba(211,225,215,.4); color:#e9f0e5; background:rgba(40,46,43,.55); font-size:10px; cursor:pointer; }
+.library-artwork-edit:hover { background:#a65339; }
+.artwork-edit-dialog { position:relative; width:min(690px,100%); max-height:85vh; overflow:auto; padding:25px; background:#fffbf2; color:#263b32; }
+.artwork-edit-dialog h2 { margin:0 28px 4px 0; font:600 24px var(--serif); }
+.artwork-edit-dialog > p { color:#627467; font-size:12px; }
+.artwork-edit-preview { display:flex; align-items:center; gap:12px; margin-top:14px; }
+.artwork-edit-preview img { width:70px; height:70px; object-fit:cover; }
+.artwork-edit-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:18px; }
+.artwork-edit-actions button { padding:8px 14px; border:1px solid #adbaa9; background:#fffef9; color:#344e3d; cursor:pointer; }
+.artwork-edit-actions button:last-child { border-color:#c15e41; background:#c15e41; color:white; }
+@media (max-width:650px) { .artwork-picker { padding:10px; }.artwork-candidates { grid-template-columns:repeat(2,minmax(0,1fr)); max-height:280px; }.artwork-edit-dialog { max-height:88vh; padding:22px; }.artwork-manual { flex-wrap:wrap; }.artwork-manual button { flex:1; } }
 .import-lines-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; margin-top:22px; }
 .import-lines-heading b,.import-lines-heading span { display:block; }
 .import-lines-heading b { font:600 15px var(--serif); }
@@ -282,6 +323,46 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .backup-dialog-actions button:last-child { color:#fff; background:#315b4e; }
 .backup-dialog-actions button:disabled { cursor:wait; opacity:.6; }
 @media (max-width:650px) { .library-backup-bar { align-items:stretch; flex-direction:column; gap:13px; }.library-backup-actions { flex-wrap:wrap; }.backup-backdrop { align-items:end; padding:0; }.backup-dialog { width:100%; max-height:88vh; padding:26px 22px; box-shadow:none; } }
+
+/* 手机导入来源与电脑传歌清单，沿用现有导入窗口的颜色和字号。 */
+.import-source-dialog,.computer-import-dialog { width:min(620px,100%); }
+.import-source-options { display:grid; gap:12px; margin-top:22px; }
+.import-source-options button { display:block; width:100%; padding:17px; border:1px solid #b5c8ba; color:#243b34; background:#f4f5eb; text-align:left; }
+.import-source-options button:hover { border-color:#31564b; background:#eaf2e8; }
+.import-source-options strong,.import-source-options span { display:block; }
+.import-source-options strong { font:600 18px var(--serif); }
+.import-source-options span { margin-top:6px; color:#5d7067; font-size:12px; }
+.computer-connect-form fieldset { display:grid; gap:12px; margin:20px 0 0; padding:0; border:0; }
+.computer-connect-form legend { margin-bottom:10px; font-weight:600; }
+.computer-connect-form fieldset > label { display:block; font-size:13px; }
+.computer-connect-form fieldset > label > span { display:block; margin:4px 0 0 22px; color:#61766b; font-size:11px; }
+.computer-field input { display:block; width:100%; margin-top:6px; padding:10px; border:1px solid #b9c9be; background:#fff; font-size:14px; }
+/* Wi-Fi 连接默认只填四位码；自动寻找失败时再显示手动地址入口。 */
+.computer-discovery-hint { margin:0; color:#61766b; font-size:12px; }
+.computer-connect-form .computer-manual-toggle { justify-self:start; padding:2px 0; border:0; color:#31564b; background:transparent; font-size:12px; text-decoration:underline; }
+.computer-import-dialog .song-import-submit { display:inline-flex; align-items:center; gap:7px; justify-content:center; width:100%; min-height:40px; padding:10px 14px; border:0; color:#fff; background:#31564b; }
+.computer-import-dialog .song-import-submit:disabled { opacity:.58; }
+.computer-song-selection { margin-top:24px; padding-top:18px; border-top:1px solid #d9e3d7; }
+.computer-song-selection-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.computer-song-selection-heading h3 { margin:0; font:600 19px var(--serif); }
+.computer-song-selection-heading button { margin-left:5px; padding:5px 7px; border:1px solid #becfc0; background:#fff; font-size:11px; }
+.computer-song-selection > p { color:#5d7067; font-size:11px; }
+.computer-song-selection ul { max-height:230px; overflow:auto; margin:14px 0; padding:0; list-style:none; }
+.computer-song-selection li { border-bottom:1px solid #e0e8dd; }
+.computer-song-selection li label { display:flex; align-items:center; gap:10px; padding:10px 4px; }
+.computer-song-selection li strong,.computer-song-selection li small { display:block; }
+.computer-song-selection li small { margin-top:3px; color:#687a70; }
+.computer-transfer-progress { margin:14px 0 0; color:#31564b; font-size:12px; }
+.computer-share-card { margin-top:15px; padding:18px; border:1px solid #9ebba9; color:#e4f1e6; background:#26453c; }
+.computer-share-card h3 { margin:0 0 9px; font:600 19px var(--serif); }
+.computer-share-card p { margin:9px 0; font-size:12px; line-height:1.7; }
+.computer-share-card button { margin-top:10px; padding:8px 11px; border:1px solid #bfd2c3; color:#e4f1e6; background:transparent; }
+.computer-share-code { display:inline-block; margin:7px 0; padding:8px 12px; border:1px solid #b4c7b8; font:700 19px var(--mono); letter-spacing:.1em; }
+/* 旧实现保留作对照：USB 短码与 Wi-Fi 长码曾并列显示。 */
+/* 恢复 USB 调试映射后，USB 和 Wi-Fi 共用一个四位数字码。 */
+.computer-share-codes { display:flex; flex-wrap:wrap; gap:12px; margin:10px 0; }
+.computer-share-codes > div > span { display:block; font-size:11px; }
+@media (max-width:650px) { .import-source-dialog,.computer-import-dialog { width:100%; }.computer-song-selection-heading { align-items:flex-start; flex-direction:column; } }
 
 /* Precomputed whole-line AI explanations */
 .reading-style-options { display:grid; gap:12px; margin:22px 0; padding:0; border:0; }
@@ -376,3 +457,299 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .settings-form-actions .settings-primary { color:#fff9eb; border-color:#3b6150; background:#3b6150; }
 .settings-dialog button:disabled { opacity:.55; cursor:wait; }
 @media (max-width:650px) { .top-actions { gap:9px; }.settings-trigger span { display:none; }.settings-backdrop { padding:0; align-items:end; }.settings-dialog { width:100%; max-height:94dvh; box-shadow:none; }.settings-heading { padding:24px 20px 18px; }.settings-tabs { padding:0 20px; }.settings-content { padding:22px 20px; }.settings-grid { grid-template-columns:1fr; gap:18px; }.settings-data-card { flex-direction:column; align-items:stretch; gap:14px; }.settings-form-actions { gap:7px; }.settings-form-actions button { padding:9px; } }
+
+/* 安卓端按确认的草图使用独立三栏首页；原网页布局继续沿用上方样式。 */
+.android-topbar { position:sticky; top:0; z-index:14; height:74px; padding:0 24px; background:#f5f2eb; }
+.android-topbar .brand { font-size:25px; }
+.android-topbar .brand-mark { width:34px; height:34px; }
+.android-main { min-height:calc(100dvh - 74px); padding-bottom:calc(89px + env(safe-area-inset-bottom, 0px)); background:#f5f2eb; }
+.android-home { max-width:560px; min-height:calc(100dvh - 163px - env(safe-area-inset-bottom, 0px)); margin:0 auto; padding:40px 24px 30px; }
+.android-home-eyebrow { margin:0 0 13px; color:#718079; font:12px var(--mono); letter-spacing:.15em; }
+.android-home h1,.android-review-detail h1 { margin:0; color:#1f2827; font:700 clamp(28px,7vw,36px)/1.25 var(--serif); }
+.android-home-intro,.android-review-detail > p:not(.android-home-eyebrow) { margin:15px 0 0; color:#718079; font-size:14px; line-height:1.7; }
+.android-mode-card { display:flex; width:100%; min-height:190px; flex-direction:column; align-items:flex-start; margin-top:36px; padding:19px 18px 0; border:1px solid #c2d7ca; border-radius:17px; color:#1f2827; background:#dcebe4; text-align:left; }
+.android-mode-card.reviewing { border-color:#efd7a6; background:#f8ebcf; }
+.android-mode-icon { display:grid; width:44px; height:44px; place-items:center; border-radius:50%; color:#fff; background:#385c50; }
+.android-mode-card.reviewing .android-mode-icon { background:#c38636; }
+.android-mode-card strong { margin-top:19px; font-size:21px; }
+.android-mode-description { margin-top:5px; color:#6e7f73; font-size:13px; }
+.android-mode-action { display:flex; width:100%; align-items:center; justify-content:space-between; margin-top:auto; padding:13px 0; border-top:1px solid #bdd0c4; color:#315b4a; font-size:14px; font-weight:700; }
+.android-mode-card.reviewing .android-mode-action { border-top-color:#e9d3aa; color:#9b6325; }
+.android-home-note { margin:30px 0 0; color:#819087; font-size:12px; }
+/* 学习页的第二入口与原三栏首页一致，但用暖色区分连续跟唱。 */
+.android-mode-card.singing { min-height:205px; margin-top:16px; border-color:#ebd7b1; background:#fcf3df; }
+.android-mode-card.singing .android-mode-icon { background:#a66f36; }
+.android-mode-card.singing .android-mode-action { border-top-color:#ebd7b1; color:#875c2e; }
+.android-mode-card.learning,.android-mode-card.singing { position:relative; min-height:215px; }
+.android-mode-card.learning > strong,.android-mode-card.singing > strong,.android-mode-card.learning > .android-mode-description,.android-mode-card.singing > .android-mode-description { max-width:calc(100% - 145px); }
+.android-mode-recent { position:absolute; top:17px; right:14px; display:grid; width:125px; gap:2px; color:#52675a; text-align:center; }
+.android-mode-recent-cover { display:grid; width:88px; height:88px; overflow:hidden; place-items:center; justify-self:center; border-radius:12px; color:#fff; background:#6b9989; font:600 24px var(--serif); }
+.android-mode-recent-cover img,.android-lesson-cover img,.android-sing-cover img { width:100%; height:100%; object-fit:cover; }
+.android-mode-recent-label { margin-top:4px; font-size:10px; }
+.android-mode-recent-title,.android-mode-recent-artist { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.android-mode-recent-title { color:#294337; font-size:12px; font-weight:700; }
+.android-mode-recent-artist { font-size:10px; }
+/* 安卓逐句学习保留原歌词与解析操作，只收起占屏的装饰和说明文字。 */
+.android-lesson-page .anime-hero { min-height:0; }
+.android-lesson-page .hero-inner { padding-top:24px; padding-bottom:20px; }
+.android-lesson-page .hero-art,.android-lesson-page .hero-label,.android-lesson-page .hero-kicker,.android-lesson-page .hero-season,.android-lesson-page .song-description,.android-lesson-page .song-meta,.android-lesson-page .ai-privacy-note,.android-lesson-page .hero-focus-card,.android-lesson-page .lesson-rail,.android-lesson-page .pronunciation-strip,.android-lesson-page .selection-guide,.android-lesson-page .lyrics-footer,.android-lesson-page .method-section { display:none; }
+.android-lesson-page .song-intro { display:grid; grid-template-columns:minmax(0,1fr) 112px; column-gap:14px; min-height:112px; padding-right:0; }
+.android-lesson-page .song-intro h1 { grid-column:1; grid-row:1; align-self:end; min-width:0; margin:0 0 5px; font-size:30px; overflow-wrap:anywhere; }
+.android-lesson-page .song-intro .roman { grid-column:1; grid-row:2; }
+.android-lesson-cover { display:grid; grid-column:2; grid-row:1 / span 2; width:112px; height:112px; overflow:hidden; place-items:center; border-radius:14px; color:#fff; background:#6b9989; box-shadow:0 2px 10px #1c352329; font:600 25px var(--serif); }
+.android-lesson-page .hero-cta { grid-column:1 / -1; margin-top:18px; }
+.android-lesson-page .practice-layout { display:block; max-width:720px; border:0; }
+/* 跟唱练习按音乐播放习惯排列：选曲、两项播放控制、可点击的歌词。 */
+.android-sing { max-width:720px; margin:0 auto; padding:24px 20px 34px; }
+.android-sing-heading { display:flex; align-items:center; gap:13px; }
+.android-sing-heading > div { min-width:0; }
+.android-sing-cover { display:grid; width:104px; height:104px; flex:none; overflow:hidden; place-items:center; margin-left:auto; border-radius:14px; color:#fff; background:#6b9989; font:600 24px var(--serif); }
+.android-sing-heading p { margin:0 0 3px; color:#8b987f; font:10px var(--mono); letter-spacing:.15em; }
+.android-sing-heading h1 { margin:0; font:700 31px/1.2 var(--serif); color:#21342d; }
+.android-sing-icon { display:grid; width:48px; height:48px; flex:none; place-items:center; border-radius:15px; color:#fff; background:#386350; }
+.android-sing-song { display:grid; gap:8px; margin-top:28px; color:#6c7b71; font-size:12px; }
+.android-sing-song select { width:100%; min-height:50px; padding:0 14px; border:1px solid #d5ded5; border-radius:12px; color:#253b31; background:#fffdf8; font-size:16px; }
+.android-sing-subtitle { margin:12px 0 0; color:#87928a; font-size:12px; }
+.android-sing-controls { display:flex; align-items:center; gap:12px; margin-top:24px; }
+.android-sing-controls button { display:flex; min-height:50px; align-items:center; justify-content:center; gap:9px; border:0; border-radius:13px; font-size:15px; font-weight:700; }
+.android-sing-start { flex:1; color:#fff; background:#3b6653; }
+.android-sing-toggle { width:54px; flex:none; color:#315d49; background:#dcebe2; }
+.android-sing-controls button:disabled { opacity:.45; }
+.android-sing-hint { margin:13px 0 0; color:#74847a; font-size:12px; line-height:1.6; }
+.android-sing-error { color:#a84436; font-size:12px; }
+.android-sing-lyrics { margin:24px 0 0; padding:0; list-style:none; border-top:1px solid #e0e4dc; }
+.android-sing-lyrics li { border-bottom:1px solid #e0e4dc; }
+.android-sing-lyrics button { display:flex; width:100%; min-height:73px; align-items:center; gap:12px; padding:12px 6px; border:0; color:#27382f; background:transparent; text-align:left; }
+.android-sing-lyrics button.current { margin:0 -8px; width:calc(100% + 16px); padding-left:14px; padding-right:14px; border-radius:10px; background:#e8eee3; }
+.android-sing-number { width:25px; flex:none; color:#a1aaa0; font:11px var(--mono); }
+.android-sing-text { display:grid; flex:1; gap:5px; min-width:0; }
+.android-sing-text strong { font:500 20px/1.4 var(--serif); overflow-wrap:anywhere; }
+.android-sing-text small { color:#78857b; font-size:12px; line-height:1.45; }
+.android-sing-playing { color:#3b6653; font-size:20px; }
+.android-home-links { display:grid; gap:14px; margin-top:36px; }
+.android-home-link { display:flex; width:100%; min-height:100px; align-items:center; gap:14px; padding:15px 16px; border:1px solid #e0e4da; border-radius:16px; color:#1f2827; background:#fffdf8; text-align:left; }
+.android-home-link > span:nth-child(2) { display:grid; gap:5px; flex:1; }
+.android-home-link strong { font-size:19px; }
+.android-home-link small { color:#718079; font-size:12px; }
+.android-home-link > svg { flex:0 0 auto; color:#64766c; }
+.android-home-link-icon { display:grid; width:54px; height:59px; flex:0 0 auto; place-items:center; border-radius:11px; }
+.android-home-link-icon.library { color:#385c50; background:#dcebe4; }
+.android-home-link-icon.settings { color:#9b6325; background:#f8ebcf; }
+/* 弹窗原有层级从 20 起，底栏低于弹窗，避免遮住“设置”和导入操作。 */
+.android-bottom-nav { position:fixed; right:0; bottom:0; left:0; z-index:15; display:flex; height:calc(82px + env(safe-area-inset-bottom, 0px)); align-items:flex-start; justify-content:space-around; gap:3px; padding:8px 12px calc(8px + env(safe-area-inset-bottom, 0px)); border-top:1px solid #d9dfd8; background:#fffdf8; }
+.android-bottom-nav button { display:flex; flex:1; min-height:63px; flex-direction:column; align-items:center; justify-content:center; gap:5px; border:0; border-radius:13px; color:#8b9990; background:transparent; font-size:13px; font-weight:600; }
+.android-bottom-nav button.active { color:#325b4d; background:#e6efe9; }
+.android-bottom-nav button:focus-visible,.android-mode-card:focus-visible,.android-home-link:focus-visible { outline:2px solid #385c50; outline-offset:2px; }
+.android-detail-back { display:block; margin:13px 24px; padding:8px 0; border:0; color:#426858; background:transparent; font-size:13px; }
+.library-page .android-detail-back { margin:0 0 20px; color:#f0bd48; }
+.android-review-detail { max-width:750px; min-height:calc(100dvh - 163px); margin:0 auto; padding:12px 24px 32px; }
+.android-review-detail .android-detail-back { margin:0 0 24px; }
+.android-review-detail h1 span { color:#b64f34; font:17px var(--mono); }
+.android-review-detail .review-line-list { grid-template-columns:1fr; max-height:none; margin-top:25px; }
+.android-review-detail .review-queue-empty { margin-top:25px; }
+/* 安卓歌曲库改用与“我的”页一致的浅色底；原网页深色卡片样式继续保留。 */
+.uta-android-font .library-page:has(.android-library) { min-height:calc(100dvh - 160px); padding:22px 22px 116px; color:#24332d; background:#f6f7f2; }
+.uta-android-font .library-page .android-detail-back { margin:0 0 24px; color:#54715f; }
+.android-library { max-width:760px; margin:0 auto; }
+.android-library-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; }
+.android-library-kicker { color:#799083; font-size:12px; letter-spacing:.15em; }
+.android-library-heading h1 { margin:4px 0 3px; color:#24372d; font:600 33px/1.2 var(--serif); }
+.android-library-heading p { margin:0; color:#829188; font-size:12px; }
+.android-library-view { display:flex; flex:0 0 auto; gap:3px; padding:4px; border:1px solid #dfe6de; border-radius:12px; background:#edf1eb; }
+.android-library-view button { display:grid; width:35px; height:35px; place-items:center; border:0; border-radius:9px; color:#809087; background:transparent; }
+.android-library-view button.selected { color:#335d4b; background:#fff; box-shadow:0 1px 5px #213a2719; }
+.android-library-tools { display:flex; gap:10px; margin:27px 0 22px; }
+.android-library-search { display:flex; min-width:0; flex:1; align-items:center; gap:9px; padding:0 13px; border:1px solid #dde5db; border-radius:11px; color:#7c9184; background:#fff; }
+.android-library-search input { width:100%; min-height:46px; border:0; outline:0; color:#263b30; background:transparent; font-size:13px; }
+.android-library-search input::placeholder { color:#99a79e; }
+.android-library-search button { display:grid; place-items:center; border:0; color:#82958a; background:transparent; }
+.android-library-import { display:flex; min-width:80px; align-items:center; justify-content:center; gap:5px; padding:0 11px; border:0; border-radius:11px; color:#fff; background:#3b6c55; font-size:13px; }
+.android-library-songs.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px; }
+.android-library-song { min-width:0; overflow:hidden; border:1px solid #e2e8df; border-radius:15px; background:#fff; box-shadow:0 2px 9px #24412c0b; }
+.android-library-song.current { border-color:#a9c5ad; }
+.android-library-song-main { display:block; width:100%; padding:0; border:0; color:inherit; background:transparent; text-align:left; cursor:pointer; }
+.android-library-cover { position:relative; display:grid; overflow:hidden; aspect-ratio:1 / 1; place-items:center; color:#f8f5ed; background:linear-gradient(140deg,#6b9989,#c3d3bc); font:600 32px var(--serif); touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+.android-library-song:nth-child(4n + 2) .android-library-cover { background:linear-gradient(140deg,#b89082,#d8c9a9); }
+.android-library-song:nth-child(4n + 3) .android-library-cover { background:linear-gradient(140deg,#808fa0,#c4c8d5); }
+.android-library-song:nth-child(4n + 4) .android-library-cover { background:linear-gradient(140deg,#9a9c79,#d6d5b4); }
+.android-library-cover img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; }
+.android-library-song-copy { display:block; min-width:0; padding:12px 13px 13px; }
+.android-library-song-copy strong,.android-library-song-copy small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.android-library-song-copy strong { color:#26382f; font:600 17px/1.4 var(--serif); }
+.android-library-song-copy small { margin-top:2px; color:#829088; font-size:12px; }
+.android-library-progress { display:flex; align-items:center; gap:5px; margin-top:12px; color:#60816d; font-size:11px; }
+.android-library-songs.list { display:grid; gap:9px; }
+.android-library-songs.list .android-library-song { display:flex; align-items:center; border-radius:12px; }
+.android-library-songs.list .android-library-song-main { display:flex; min-width:0; min-height:69px; flex:1; align-items:center; padding:11px 15px; }
+/* 列表只呈现歌名与歌手，封面和进度留在图标模式。 */
+.android-library-songs.list .android-library-cover,.android-library-songs.list .android-library-progress { display:none; }
+.android-library-songs.list .android-library-song-copy { min-width:0; flex:1; padding:0; }
+.android-library-songs.list .android-library-song-copy strong { font-size:16px; }
+.android-library-songs.list .android-library-progress { margin-top:4px; }
+.android-library-more { display:grid; width:42px; min-height:58px; flex:0 0 42px; place-items:center; border:0; color:#6c8272; background:transparent; }
+.android-library-empty { display:flex; min-height:240px; flex-direction:column; align-items:center; justify-content:center; color:#799185; text-align:center; }
+.android-library-empty p { margin:12px 0 2px; color:#3e5b48; font-size:18px; }.android-library-empty span { font-size:12px; }.android-library-empty button { margin-top:18px; padding:10px 18px; border:0; border-radius:9px; color:#fff; background:#3b6c55; }
+.android-library-menu-backdrop { position:fixed; inset:0; z-index:30; display:flex; align-items:flex-end; justify-content:center; background:#15251a66; }
+.android-library-menu { width:min(100%,760px); padding:10px 20px calc(22px + env(safe-area-inset-bottom, 0px)); border-radius:20px 20px 0 0; background:#fffdf8; box-shadow:0 -10px 35px #17251d2e; }
+/* 歌曲详情编辑在底部导航上方独立滚动，避免长歌词遮住保存按钮。 */
+.song-editor-backdrop { position:fixed; inset:0; z-index:45; display:grid; place-items:center; padding:12px; background:#18271ecc; }
+.song-editor { display:flex; width:min(100%,700px); max-height:calc(100dvh - 24px); flex-direction:column; overflow:hidden; padding:20px; border-radius:17px; color:#283b30; background:#fffdf8; }
+.song-editor-head { display:flex; align-items:flex-start; justify-content:space-between; }
+.song-editor-head p { margin:0; color:#8b9a8e; font:10px var(--mono); letter-spacing:.14em; }
+.song-editor-head h2 { margin:3px 0 14px; font:600 25px var(--serif); }
+.song-editor-head button,.song-editor-lines li > button { border:0; color:#6c8072; background:transparent; }
+.song-editor-meta { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.song-editor-meta label,.song-editor-files label { display:grid; gap:5px; color:#607267; font-size:12px; }
+.song-editor-meta input,.song-editor-lines input { width:100%; min-width:0; min-height:38px; padding:7px 9px; border:1px solid #d5dfd5; border-radius:8px; color:#273b30; background:#fff; font-size:14px; }
+.song-editor-files { display:grid; gap:10px; margin-top:17px; }
+.song-editor-files label { padding:10px 12px; border:1px solid #e0e7df; border-radius:9px; }
+.song-editor-files input { max-width:100%; color:#40594a; font-size:12px; }
+.song-editor-files small,.song-editor-note { color:#839185; font-size:11px; line-height:1.5; }
+.song-editor-lines-head { display:flex; align-items:center; justify-content:space-between; margin-top:20px; font-size:14px; }
+.song-editor-lines-head button { display:flex; align-items:center; gap:4px; padding:5px 0; border:0; color:#3a6a4e; background:transparent; }
+.song-editor-lines { flex:1; overflow-y:auto; margin:9px 0 0; padding:0; list-style:none; border-top:1px solid #e4e9e1; }
+.song-editor-lines li { display:grid; grid-template-columns:22px 1fr 23px; align-items:start; gap:7px; padding:11px 0; border-bottom:1px solid #e4e9e1; }
+.song-editor-lines li > span { padding-top:10px; color:#9ca99d; font:10px var(--mono); }
+.song-editor-lines li > div { display:grid; grid-template-columns:90px 1fr; gap:7px; min-width:0; }
+.song-editor-lines li label { display:grid; gap:3px; color:#839185; font-size:10px; }
+.song-editor-lines li label:last-child { grid-column:1 / -1; }
+.song-editor-lines li > button { padding-top:10px; }
+.song-editor-note { margin:10px 0; }
+.song-editor-error { margin:0 0 8px; color:#ad4234; font-size:12px; }
+.song-editor-actions { display:flex; justify-content:flex-end; gap:10px; padding-top:12px; border-top:1px solid #e4e9e1; }
+.song-editor-actions button { min-height:39px; padding:0 18px; border:1px solid #d2ddd2; border-radius:8px; color:#3b644d; background:#fff; }
+.song-editor-actions button:last-child { border-color:#3b6c55; color:#fff; background:#3b6c55; }
+@media (max-width:500px) { .song-editor { padding:15px; }.song-editor-meta { grid-template-columns:1fr; } }
+.android-library-menu-handle { width:40px; height:4px; margin:0 auto 16px; border-radius:5px; background:#ccd6cb; }
+.android-library-menu strong { display:block; overflow:hidden; padding:0 5px 12px; color:#294331; text-overflow:ellipsis; white-space:nowrap; font-size:17px; }
+.android-library-menu button { display:block; width:100%; min-height:49px; padding:0 8px; border:0; border-top:1px solid #e8ede7; color:#304937; background:transparent; text-align:left; font-size:15px; }
+.android-library-menu button.danger { color:#bd5d50; }.android-library-menu button:disabled { color:#a7afa8; }
+@media (min-width:650px) { .android-library-songs.grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+/* 本地导入：在线歌词搜索与 AI 两种导入方式，采用紧凑卡片避免手机弹窗过长。 */
+.online-song-search { margin-top:18px; padding:16px; border:1px solid #d7e4d7; border-radius:12px; background:#f7faf4; }
+.online-song-search h3 { margin:0 0 5px; color:#304c3e; font:600 18px var(--serif); }
+.online-song-search > p { margin:0; color:#718177; font-size:11px; line-height:1.65; }
+.online-song-search-row { display:flex; gap:8px; margin-top:12px; }
+.online-song-search-row input { min-width:0; min-height:40px; flex:1; padding:0 10px; border:1px solid #c9d8ca; border-radius:8px; color:#24392e; background:#fff; font-size:12px; }
+.online-song-search-row button,.online-song-results button { display:flex; flex:0 0 auto; align-items:center; justify-content:center; gap:5px; padding:0 10px; border:0; border-radius:8px; color:#fff; background:#426d54; font-size:11px; }
+.online-song-search-row button:disabled { opacity:.55; }.online-song-search-error { margin-top:9px!important; color:#b24d3d!important; }
+.online-song-results { margin-top:14px; }.online-song-results > span,.online-song-sites > span { color:#58715f; font-size:11px; }
+.online-song-results ol { display:grid; gap:7px; max-height:225px; overflow:auto; margin:8px 0 0; padding:0; list-style:none; }
+.online-song-results li { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px; border:1px solid #dae6d9; border-radius:8px; background:#fff; }
+.online-song-results li div { min-width:0; }.online-song-results strong,.online-song-results small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.online-song-results strong { font-size:12px; }.online-song-results small { margin-top:2px; color:#839187; font-size:10px; }.online-song-results button { min-height:33px; }
+.online-song-sites { margin-top:16px; padding-top:12px; border-top:1px solid #dbe5d9; }.online-song-sites > div { display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
+.online-song-sites button { display:flex; align-items:center; gap:4px; min-height:32px; padding:0 9px; border:1px solid #bed0bf; border-radius:7px; color:#41604b; background:#fff; font-size:11px; }
+.online-song-search .online-song-hint { margin-top:10px; color:#8c998e; font-size:10px; }
+.import-ai-choice { display:grid; gap:8px; margin:18px 0 0; padding:0; border:0; }.import-ai-choice legend { margin-bottom:8px; color:#395846; font-size:13px; font-weight:700; }
+.import-ai-choice label { display:flex; align-items:flex-start; gap:10px; padding:11px; border:1px solid #d9e4d6; border-radius:9px; background:#fff; cursor:pointer; }
+.import-ai-choice label:has(input:checked) { border-color:#7aa387; background:#edf6ed; }.import-ai-choice input { flex:0 0 auto; margin-top:3px; accent-color:#426d54; }
+.import-ai-choice strong,.import-ai-choice small { display:block; }.import-ai-choice strong { color:#294b37; font-size:12px; }.import-ai-choice small { margin-top:3px; color:#748679; font-size:10px; line-height:1.5; }
+/* 安卓启动页：先完整展示用户提供的画面，再以居中双行日文进入首页。 */
+.android-launch-screen { position:fixed; inset:0; z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:30px; padding:34px 24px calc(34px + env(safe-area-inset-bottom, 0px)); background:#1e1e23; color:#f6f0e8; }
+.android-launch-screen img { display:block; width:min(78vw, 43dvh, 390px); max-height:43dvh; aspect-ratio:1; object-fit:contain; border-radius:18px; box-shadow:0 18px 55px #0007; }
+.android-launch-title { display:grid; gap:10px; text-align:center; font-family:"UTA YanZhenQing","Noto Serif JP",serif; font-size:clamp(22px,6vw,31px); line-height:1.35; letter-spacing:.11em; }
+/* 安卓返回退出提示显示在固定底栏上方，避免文字被导航按钮遮住。 */
+.uta-android-font .toast { z-index:25; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); max-width:calc(100vw - 32px); text-align:center; white-space:nowrap; }
+/* 长按歌词只显示简短操作菜单，单句编辑采用可滚动的底部面板。 */
+.lyric-edit-menu-backdrop,.line-editor-backdrop { position:fixed; inset:0; z-index:55; display:flex; align-items:flex-end; justify-content:center; padding:12px; background:#19271a70; }
+.lyric-edit-menu,.line-editor { width:min(100%,650px); padding:18px; border-radius:20px; background:#fffdf8; color:#294333; }
+.lyric-edit-menu button { display:flex; width:100%; align-items:center; justify-content:center; gap:10px; min-height:48px; border:0; background:transparent; color:#345c46; font-size:16px; }
+.lyric-edit-menu button + button { border-top:1px solid #e4e9e1; color:#89958c; }
+.line-editor { max-height:85dvh; overflow:auto; }
+.line-editor header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }.line-editor h2 { margin:0; font-size:22px; }.line-editor header button { border:0; background:transparent; color:#57725e; }
+.line-editor-lyric { display:grid; gap:8px; font-size:13px; }.line-editor textarea { width:100%; min-height:84px; padding:12px; border:1px solid #cfd9ce; border-radius:10px; background:white; color:#294333; font:18px/1.6 var(--serif); resize:vertical; }
+.line-editor-reading-head { display:flex; align-items:center; justify-content:space-between; margin-top:22px; }.line-editor-reading-head button { display:flex; align-items:center; gap:5px; padding:8px; border:0; background:#e8f0e8; color:#345c46; border-radius:8px; }
+.line-editor p { font-size:12px; line-height:1.65; color:#829080; }.line-editor .line-editor-warning,.line-editor .line-editor-error { color:#ae5843; }
+.line-editor-readings { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }.line-editor-readings label { display:grid; gap:6px; min-width:0; }.line-editor-readings input { width:100%; padding:10px; border:1px solid #d5dfd2; border-radius:8px; color:#294333; background:#fff; font-size:15px; }
+.line-editor footer { display:flex; justify-content:flex-end; gap:10px; margin-top:22px; padding:12px 0 0; border-top:1px solid #e3e8de; background:transparent; }.line-editor footer button { padding:10px 20px; border:1px solid #cfd9ce; border-radius:9px; color:#345c46; background:white; }.line-editor footer button:last-child { background:#3c6a51; color:white; border-color:#3c6a51; }.line-editor button:disabled { opacity:.5; }
+/* 采用已确认的安卓概念稿；上方旧网页布局规则保留供对照。 */
+.study-topbar-hidden { display:none; }
+.android-lesson-page { padding:0 20px 160px; background:#f7f8f2; }
+.android-lesson-page .anime-hero,.android-lesson-page .panel-head,.android-lesson-page .audio-tools,.android-lesson-page .sentence-explanation-status,.android-lesson-page .sentence-explanation-disclosure,.android-lesson-page .practice-launch,.android-lesson-page .mobile-word-dock,.android-lesson-page .word-panel,.android-lesson-page .annotation-tip,.android-lesson-page .ai-review-summary { display:none; }
+.android-lesson-page .practice-layout { padding:0; margin:0 auto; width:100%; max-width:720px; }
+.android-lesson-page .lyrics-panel { padding:0; border:0; }
+.android-study-header { max-width:720px; margin:0 auto; padding:24px 0 0; }
+.android-study-mode { margin:0 0 18px; color:#6f8977; font-size:14px; }
+.android-study-song { display:flex; align-items:center; justify-content:space-between; gap:18px; }
+.android-study-song > div { min-width:0; flex:1; }
+.android-study-song h1 { margin:0 0 10px; color:#2b4737; font:600 clamp(23px,6vw,31px)/1.5 var(--serif); overflow-wrap:anywhere; }
+.android-study-song p { margin:0; color:#8c998c; font-size:14px; line-height:1.7; overflow-wrap:anywhere; }
+/* 红框约为屏宽的 38%，两个学习页共用尺寸。 */
+.android-study-cover { display:block; flex:none; width:clamp(128px,38vw,160px); height:clamp(128px,38vw,160px); padding:0; border:0; background:transparent; border-radius:18px; }
+.android-study-cover > span { display:grid; place-items:center; width:100%; height:100%; overflow:hidden; border-radius:18px; color:#fff; background:#719682; font:600 28px var(--serif); box-shadow:0 5px 16px #304c3720; }
+.android-study-cover img { display:block; width:100%; height:100%; object-fit:cover; }
+.android-study-progress { margin:21px 0 23px; color:#829784; font-size:12px; }.android-study-progress > div { height:3px; margin-top:10px; border-radius:4px; background:#dfe8dc; }.android-study-progress i { display:block; height:100%; border-radius:4px; background:#729b7e; }
+.android-study-toolbar { display:flex; align-items:center; gap:12px; margin-bottom:20px; }.android-study-segment { display:flex; flex:1; gap:3px; padding:4px; border-radius:11px; background:#e9eee4; }.android-study-segment button { flex:1; min-height:36px; padding:5px; border:0; border-radius:8px; color:#8d9a89; background:transparent; font-size:14px; }.android-study-segment button.selected { background:#fffefa; color:#3b6348; box-shadow:0 2px 5px #263e2410; }.android-study-more { display:grid; width:42px; height:44px; place-items:center; border:0; color:#78917c; background:transparent; }
+.android-study-error { margin:10px 0; color:#a65542; font-size:12px; }
+.android-lesson-page .lyrics-list { margin:0; border:0; display:grid; gap:13px; }
+.android-lesson-page .lyric-row { display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:8px; row-gap:10px; margin:0; padding:16px 14px 14px; border:1px solid #e1e8db; border-radius:16px; background:#fffefa; }
+.android-lesson-page .lyric-row.active { background:#eaf3e7; border-color:#adc9a9; box-shadow:0 5px 14px #3b5f4510; }
+.android-lesson-page .line-number { position:static; grid-column:1; grid-row:1; padding:0; color:#a0ac9b; font:11px var(--mono); align-self:center; }
+.android-lesson-page .auto-line-wrap { grid-column:1 / -1; grid-row:2; }
+.android-lesson-page .line-actions { display:contents; }.android-lesson-page .line-play { display:none; }
+.android-lesson-page .line-mastery { grid-column:2; grid-row:1; justify-self:end; width:auto; min-width:65px; min-height:28px; margin:0; padding:0; border:0; color:#829c7c; background:transparent; font-size:11px; }.android-lesson-page .line-mastery.mastered { color:#668d61; background:transparent; }
+.android-lesson-page .sentence-explain-link { grid-column:2; grid-row:3; justify-self:end; min-height:30px; width:auto; padding:4px 0 0 8px; border:0; color:#698761; background:transparent; font-size:12px; }
+.android-line-state { grid-column:1; grid-row:3; align-self:center; color:#849c7c; font-size:11px; }
+.android-lesson-page .japanese { color:#2e4b35; font:500 24px/1.9 var(--serif); letter-spacing:.01em; }.android-lesson-page .lyric-token rt { color:#7b9877; font-size:11px; }
+/* 单词选择保留交互，但不因人工改音或单次点击改变歌词文字颜色。 */
+.android-lesson-page .lyric-token.has-ruby:hover,.android-lesson-page .lyric-token.has-ruby.selected { color:inherit; border-bottom-color:transparent; background:transparent; }
+.android-lesson-page .reading { margin-top:7px; color:#78916f; font-size:15px; line-height:1.6; }.android-lesson-page .translation { margin-top:8px; color:#98a18e; font-size:13px; line-height:1.6; }
+.android-lesson-page .sentence-inline-analysis { grid-column:1 / -1; }
+.study-floating-speed { position:fixed; right:18px; bottom:calc(98px + env(safe-area-inset-bottom,0px)); z-index:18; display:grid; justify-items:end; gap:8px; }.study-speed-trigger { width:56px; height:52px; border:1px solid #c7dac0; border-radius:16px; background:#fffefa; color:#3f6a49; box-shadow:0 5px 20px #2d4b3026; font-size:16px; }.study-speed-options { display:grid; gap:3px; padding:6px; border:1px solid #d9e4d2; border-radius:14px; background:#fffefa; box-shadow:0 6px 18px #263b2422; }.study-speed-options button { min-width:75px; min-height:40px; border:0; border-radius:9px; color:#678660; background:transparent; }.study-speed-options button[aria-pressed=true] { color:#345e3d; background:#e8f1e3; }
+.study-options-backdrop,.profile-editor-backdrop { position:fixed; inset:0; z-index:45; display:flex; align-items:flex-end; justify-content:center; padding:12px; background:#21332666; }.study-options,.profile-editor { width:min(100%,650px); max-height:85dvh; overflow:auto; padding:22px; border-radius:22px; background:#fffefa; color:#304f37; }.study-options header,.profile-editor header { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }.study-options h2,.profile-editor h2 { margin:0; font-size:22px; }.study-options header button,.profile-editor header button { border:0; color:#8fa18a; background:transparent; }
+.study-options fieldset { display:flex; gap:20px; padding:16px 0; border:0; }.study-options legend { font-size:14px; }.study-options label { display:flex; align-items:center; gap:7px; font-size:15px; }.study-options input { accent-color:#486e4e; }
+.study-ai { padding-top:18px; margin-top:8px; border-top:1px solid #e4eade; }.study-ai p { color:#8b9c81; font-size:13px; }.study-ai button { min-height:42px; padding:0 18px; border:0; border-radius:10px; color:white; background:#496f50; }.study-ai button:disabled { opacity:.55; }.study-ai small { display:block; margin-top:12px; color:#929d88; font-size:11px; line-height:1.8; }.study-word-details { width:100%; margin-top:20px; padding-top:18px; border:0; border-top:1px solid #e4eade; color:#698360; background:transparent; text-align:left; }
+.study-song-picker { position:fixed; inset:0; z-index:42; padding:16px 20px 40px; overflow:auto; background:#f6f7f2; }.study-picker-close { display:block; margin:0 auto 20px 0; min-height:38px; padding:0; border:0; color:#64835e; background:transparent; font-size:15px; }
+.android-sing { padding-bottom:130px; background:#f7f8f2; }.android-sing-text strong { font-size:24px; line-height:2; }.android-sing-text rt { color:#819b78; font-size:11px; }
+.local-profile-card { display:flex; align-items:center; gap:18px; width:100%; margin:26px 0 0; padding:20px 16px; border:1px solid #dce5d8; border-radius:18px; color:#426549; background:#fffefa; text-align:left; }.local-profile-avatar { display:grid; place-items:center; flex:none; width:78px; height:78px; overflow:hidden; border-radius:50%; color:#74976d; background:#e4efe0; }.local-profile-avatar img { width:100%; height:100%; object-fit:cover; }.local-profile-copy { flex:1; min-width:0; }.local-profile-copy strong { display:block; overflow-wrap:anywhere; font-size:21px; }.local-profile-copy small { display:block; margin-top:7px; color:#8f9d84; font-size:12px; }
+.profile-upload { display:grid; justify-items:center; gap:12px; margin-bottom:26px; }.profile-upload .local-profile-avatar { width:104px; height:104px; }.profile-upload > span:last-of-type { display:flex; align-items:center; gap:7px; color:#608956; font-size:14px; }.profile-upload input { position:absolute; width:1px; height:1px; opacity:0; }.profile-nickname { display:grid; gap:9px; font-size:14px; }.profile-nickname input { width:100%; min-height:45px; padding:10px; border:1px solid #d2dec9; border-radius:10px; background:#fff; color:#3d5f42; font-size:18px; }.profile-editor > p { color:#9aa58f; font-size:12px; }.profile-editor .profile-error { color:#aa5b44; }.profile-save { width:100%; min-height:45px; margin-top:14px; border:0; border-radius:11px; color:#fff; background:#496f50; font-size:16px; }.profile-save:disabled { opacity:.5; }
+/* 安卓界面文字禁止系统长按选中；输入框保留原生选字、复制与粘贴能力。 */
+.uta-android-font body { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+.uta-android-font button,.uta-android-font .lyric-row,.uta-android-font .lyric-row * { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+.uta-android-font input,.uta-android-font textarea,.uta-android-font [contenteditable=true] { -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
+/* 问 AI 与倍速组成右下角悬浮入口，对话区独立滚动以适配软键盘。 */
+.study-floating-chat { position:fixed; right:18px; bottom:calc(158px + env(safe-area-inset-bottom,0px)); z-index:17; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; width:56px; min-height:56px; padding:7px 2px; border:1px solid #c7dac0; border-radius:16px; color:#3f6a49; background:#fffefa; box-shadow:0 5px 20px #2d4b3026; font-size:12px; }
+.lyric-chat-backdrop { position:fixed; inset:0; z-index:70; display:flex; align-items:end; padding:14px; background:#243b2955; }
+.lyric-chat { display:flex; flex-direction:column; width:100%; height:min(650px,86dvh); min-height:0; padding:18px 16px calc(14px + env(safe-area-inset-bottom,0px)); border-radius:24px; color:#34523c; background:#fffefa; box-shadow:0 12px 45px #1a2e2930; }
+.lyric-chat header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.lyric-chat h2 { margin:0 0 5px; font-size:21px; }.lyric-chat header small { color:#7a8c79; font-size:12px; }.lyric-chat header button { flex-shrink:0; width:40px; height:40px; border:0; background:transparent; color:inherit; }
+.lyric-chat-messages { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; margin:16px 0; }
+.lyric-chat-messages p { margin:0 0 12px; padding:12px; border-radius:14px; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.7; font-size:15px; }.lyric-chat-messages .user { margin-left:28px; background:#e6efdf; }.lyric-chat-messages .assistant { margin-right:12px; background:#f2f4ec; }.lyric-chat-messages .lyric-chat-hint { color:#8b9984; background:transparent; }
+.lyric-chat form { display:flex; align-items:end; gap:8px; }.lyric-chat textarea { flex:1; min-width:0; min-height:72px; max-height:120px; padding:11px; border:1px solid #ccd9c4; border-radius:12px; background:#fafbf6; color:#34523c; resize:none; font:inherit; font-size:16px; }.lyric-chat form button { width:44px; height:44px; border:0; border-radius:12px; color:#fff; background:#426a50; }.lyric-chat button:disabled { opacity:.45; }.lyric-chat-notice { margin-top:8px; color:#889580; font-size:10px; }.lyric-chat-error { margin:0 0 10px; color:#a34c33; font-size:13px; }
+/* 我的页居中圆形头像与下方昵称，设置内裁剪支持静态图与保留动画的 GIF。 */
+.local-profile-centered { display:flex; flex-direction:column; align-items:center; gap:18px; padding:18px 0 32px; }
+.local-profile-view { position:relative; width:170px; height:170px; overflow:hidden; border:0; border-radius:50%; background:#e6ede3; color:#426550; box-shadow:0 5px 18px #31493116; }
+.local-profile-centered strong { font-size:24px; color:#34563d; }.local-profile-view img,.profile-crop-window img,.profile-large-avatar img { display:block; width:100%; height:100%; object-fit:cover; }
+.profile-view-backdrop { position:fixed; inset:0; z-index:85; display:grid; place-items:center; background:#17221ee8; }.profile-view-backdrop > button { position:absolute; right:20px; top:20px; width:44px; height:44px; border:0; color:#fff; background:transparent; }.profile-large-avatar { position:relative; overflow:hidden; width:min(88vw,480px); aspect-ratio:1; border-radius:50%; background:#e6ede3; color:#426550; display:grid; place-items:center; }
+.profile-settings-tab { margin:12px 25px 0; padding:10px 16px; border:1px solid #c8d5c2; border-radius:10px; background:#f3f6ef; color:#426550; }.profile-settings-tab[aria-pressed=true] { background:#e0ebda; }
+.profile-settings { display:flex; flex-direction:column; gap:14px; }.profile-crop-window { position:relative; overflow:hidden; width:200px; height:200px; align-self:center; border-radius:50%; background:#e6ede3; color:#426550; display:grid; place-items:center; }.profile-upload-control { align-self:center; padding:10px 20px; border-radius:12px; background:#e6ede3; color:#426550; cursor:pointer; }.profile-upload-control input { display:none; }.profile-settings > small { text-align:center; color:#83917d; font-size:11px; }.profile-crop-controls { padding:12px; border:1px solid #d8e1d2; border-radius:14px; }.profile-crop-controls p { margin:0 0 12px; font-size:13px; }.profile-crop-controls label { display:flex; align-items:center; gap:12px; margin:10px 0; font-size:13px; }.profile-crop-controls input { flex:1; min-width:0; accent-color:#426550; }
+/* 我的入口去掉副说明后，用清晰字号保留简洁的单行标题。 */
+.local-profile-centered + .android-home-links .android-home-link strong { font-size:24px; line-height:1.35; }
+/* 清除按钮默认内边距，让图片完整贴合圆形轮廓。 */
+.local-profile-view { padding:0; display:grid; place-items:center; }
+/* 资料与数据、AI 同一行，覆写此前独立按钮布局，窄屏也保持对齐。 */
+.uta-android-font .settings-tabs { gap:12px; justify-content:space-between; }
+.uta-android-font .settings-tabs .profile-settings-tab { margin:0; border-radius:0; background:none; font-size:14px; }
+.uta-android-font .settings-tabs button { white-space:nowrap; font-size:14px; }
+/* 对话列表与聊天共用弹层，标题保留空间，删除操作二次点按确认。 */
+.lyric-chat header > div { flex:1; min-width:0; }.lyric-chat header small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.lyric-chat-list { flex:1; min-height:0; overflow-y:auto; margin-top:18px; }.lyric-chat-new { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:13px; border:0; border-radius:12px; color:#fff; background:#426a50; font:inherit; font-size:14px; }.lyric-chat-list article { display:flex; align-items:center; gap:10px; margin-top:12px; padding:8px; border:1px solid #e0e6db; border-radius:13px; }.lyric-chat-select { flex:1; min-width:0; padding:8px; text-align:left; border:0; background:transparent; color:#34523c; }.lyric-chat-select strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:16px; }.lyric-chat-select small { display:block; margin-top:8px; color:#889580; font-size:11px; }.lyric-chat-delete { flex-shrink:0; min-width:40px; min-height:44px; border:0; border-radius:10px; background:transparent; color:#a45e45; font:inherit; font-size:12px; }
+/* 搜索来源单独展示可点击链接，保存到历史后仍能查看。 */
+.lyric-chat-sources { display:flex; flex-wrap:wrap; gap:7px; margin:0 12px 16px 0; }.lyric-chat-sources button { padding:7px 9px; border:1px solid #d6e0cf; border-radius:9px; color:#426550; background:#f2f6ee; text-align:left; font:inherit; font-size:12px; }.lyric-chat-search-used { display:block; margin:-4px 0 10px 12px; color:#7a9170; font-size:11px; }
+/* 所有错误和失败提示统一红色，成功与一般说明保持原色。 */
+.uta-android-font [role=alert],.uta-android-font .profile-error,.uta-android-font .settings-message.error,.uta-android-font .android-study-error,.uta-android-font .lyric-chat-error { color:#c03932; }
+/* 云备份资料与操作分组，敏感密钥和失败提示用红色。 */
+.webdav-panel { margin-top:26px; padding-top:22px; border-top:1px solid #dbe2d3; }.webdav-panel > label { display:grid; gap:8px; margin:16px 0; font-size:14px; }.webdav-panel input:not([type=checkbox]):not([type=radio]) { min-width:0; width:100%; min-height:44px; padding:10px; border:1px solid #cfdcc5; border-radius:10px; background:#fff; color:#34523c; font-size:15px; }.webdav-panel small { display:block; color:#82907b; font-size:11px; line-height:1.7; }.webdav-panel fieldset { margin:18px 0; padding:14px; border:1px solid #d9e2d1; border-radius:12px; }.webdav-panel fieldset label { display:flex; gap:8px; align-items:center; margin:12px 0; font-size:13px; }.webdav-panel .webdav-auto { display:flex; align-items:center; gap:8px; }.webdav-actions { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:18px 0; }.webdav-actions button,.webdav-files button { min-height:42px; padding:8px 10px; border:1px solid #cbd9c2; border-radius:10px; background:#edf3e7; color:#426550; font:inherit; font-size:13px; }.webdav-panel button:disabled { opacity:.5; }.webdav-files article { display:flex; align-items:center; gap:10px; padding:12px 0; border-top:1px solid #e0e7d8; }.webdav-files article > div { flex:1; min-width:0; }.webdav-files strong { font-size:13px; }.lyric-chat-online { display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; color:#426550; }.lyric-chat-online input { accent-color:#426550; }.backup-cloud-note { font-size:13px; line-height:1.7; }.uta-android-font .toast:has(strong),.uta-android-font .toast-error { color:#ffb4ae; }
+
+/* 关于与四个设置分类：保持窄屏同一行，更新提示不自动下载安装。 */
+.uta-android-font .settings-tabs { gap:8px; }
+.uta-android-font .settings-tabs button { gap:5px; }
+.about-panel > p { color:#6c7f6a; font-size:14px; }
+.about-panel small { display:block; margin-top:22px; color:#85927d; font-size:12px; }
+.about-check-update { display:flex; align-items:center; justify-content:space-between; width:100%; min-height:56px; margin:22px 0; padding:14px 16px; border:1px solid #dbe2d3; border-radius:14px; background:#fffdf8; color:#426550; font:inherit; font-size:17px; }
+.about-check-update span:first-child,.about-download-update { display:flex; align-items:center; gap:10px; }
+.about-download-update { padding:12px 18px; border:0; border-radius:12px; color:white; background:#426550; font:inherit; }
+.app-update-backdrop { position:fixed; inset:0; z-index:2200; display:grid; place-items:center; padding:24px; background:#172c2673; }
+.app-update-dialog { width:100%; max-width:420px; max-height:80dvh; overflow-y:auto; padding:24px; border-radius:22px; background:#fffdf8; color:#34523c; }
+.app-update-dialog header { display:flex; align-items:center; justify-content:space-between; gap:12px; }.app-update-dialog header h3 { margin:0; font-size:22px; }.app-update-dialog header button { border:0; padding:8px; background:none; color:inherit; }
+.app-update-dialog p { font-size:14px; line-height:1.8; }.app-update-notes { white-space:pre-wrap; max-height:35dvh; overflow:auto; }.app-update-dialog footer { display:flex; justify-content:end; gap:12px; margin-top:22px; }.app-update-dialog footer button { padding:12px 16px; border:0; border-radius:12px; color:#426550; background:#eaf0e4; font:inherit; }.app-update-dialog footer button:last-child { background:#426550; color:white; }
+@media(max-width:380px) { .uta-android-font .settings-tabs button,.uta-android-font .settings-tabs .profile-settings-tab { font-size:13px; gap:4px; }.uta-android-font .settings-tabs svg { width:15px; height:15px; } }

@@ -26,10 +26,12 @@ from urllib import request as urllib_request
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sudachipy import dictionary, tokenizer
 from ai_provider import Provider, default_provider, provider_from_request, request_json
+from artwork_sources import fetch_artwork_image, search_artwork_candidates
 
 
 load_dotenv(Path(__file__).with_name(".env"))
@@ -605,6 +607,26 @@ def search_song_artwork(title: str, artist: str = "") -> dict[str, str]:
     if not safe_title:
         raise HTTPException(status_code=422, detail="歌曲名不能为空")
     return find_song_artwork(safe_title, safe_artist)
+
+
+@app.get("/api/artwork/candidates")
+def search_song_artwork_candidates(title: str, artist: str = "") -> dict[str, Any]:
+    """在多个音乐目录检索候选封面，由用户核对并选择。"""
+    safe_title = text_field(title, limit=160)
+    safe_artist = text_field(artist, limit=160)
+    if not safe_title:
+        raise HTTPException(status_code=422, detail="歌曲名不能为空")
+    return search_artwork_candidates(safe_title, safe_artist)
+
+
+@app.get("/api/artwork/image")
+def download_song_artwork_image(url: str) -> Response:
+    """仅供网页端把已选音乐平台封面压缩保存；不持久缓存图片。"""
+    try:
+        content, media_type = fetch_artwork_image(url)
+    except (ValueError, OSError, urllib_error.URLError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return Response(content=content, media_type=media_type, headers={"Cache-Control": "no-store"})
 
 
 @app.post("/api/annotate/batch", response_model=list[AnnotatedLine])
