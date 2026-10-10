@@ -70,7 +70,7 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
       await saveAiSettings(draft)
       setMessage({ kind: 'success', text: '已保存，后续 AI 请求会使用此配置。已有解析会保留。' })
       setVisible(false)
-    } catch { setMessage({ kind: 'error', text: '浏览器未能保存设置，请检查存储空间或浏览器权限。' }) }
+    } catch { setMessage({ kind: 'error', text: isDesktop ? '未能保存设置，请检查程序数据文件夹是否可写。' : '浏览器未能保存设置，请检查存储空间或浏览器权限。' }) }
   }
 
   async function test() {
@@ -111,7 +111,8 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
         </>}
         {/* 安卓数据管理只保留完整的本机云备份。 */}
         {isAndroid && <WebDavPanel onCreateBackup={onCloudExport} onRestore={onRestore}/>}
-      </div> : <form className="settings-content" onSubmit={save}>
+      </div> : <form className={`settings-content ${isDesktop ? 'desktop-ai-form' : ''}`} onSubmit={save}>
+        <div className="settings-ai-fields">
         <fieldset disabled={busy} className="settings-fields">
           {!isAndroid && <label className="settings-checkbox"><input type="checkbox" checked={draft.useServerDefault} onChange={(event) => update('useServerDefault', event.target.checked)} /> 使用服务端默认配置</label>}
           {!isAndroid && draft.useServerDefault ? <div className="settings-server-note"><b>{serverStatus?.configured ? `${serverStatus.provider} · ${serverStatus.model}` : '服务端默认配置'}</b><p>{serverStatus === null ? '无法确认服务状态，可点击测试连接。' : serverStatus.configured ? '已检测到服务端密钥，可以直接测试和使用。密钥不会返回浏览器。' : '服务端尚未配置密钥，请取消上方勾选并填写自己的服务。'}</p></div> : <>
@@ -127,8 +128,11 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
           </>}
         </fieldset>
         <p className="settings-note">{isAndroid ? '手机直接连接你配置的 AI 服务，不需要电脑开机。测试连接会发送一条短测试文本；词句解析会发送对应歌词文字，可能产生费用。' : '测试连接会发送一条短测试文本，可能产生少量费用。使用 AI 功能时，歌词经网站后端发送到你配置的服务。当前支持 Chat Completions 兼容接口。'}</p>
+        </div>
+        <div className="settings-ai-footer">
         {message && <p className={`settings-message ${message.kind}`} role="status">{message.text}</p>}
         <div className="settings-form-actions"><button type="button" disabled={busy} onClick={async () => { try { await clearAiSettings(); setDraft({ ...DEFAULT_AI_SETTINGS }); setVisible(false); setMessage({ kind: 'success', text: isAndroid ? '已清除手机中的 AI 配置与密钥。' : '已清除浏览器中的 AI 配置与密钥，恢复服务端默认配置。' }) } catch { setMessage({ kind: 'error', text: '无法清除 AI 配置。' }) } }}>清除配置</button><span /><button type="button" disabled={busy} onClick={test}>{busy && <LoaderCircle size={15} className="spin" />}{busy ? '测试中…' : '测试连接'}</button><button type="submit" disabled={busy} className="settings-primary"><Save size={15} /> 保存设置</button></div>
+        </div>
       </form>}
     </section>
   </div>

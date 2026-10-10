@@ -56,3 +56,19 @@
 .uta-desktop .settings-content h3,.uta-desktop .settings-data-card h4 { color:#334860; }
 .uta-desktop .settings-data-card { border-color:#dfe6f1; }
 .uta-desktop .word-topline button { color:#7d97b8; }
+
+/* Explicit grid rows keep the AI form inside the dialog. Only its fields scroll. */
+.uta-desktop .settings-dialog {
+  width:min(780px,calc(100vw - 48px));
+  height:min(720px,calc(100dvh - 100px));
+  grid-template-rows:auto minmax(0,1fr);
+  min-height:0;
+}
+.uta-desktop .settings-tabs { min-height:0; overflow:auto; }
+.uta-desktop .settings-content.desktop-ai-form { display:flex; flex-direction:column; overflow:hidden; padding:0; min-width:0; }
+.uta-desktop .settings-ai-fields { flex:1; min-height:0; overflow:auto; padding:24px; scrollbar-gutter:stable; }
+.uta-desktop .settings-ai-footer { flex-shrink:0; border-top:1px solid #dfe6f1; background:#fff; padding:14px 20px; }
+.uta-desktop .settings-ai-footer .settings-message { margin:0 0 12px; max-height:80px; overflow:auto; overflow-wrap:anywhere; font-size:11px; }
+.uta-desktop .settings-ai-footer .settings-form-actions { margin:0; padding:0; gap:8px; }
+.uta-desktop .settings-ai-footer .settings-form-actions button { font-size:11px; padding:9px 11px; }
+.uta-desktop .settings-ai-footer .settings-form-actions .settings-primary { background:#2867d7; color:#fff; border-color:#2867d7; }

@@ -140,6 +140,49 @@ try {
   await shortcut(',')
   await page.locator('.settings-dialog').waitFor()
   await page.screenshot({ path:path.join(evidence, 'desktop-settings.png') })
+  await page.getByRole('button', { name:'AI 服务', exact:true }).click()
+  await page.getByRole('button', { name:'其他兼容服务', exact:true }).click()
+  await page.getByLabel('供应商名称', { exact:true }).fill('Windows settings test')
+  await page.getByLabel('API 地址', { exact:true }).fill(mockOrigin)
+  await page.getByLabel('API Key', { exact:true }).fill('mock-settings-key')
+  await page.getByLabel('模型名称', { exact:true }).fill('test')
+  await page.getByLabel('在这台电脑上记住 API Key', { exact:true }).check()
+  // The action bar must stay inside the clipped dialog before and after scrolling.
+  for (const [width,height,zoom] of [[1000,680,1],[1024,768,1],[1440,960,1],[1024,768,1.25],[1024,768,1.5]]) {
+    await client.evaluate(({BrowserWindow}, size) => {
+      const window=BrowserWindow.getAllWindows()[0]; window.setSize(size[0],size[1]); window.webContents.setZoomFactor(size[2]);
+    },[width,height,zoom])
+    await page.waitForTimeout(250)
+    for (const scroll of [0,10000]) {
+      await page.locator('.settings-ai-fields').evaluate((element,top)=>{element.scrollTop=top},scroll)
+      const bounds=await page.evaluate(()=>{
+        const rect=selector=>document.querySelector(selector).getBoundingClientRect().toJSON();
+        return {height:innerHeight,width:innerWidth,dialog:rect('.settings-dialog'),footer:rect('.settings-ai-footer'),actions:rect('.settings-form-actions'),fields:rect('.settings-ai-fields')};
+      })
+      assert.ok(bounds.actions.top >= bounds.dialog.top && bounds.actions.bottom <= bounds.dialog.bottom && bounds.actions.bottom <= bounds.height,JSON.stringify(bounds))
+      assert.ok(bounds.actions.left >= bounds.dialog.left && bounds.actions.right <= bounds.dialog.right && bounds.actions.right <= bounds.width)
+      assert.ok(bounds.fields.bottom <= bounds.footer.top + 1 && bounds.fields.height > 90)
+    }
+    if(zoom === 1) await page.screenshot({path:path.join(evidence,`ai-settings-${width}.png`)})
+  }
+  await client.evaluate(({BrowserWindow})=>{ const window=BrowserWindow.getAllWindows()[0];window.setSize(1024,768);window.webContents.setZoomFactor(1) })
+  await page.getByRole('button', { name:'测试连接', exact:true }).click()
+  await page.locator('.settings-ai-footer').getByRole('status').filter({hasText:'连接成功'}).waitFor({timeout:15000})
+  await page.getByRole('button', { name:'保存设置', exact:true }).click()
+  await page.locator('.settings-ai-footer').getByRole('status').filter({hasText:'已保存'}).waitFor()
+  assert.equal(await page.evaluate(()=>window.utaDesktop.loadCredential()),'mock-settings-key')
+  const settings=await page.evaluate(()=>JSON.parse(localStorage.getItem('uta-ai-provider-v1')))
+  assert.equal(settings.base_url,mockOrigin);assert.equal(settings.model,'test');assert.equal(settings.rememberKey,true)
+  assert.equal(Object.hasOwn(settings,'api_key'),false)
+  await page.getByRole('button', { name:'关闭设置', exact:true }).click()
+  await shortcut(',')
+  await page.getByRole('button', { name:'AI 服务', exact:true }).click()
+  assert.equal(await page.getByLabel('API Key', { exact:true }).inputValue(),'mock-settings-key')
+  await page.screenshot({path:path.join(evidence,'ai-settings-fixed.png')})
+  // Restore the dummy credential used by the existing restart check.
+  await page.evaluate(()=>window.utaDesktop.saveCredential('desktop-encrypted-test-key'))
+  await page.getByRole('button', { name:'数据管理', exact:true }).click()
+
   await page.getByRole('button', { name: '导出备份', exact: false }).click()
   for (let i = 0; i < 150; i++) {
     try { if ((await fs.stat(backup)).size > wav.length) break } catch { /* Native save dialog completes asynchronously. */ }
@@ -177,7 +220,7 @@ try {
   } finally { child.kill() }
   assert.deepEqual(failures, [])
   const report = { passed: true, runtime, checks: ['packaged-exe', 'relocated-chinese-space-path', 'no-system-node-python', 'bundled-sudachi-tomoshi', 'ai-proxy-mock',
-    'ui-import-wav-lrc', 'backup-export', 'indexeddb-localstorage-restart', 'windows-encrypted-key', 'renderer-isolation', 'api-authentication', 'parent-exit-cleanup', 'native-titlebar-shortcuts', 'library-filter-sort-search', 'desktop-player-seek-volume-speed', 'independent-panes-1024-1440', 'dedicated-review-practice'] }
+    'ui-import-wav-lrc', 'backup-export', 'indexeddb-localstorage-restart', 'windows-encrypted-key', 'renderer-isolation', 'api-authentication', 'parent-exit-cleanup', 'native-titlebar-shortcuts', 'library-filter-sort-search', 'desktop-player-seek-volume-speed', 'independent-panes-1024-1440', 'dedicated-review-practice', 'ai-settings-visible-footer-small-window-and-zoom', 'ai-settings-test-and-save-through-ui'] }
   await fs.writeFile(path.join(evidence, 'desktop-smoke.json'), JSON.stringify(report, null, 2))
   console.log(JSON.stringify(report, null, 2))
 } finally { if (client) await client.close().catch(() => {}); mock.close(); }
