@@ -2,15 +2,13 @@
 
 用自己的歌曲练习日语：逐句听、看注音、慢速练习，再跟着原唱连续唱。支持安卓应用与电脑网页。
 
-**当前版本：1.0.0**
-
 [安卓下载与使用](#安卓端下载与安装) · [网页安装与使用](#网页端安装与使用) · [开发交接](WEB_APP_DEVELOPMENT_HANDOFF.md)
 
 ## 安卓端下载与安装
 
 ### 1. 下载 APK
 
-**[下载 UTA 1.0.0 APK](https://github.com/meilawiet/Japanese-song-learning-website/releases/download/v1.0.0/UTA-Android-1.0.0.apk)** · [查看发布记录](https://github.com/meilawiet/Japanese-song-learning-website/releases)
+**[前往 Releases 下载安卓 APK](https://github.com/meilawiet/Japanese-song-learning-website/releases)**
 
 打开版本页面，展开 **Assets（附件）**，下载以 **.apk** 结尾的安装包。
 
@@ -24,7 +22,7 @@
 
 支持 Android 7.0 及以上；目前已在 Android 13 手机测试。正常安装和使用无需开启 USB 调试，无需电脑。
 
-下方安卓说明对应 1.0.0，更新内容可在版本发布记录中查看。
+安卓最新版本和更新内容请查看 Releases 发布页。
 
 ## 第一次使用
 
