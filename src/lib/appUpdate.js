@@ -26,3 +26,25 @@ export function selectAppRelease(release,current) {
   // return {available:true,newer:newerAppVersion(release.tag_name,current),version:release.tag_name,url:asset.browser_download_url,notes:typeof release.body==='string'?release.body.slice(0,4000):'',message:newerAppVersion(release.tag_name,current)?'发现新版本。':'当前已是最新版本。'}
   return {available:true,newer:newerAppVersion(release.tag_name,current),version:release.tag_name,url:asset.browser_download_url,sha256:/^sha256:[0-9a-f]{64}$/.test(asset.digest||'')?asset.digest.slice(7):'',notes:typeof release.body==='string'?release.body.slice(0,4000):'',message:newerAppVersion(release.tag_name,current)?'发现新版本。':'当前已是最新版本。'}
 }
+
+// Release 说明采用安全的纯文本分段：标题不显示 Markdown 井号，列表用界面圆点。
+export function parseUpdateNotes(notes) {
+  const blocks = []
+  for (const source of String(notes || '').split(/\r?\n/u)) {
+    const line = source.trim()
+    if (!line) continue
+    const heading = line.match(/^#{1,6}\s+(.+?)(?:\s+#+)?$/u)
+    if (heading) { blocks.push({ type: 'heading', text: heading[1] }); continue }
+    const item = line.match(/^[-*+]\s+(.+)$/u)
+    if (item) {
+      const previous = blocks.at(-1)
+      if (previous?.type === 'list') previous.items.push(item[1])
+      else blocks.push({ type: 'list', items: [item[1]] })
+      continue
+    }
+    // Markdown 的分隔线不当作正文展示；歌词、网址中的普通符号保留。
+    if (/^(?:-{3,}|\*{3,}|_{3,})$/u.test(line)) continue
+    blocks.push({ type: 'text', text: line })
+  }
+  return blocks
+}

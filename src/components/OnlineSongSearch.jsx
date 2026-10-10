@@ -8,7 +8,13 @@ import { lyricsRecordToFile, searchSyncedLyrics } from '../lib/onlineLyrics'
 const scopedSearch = (domain, query) => query ? `https://www.bing.com/search?q=${encodeURIComponent(`site:${domain} ${query}`)}` : `https://${domain}/`
 const SITES = [
   { name: 'Toomic / MusicEnc', url: (query) => scopedSearch('musicenc.com', query) },
-  { name: '歌曲宝', url: (query) => `https://www.gequbao.com/s/${encodeURIComponent(query)}` },
+  // 新增下歌吧入口；未确认其搜索参数，直接打开用户提供的网站。
+  // 旧名称：{ name: '刘明野音乐', url: () => 'https://so.liumingye.cn/' },
+  // 使用网站自己的名称：下歌吧。
+  { name: '下歌吧', url: () => 'https://so.liumingye.cn/' },
+  // { name: '歌曲宝', url: (query) => `https://www.gequbao.com/s/${encodeURIComponent(query)}` },
+  // 歌曲宝不重复添加；有关键词进入搜索页，没有关键词打开首页。
+  { name: '歌曲宝', url: (query) => query ? `https://www.gequbao.com/s/${encodeURIComponent(query)}` : 'https://www.gequbao.com/' },
   { name: '爱歌词网', url: (query) => scopedSearch('22lrc.com', query) },
   { name: '世纪音乐网', url: (query) => scopedSearch('4c44.com', query) },
 ]
@@ -71,6 +77,6 @@ export default function OnlineSongSearch({ onChooseLyrics, autoQuery = '' }) {
     {error && <p className="online-song-search-error" role="status">{error}</p>}
     {results.length > 0 && <div className="online-song-results"><span>LRCLIB · 找到 {results.length} 份带时间轴歌词</span><ol>{results.map((record) => <li key={record.id}><div><strong>{record.title}</strong><small>{record.artist}{record.duration ? ` · ${Math.round(record.duration / 60)} 分钟` : ''}</small></div><button type="button" onClick={() => { onChooseLyrics(lyricsRecordToFile(record)); setSelectedId(record.id) }}>{selectedId === record.id ? '已选用' : '选用歌词'}</button></li>)}</ol></div>}
     <div className="online-song-sites"><span>继续到网站查找歌曲或歌词</span><div>{SITES.map((site) => <button type="button" key={site.name} onClick={() => openSite(site)}>{site.name} <ExternalLink size={13} /></button>)}</div></div>
-    <p className="online-song-hint">除歌曲宝外，使用限定网站的网页搜索。网站下载会保存在手机中；返回 UTA 后，使用上方文件选择按钮导入音频或 LRC。</p>
+    <p className="online-song-hint">歌曲宝支持带关键词搜索；下歌吧直接打开网站，其他入口使用限定网站的网页搜索。网站下载会保存在手机中；返回 UTA 后，使用上方文件选择按钮导入音频或 LRC。</p>
   </section>
 }

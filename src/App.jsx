@@ -1264,7 +1264,9 @@ export default function App() {
     }
   }
 
-  async function saveSongDetails({ title, artist, lines, audioFile, sourceFile }) {
+  // 新增封面参数，未调整封面时保留原来的封面与学习数据。
+  // async function saveSongDetails({ title, artist, lines, audioFile, sourceFile }) {
+  async function saveSongDetails({ title, artist, lines, audioFile, sourceFile, artwork }) {
     const song = editingDetailsSong
     if (!song?.isLocal) throw new Error('只有本机导入的歌曲可以修改详细信息。')
     if (sentenceExplanationJobRef.current === song.id) throw new Error('这首歌正在生成 AI 解析，请完成后再编辑歌词。')
@@ -1273,8 +1275,19 @@ export default function App() {
     const metadata = { title, artist, lines, sourceFile, duration: lines.at(-1).start, ...(audioFile ? { audioBlob: audioFile, audioName: audioFile.name } : {}) }
     setEditingDetailsBusy(true)
     try {
+      // 在线封面先缓存到本地；缓存失败不会提交歌曲资料。
+      if (artwork) {
+        const cached = await cacheArtworkSelection(artwork)
+        Object.assign(metadata, { artworkUrl: cached.artworkUrl || '', artworkSourceUrl: cached.artworkSourceUrl || '', artworkProvider: cached.artworkProvider || '默认封面', artworkChoice: cached.artworkChoice || 'selected' })
+      }
       const updated = await updateLocalSongMetadata(song.id, metadata)
       if (!updated) throw new Error('找不到要编辑的本地歌曲。')
+      if (artwork && Object.hasOwn(artworkOverrides, song.id)) {
+        // 清理旧覆盖项，避免新版封面被早期的个人选择覆盖。
+        const { [song.id]: previousArtwork, ...remaining } = artworkOverrides
+        localStorage.setItem(ARTWORK_OVERRIDES_KEY, JSON.stringify(remaining))
+        setArtworkOverrides(remaining)
+      }
       if (audioFile) {
         stopLinePlayback()
         const oldUrl = localAudioUrlRef.current[song.id]
@@ -1858,7 +1871,10 @@ export default function App() {
     </main>
     {IS_ANDROID_APP && <AndroidBottomNav activeTab={mobileTab} onSelect={showMobileTab} />}
 
+    {/* 旧调用未传入当前封面：
     {editingDetailsSong && <SongDetailsEditor key={editingDetailsSong.id} song={editingDetailsSong} onClose={() => { if (!editingDetailsBusy) setEditingDetailsSong(null) }} onSave={saveSongDetails} busy={editingDetailsBusy} />}
+    */}
+    {editingDetailsSong && <SongDetailsEditor key={editingDetailsSong.id} song={editingDetailsSong} artwork={Object.hasOwn(artworkOverrides, editingDetailsSong.id) ? artworkOverrides[editingDetailsSong.id] : editingDetailsSong.artworkUrl || editingDetailsSong.artworkChoice === 'default' ? editingDetailsSong : songArtworkBySource[editingDetailsSong.sourceFile]} onClose={() => { if (!editingDetailsBusy) setEditingDetailsSong(null) }} onSave={saveSongDetails} busy={editingDetailsBusy} />}
 
     {editingArtworkSong && <div className="settings-backdrop" onClick={() => { if (!artworkEditSaving) setEditingArtworkSong(null) }}><section className="artwork-edit-dialog" role="dialog" aria-modal="true" aria-label={`更换《${editingArtworkSong.title}》的封面`} onClick={(event) => event.stopPropagation()}>
       <button className="song-import-close" type="button" disabled={artworkEditSaving} onClick={() => setEditingArtworkSong(null)} aria-label="关闭封面选择"><X size={18} /></button>

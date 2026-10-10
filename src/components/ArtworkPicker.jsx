@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { ImagePlus, LoaderCircle, Search } from 'lucide-react'
 import { prepareUploadedArtwork, searchArtworkCandidates } from '../lib/artworkSearch'
 
-export default function ArtworkPicker({ title, artist, selected, onSelect, onBusy = () => {} }) {
+// 图片读取状态单独上报，父编辑器在上传完成前暂停保存。
+// export default function ArtworkPicker({ title, artist, selected, onSelect, onBusy = () => {} }) {
+export default function ArtworkPicker({ title, artist, selected, onSelect, onBusy = () => {}, onUploading = () => {} }) {
   const [candidates, setCandidates] = useState([])
   const [unavailable, setUnavailable] = useState([])
   const [busy, setBusy] = useState(false)
@@ -30,10 +32,12 @@ export default function ArtworkPicker({ title, artist, selected, onSelect, onBus
 
   async function upload(file) {
     if (!file) return
-    setUploading(true); setError('')
+    // 等待本地图片处理完成，避免提前保存旧封面。
+    setUploading(true); onUploading(true); setError('')
     try { onSelect(await prepareUploadedArtwork(file)) }
     catch (failure) { setError(failure instanceof Error ? failure.message : '无法读取图片。') }
-    finally { setUploading(false) }
+    // finally { setUploading(false) }
+    finally { setUploading(false); onUploading(false) }
   }
 
   function applyUrl() {

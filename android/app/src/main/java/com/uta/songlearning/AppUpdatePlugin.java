@@ -158,30 +158,71 @@ public final class AppUpdatePlugin extends Plugin {
             } catch (Exception error) { call.reject("安装包保存失败，请检查空间后重试。"); }
         });
     }
-    @PluginMethod public void install(PluginCall call) {
+    // 系统安装失败返回明确错误，页面提示用户改用手动安装。
+    @PluginMethod public void install(PluginCall call) { launchSystemInstaller(call, true); }
+    private void launchSystemInstaller(PluginCall call, boolean requestPermission) {
         try {
             if (downloading) throw new IOException("正在下载，请稍候。");
             verify(apk());
             getActivity().runOnUiThread(() -> {
                 try {
                     if (Build.VERSION.SDK_INT >= 26 && !getContext().getPackageManager().canRequestPackageInstalls()) {
-                        getActivity().startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getContext().getPackageName())));
-                        JSObject result = new JSObject(); result.put("permissionRequired", true); call.resolve(result); return;
+                        if (!requestPermission) throw new IOException("未允许 UTA 安装应用。");
+                        startActivityForResult(call, new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getContext().getPackageName())), "installPermissionReturned");
+                        return;
                     }
                     Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", apk());
-                    Intent view = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, MIME).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    // 安装专用 Intent 请求返回结果；只能选择具有系统标记的安装器。
+                    Intent view = new Intent(Intent.ACTION_INSTALL_PACKAGE).setDataAndType(uri, MIME).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     view.setClipData(ClipData.newRawUri("UTA 安装包", uri));
-                    if ("system".equals(call.getString("mode", "chooser"))) {
-                        // 从支持 APK 的系统应用中选安装器，避免默认文件关联指向浏览器。
-                        for (ResolveInfo candidate : getContext().getPackageManager().queryIntentActivities(view, PackageManager.MATCH_DEFAULT_ONLY)) {
-                            if ((candidate.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) { view.setClassName(candidate.activityInfo.packageName, candidate.activityInfo.name); break; }
-                        }
-                        if (view.getComponent() == null) throw new IOException("未找到系统安装器，请选择其他安装方式。");
-                        getActivity().startActivity(view);
-                    } else getActivity().startActivity(Intent.createChooser(view, "选择安装方式"));
-                    call.resolve(new JSObject());
-                } catch (Exception error) { call.reject(error instanceof IOException ? error.getMessage() : "无法启动安装器，请选择其他安装方式。"); }
+                    view.putExtra(Intent.EXTRA_RETURN_RESULT, true);
+                    for (ResolveInfo candidate : getContext().getPackageManager().queryIntentActivities(view, PackageManager.MATCH_DEFAULT_ONLY)) {
+                        if ((candidate.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) { view.setClassName(candidate.activityInfo.packageName, candidate.activityInfo.name); break; }
+                    }
+                    if (view.getComponent() == null) throw new IOException("未找到系统安装器。");
+                    startActivityForResult(call, view, "systemInstallReturned");
+                } catch (Exception error) { call.reject(error instanceof IOException ? error.getMessage() : "无法启动系统安装器。"); }
             });
         } catch (Exception error) { call.reject(error instanceof IOException ? error.getMessage() : "请先完整下载更新包。"); }
     }
+    @ActivityCallback private void installPermissionReturned(PluginCall call, ActivityResult result) {
+        // 以真实授权状态为准；拒绝授权时不会循环打开设置。
+        if (call != null) launchSystemInstaller(call, false);
+    }
+    @ActivityCallback private void systemInstallReturned(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        if (result.getResultCode() == android.app.Activity.RESULT_OK) { call.resolve(new JSObject()); return; }
+        if (result.getResultCode() == android.app.Activity.RESULT_CANCELED) {
+            JSObject value = new JSObject(); value.put("cancelled", true); call.resolve(value); return;
+        }
+        call.reject("系统安装器安装失败，请检查可用空间与安装权限。");
+    }
+
+    // 旧安装方式选择流程保留作对照。
+    //     @PluginMethod public void install(PluginCall call) {
+    //         try {
+    //             if (downloading) throw new IOException("正在下载，请稍候。");
+    //             verify(apk());
+    //             getActivity().runOnUiThread(() -> {
+    //                 try {
+    //                     if (Build.VERSION.SDK_INT >= 26 && !getContext().getPackageManager().canRequestPackageInstalls()) {
+    //                         getActivity().startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getContext().getPackageName())));
+    //                         JSObject result = new JSObject(); result.put("permissionRequired", true); call.resolve(result); return;
+    //                     }
+    //                     Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", apk());
+    //                     Intent view = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, MIME).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+    //                     view.setClipData(ClipData.newRawUri("UTA 安装包", uri));
+    //                     if ("system".equals(call.getString("mode", "chooser"))) {
+    //                         // 从支持 APK 的系统应用中选安装器，避免默认文件关联指向浏览器。
+    //                         for (ResolveInfo candidate : getContext().getPackageManager().queryIntentActivities(view, PackageManager.MATCH_DEFAULT_ONLY)) {
+    //                             if ((candidate.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) { view.setClassName(candidate.activityInfo.packageName, candidate.activityInfo.name); break; }
+    //                         }
+    //                         if (view.getComponent() == null) throw new IOException("未找到系统安装器，请选择其他安装方式。");
+    //                         getActivity().startActivity(view);
+    //                     } else getActivity().startActivity(Intent.createChooser(view, "选择安装方式"));
+    //                     call.resolve(new JSObject());
+    //                 } catch (Exception error) { call.reject(error instanceof IOException ? error.getMessage() : "无法启动安装器，请选择其他安装方式。"); }
+    //             });
+    //         } catch (Exception error) { call.reject(error instanceof IOException ? error.getMessage() : "请先完整下载更新包。"); }
+    //     }
 }

@@ -23,3 +23,12 @@ test('只提示有正式APK的官方Release，拒绝外站、调试包和预发�
   assert.equal(selectAppRelease({...release,assets:[{name:'UTA.apk',browser_download_url:'https://example.com/UTA.apk'}]},'1.9').available,false)
   assert.equal(selectAppRelease({...release,assets:[{...release.assets[0],name:'app-debug.apk'}]},'1.9').available,false)
 })
+
+// 发布说明的符号只按 Markdown 行首规则处理，正文中的井号或连字符仍保留。
+import {parseUpdateNotes} from '../src/lib/appUpdate.js'
+test('更新说明标题去井号，连续项目渲染为同一圆点列表',()=>{
+  assert.deepEqual(parseUpdateNotes('## UTA 1.0.3\n\n### 更新内容\n- 第一条\n- 第二条\n---'),[{type:'heading',text:'UTA 1.0.3'},{type:'heading',text:'更新内容'},{type:'list',items:['第一条','第二条']}])
+})
+test('普通文本符号与远程 HTML 保留为文本，不转成 HTML',()=>{
+  assert.deepEqual(parseUpdateNotes('C# 与 A-B\n<script>示例</script>'),[{type:'text',text:'C# 与 A-B'},{type:'text',text:'<script>示例</script>'}])
+})

@@ -758,3 +758,39 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .update-install-controls { display:grid; gap:10px; margin:14px 0; }
 .update-install-controls p { margin:0; line-height:1.6; }
 .update-install-controls button { min-height:44px; padding:10px 14px; border:1px solid #d2dec9; border-radius:10px; background:#e6eee7; color:#365843; }
+
+/* 歌曲编辑分区可收起，正文统一滚动，底部保存按钮始终可见。 */
+.song-editor-scroll { min-height:0; min-width:0; overflow-y:auto; margin:0; padding:0; border:0; }
+.song-editor-section { border-bottom:1px solid #e2e8df; }
+.song-editor-section summary { display:flex; align-items:center; justify-content:space-between; min-height:54px; padding:10px 3px; list-style:none; cursor:pointer; font-size:17px; }
+.song-editor-section summary::-webkit-details-marker { display:none; }
+.song-editor-section[open] > summary svg { transform:rotate(180deg); }
+.song-editor-section-body { padding:3px 0 16px; }
+.song-editor-section .song-editor-meta { grid-template-columns:1fr; }
+.song-editor-section .song-editor-files { margin-top:0; }
+.song-editor-section .song-editor-lines { overflow:visible; }
+.song-editor-section .song-editor-lines-head { margin:0 0 10px; }
+.song-editor-insert { display:flex; align-items:flex-end; flex-wrap:wrap; gap:10px; }
+.song-editor-insert label { flex:1; display:grid; gap:6px; font-size:12px; }
+.song-editor-insert select { min-height:40px; max-width:100%; padding:6px; border:1px solid #d5dfd5; border-radius:8px; background:#fff; color:#273b30; }
+.song-editor-insert button { display:flex; align-items:center; gap:4px; min-height:40px; border:0; border-radius:8px; background:#e7efe5; color:#3a6a4e; padding:6px 10px; }
+/* 更新失败以红色提示；关于页面的三行入口保持相同高度。 */
+.about-panel [role="alert"],.app-update-dialog [role="alert"] { color:#b13d32; }
+.about-panel .about-check-update { margin:0; padding:15px 0; border:0; border-bottom:1px solid #dce5da; border-radius:0; background:transparent; }
+.about-panel .about-check-update > span:last-child { font-size:12px; }
+
+/* 真机修正：fieldset 放入普通滚动容器，底部操作区不与内容重叠。 */
+.song-editor-fields { min-width:0; margin:0; padding:0; border:0; }
+.song-editor-actions { flex-shrink:0; position:relative; background:#fffdf8; }
+
+/* 更新弹窗沿用浅色底，覆盖网页 footer 的深色背景；两个按钮等宽便于触控。 */
+.app-update-dialog footer { padding:16px 0 0; background:#fffdf8; border-top:1px solid #dce5da; }
+.app-update-dialog footer button,.app-update-dialog footer button:last-child { flex:1; min-width:0; min-height:64px; padding:14px 18px; border:1px solid #cbd8cb; background:#fffdf8; color:#34523c; font-size:24px; font-weight:600; }
+.app-update-dialog footer button:disabled { opacity:.55; }
+
+/* 更新说明使用真实圆点列表，不显示 Markdown 标题与列表标记。 */
+.app-update-notes { white-space:normal; }
+.app-update-notes h4 { margin:14px 0 8px; font-size:16px; }
+.app-update-notes p { margin:8px 0; }
+.app-update-notes ul { margin:8px 0; padding-left:22px; list-style:disc outside; }
+.app-update-notes li { margin:7px 0; font-size:14px; line-height:1.8; }
