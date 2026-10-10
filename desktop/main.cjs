@@ -114,12 +114,32 @@ function registerProtocol() {
   });
 }
 
+function sendCommand(command) { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('uta:command', command); }
+ipcMain.handle('uta:menu', (event, name) => {
+  if (event.sender !== mainWindow?.webContents || !event.senderFrame?.url.startsWith(APP_ORIGIN + '/')) throw new Error('Forbidden');
+  const index = { file: 0, edit: 1, view: 2, help: 3 }[name];
+  if (index === undefined) throw new Error('Unknown menu');
+  Menu.getApplicationMenu().items[index].submenu.popup({ window: mainWindow });
+});
+ipcMain.handle('uta:data-folder', event => {
+  if (event.sender !== mainWindow?.webContents || !event.senderFrame?.url.startsWith(APP_ORIGIN + '/')) throw new Error('Forbidden');
+  return shell.openPath(dataDir);
+});
+
 function openExternal(url) { if (isExternalUrl(url)) shell.openExternal(url).catch(() => {}); }
 
 function createWindow() {
-  mainWindow = new BrowserWindow({ width: 1360, height: 900, minWidth: 880, minHeight: 640, show: false,
-    title: 'UTA · 日语歌学习', backgroundColor: '#f5f2eb', icon: path.join(__dirname, 'icon.png'),
+  mainWindow = new BrowserWindow({ width: 1360, height: 900, minWidth: 1000, minHeight: 680, show: false,
+    title: 'UTA · 日语歌学习', backgroundColor: '#f4f6f9', titleBarStyle: 'hidden', titleBarOverlay: { color: '#edf1f7', symbolColor: '#42516a', height: 42 }, autoHideMenuBar: true, icon: path.join(__dirname, 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+  // Route desktop shortcuts before Chromium handles them, including hidden-menu windows.
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown' || !input.control || input.alt || input.meta) return;
+    const key = input.key.toLowerCase();
+    const command = input.shift ? (key === 'e' ? 'backup' : null)
+      : ({ o: 'import', f: 'search', ',': 'settings', '1': 'lesson', '2': 'library', '3': 'review' })[key];
+    if (command) { event.preventDefault(); sendCommand(command); }
+  });
   mainWindow.webContents.setWindowOpenHandler(({ url }) => { openExternal(url); return { action: 'deny' }; });
   mainWindow.webContents.on('will-navigate', (event, url) => { if (!url.startsWith(APP_ORIGIN + '/')) { event.preventDefault(); openExternal(url); } });
   mainWindow.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
@@ -133,13 +153,19 @@ function createWindow() {
   mainWindow.webContents.on('render-process-gone', (_event, details) => log(`Renderer stopped: ${details.reason}`));
   mainWindow.loadURL(APP_ORIGIN + '/').catch((error) => { dialog.showErrorBox('UTA 页面加载失败', error.message); app.quit(); });
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    { label: 'UTA', submenu: [{ label: '打开数据文件夹', click: () => shell.openPath(dataDir) }, { type: 'separator' }, { role: 'quit', label: '退出' }] },
+    { label: '文件', submenu: [
+      { label: '导入歌曲…', accelerator: 'Ctrl+O', click: () => sendCommand('import') },
+      { label: '搜索歌曲', accelerator: 'Ctrl+F', click: () => sendCommand('search') },
+      { label: '导出学习备份…', accelerator: 'Ctrl+Shift+E', click: () => sendCommand('backup') },
+      { label: '设置…', accelerator: 'Ctrl+,', click: () => sendCommand('settings') },
+      { type: 'separator' }, { label: '打开数据文件夹', click: () => shell.openPath(dataDir) }, { type: 'separator' }, { role: 'quit', label: '退出' }] },
     { label: '编辑', submenu: [{ role: 'undo', label: '撤销' }, { role: 'redo', label: '重做' }, { type: 'separator' }, { role: 'cut', label: '剪切' }, { role: 'copy', label: '复制' }, { role: 'paste', label: '粘贴' }, { role: 'selectAll', label: '全选' }] },
-    { label: '显示', submenu: [{ role: 'reload', label: '刷新' }, { role: 'resetZoom', label: '实际大小' }, { role: 'zoomIn', label: '放大' }, { role: 'zoomOut', label: '缩小' }, { role: 'togglefullscreen', label: '全屏' }] },
+    { label: '视图', submenu: [{ label: '发音学习', accelerator: 'Ctrl+1', click: () => sendCommand('lesson') }, { label: '歌曲库', accelerator: 'Ctrl+2', click: () => sendCommand('library') }, { label: '复习', accelerator: 'Ctrl+3', click: () => sendCommand('review') }, { type: 'separator' }, { role: 'reload', label: '刷新' }, { role: 'resetZoom', label: '实际大小' }, { role: 'zoomIn', label: '放大' }, { role: 'zoomOut', label: '缩小' }, { role: 'togglefullscreen', label: '全屏' }] },
     { label: '帮助', submenu: [{ label: '使用说明', click: () => shell.openPath(path.join(home, '使用说明.md')) },
       { label: '查看 Windows 版更新', click: () => openExternal('https://github.com/meilawiet/Japanese-song-learning-website/releases') },
       { label: '关于 UTA', click: () => dialog.showMessageBox(mainWindow, { type: 'info', title: '关于 UTA', message: `UTA ${app.getVersion()} · Windows x64`, detail: '用日语歌学习发音与词汇。\n内置 Sudachi 注音与 Tomoshi 日中词典。\n学习数据保存在程序旁的 uta-data 文件夹。' }) }] },
   ]));
+  mainWindow.setMenuBarVisibility(false);
 }
 
 app.on('before-quit', () => { stopping = true; if (backend) { backend.stdin.end(); backend.kill(); } });

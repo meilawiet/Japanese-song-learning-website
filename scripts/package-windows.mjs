@@ -19,6 +19,12 @@ await rcedit(path.join(destination, 'UTA.exe'), { icon: path.join(root, 'desktop
 await fs.rm(path.join(destination, 'resources', 'default_app.asar'), { force: true })
 const appDir = path.join(destination, 'resources', 'app')
 await fs.mkdir(appDir, { recursive: true })
+// Remove old hashed interface assets during rebuild; user data is outside resources/app.
+for (const name of ['desktop', 'dist-desktop']) {
+  const target = path.resolve(appDir, name)
+  if (path.dirname(target) !== path.resolve(appDir)) throw new Error('Invalid application asset path')
+  await fs.rm(target, { recursive: true, force: true })
+}
 await fs.writeFile(path.join(appDir, 'package.json'), JSON.stringify({ name: manifest.name, productName: 'UTA',
   version: manifest.version, main: 'desktop/main.cjs', description: manifest.description }, null, 2))
 await fs.cp(path.join(root, 'desktop'), path.join(appDir, 'desktop'), { recursive: true,
@@ -28,7 +34,7 @@ await fs.cp(path.join(root, 'work', 'backend', 'uta-backend'), path.join(destina
 const dictionaryDir = path.join(destination, 'resources', 'dictionary')
 await fs.mkdir(dictionaryDir, { recursive: true })
 await fs.copyFile(path.join(root, 'server', 'data', 'tomoshi-dict-open.db'), path.join(dictionaryDir, 'tomoshi-dict-open.db'))
-for (const [source, target] of [['docs/WINDOWS.md', '使用说明.md'], ['LICENSE', 'UTA-LICENSE.txt'], ['THIRD_PARTY_DATA_NOTICES.md', '第三方数据说明.md']]) {
+for (const [source, target] of [['docs/WINDOWS.md', '使用说明.md'], ['docs/WINDOWS_VERIFICATION.md', '验证记录.md'], ['LICENSE', 'UTA-LICENSE.txt'], ['THIRD_PARTY_DATA_NOTICES.md', '第三方数据说明.md']]) {
   await fs.copyFile(path.join(root, source), path.join(destination, target))
 }
 await fs.cp(path.join(root, 'desktop', 'licenses'), path.join(destination, 'licenses'), { recursive: true })

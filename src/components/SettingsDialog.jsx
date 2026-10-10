@@ -9,6 +9,7 @@ import WebDavPanel from './WebDavPanel'
 import {AboutPanel} from './AppUpdates'
 
 export default function SettingsDialog({ onClose, onExport, onRestore, onCloudExport, updates, backupBusy, backupError, readingStyle = 'hiragana', onReadingStyleChange, initialTab = 'data' }) {
+  const isDesktop = Boolean(globalThis.window?.utaDesktop)
   const [tab, setTab] = useState(Capacitor.isNativePlatform() && initialTab === 'reading' ? 'data' : initialTab)
   const [draft, setDraft] = useState(loadAiSettings)
   const [visible, setVisible] = useState(false)
@@ -93,7 +94,7 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
       {/* 原独立个人资料按钮已移入上方分类栏。 */}
       {/* 安卓新增关于页，其他设置分类保持同一行。 */}
       {tab === 'about' && isAndroid ? <AboutPanel updates={updates}/> : tab === 'profile' && isAndroid ? <div className="settings-content"><ProfilePanel editable /></div> : tab === 'reading' && !isAndroid ? <div className="settings-content">
-        <h3>选择你习惯的注音</h3><p className="settings-description">切换后立即生效，并在当前浏览器保存。歌词原文不会改变。</p>
+        <h3>选择你习惯的注音</h3><p className="settings-description">切换后立即生效。歌词原文不会改变。</p>
         <fieldset className="reading-style-options"><legend>注音方式</legend>
           <label><input type="radio" name="reading-style" value="hiragana" checked={readingStyle === 'hiragana'} onChange={() => onReadingStyleChange('hiragana')} /><span><b>平假名</b><small>夢 → ゆめ　·　学校 → がっこう</small></span></label>
           <label><input type="radio" name="reading-style" value="romaji" checked={readingStyle === 'romaji'} onChange={() => onReadingStyleChange('romaji')} /><span><b>罗马音</b><small>夢 → yume　·　学校 → gakkou</small></span></label>
@@ -102,9 +103,9 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
       </div> : tab === 'data' ? <div className="settings-content">
         {/* 安卓端按用户要求暂时移除网站导入导出入口；网页端保留原数据管理。 */}
         {!isAndroid && <>
-        <h3>让学习记录随你同行</h3><p className="settings-description">备份网页导入的歌曲和音频，以及学习进度、读音修正、复习记录与 AI 解析。</p>
-        <div className="settings-data-card"><div><h4>导出网站数据</h4><p>下载一个 .uta-backup 文件，留存备份或迁移到其他浏览器。</p></div><button type="button" onClick={onExport} disabled={Boolean(backupBusy)}>{backupBusy === 'export' ? <LoaderCircle size={16} className="spin" /> : <Download size={16} />} 导出备份</button></div>
-        <div className="settings-data-card"><div><h4>导入网站数据</h4><p>先预览备份内容，确认后覆盖当前浏览器的学习数据。</p></div><button type="button" onClick={() => fileRef.current?.click()} disabled={Boolean(backupBusy)}>{backupBusy === 'inspect' ? <LoaderCircle size={16} className="spin" /> : <Upload size={16} />} 导入备份</button><input ref={fileRef} type="file" accept=".uta-backup,application/octet-stream" hidden onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onRestore(file) }} /></div>
+        <h3>让学习记录随你同行</h3><p className="settings-description">备份导入的歌曲、音频、学习进度、读音修正、复习记录与 AI 解析。</p>
+        <div className="settings-data-card"><div><h4>导出学习数据</h4><p>保存一个 .uta-backup 文件，备份或迁移学习记录。</p></div><button type="button" onClick={onExport} disabled={Boolean(backupBusy)}>{backupBusy === 'export' ? <LoaderCircle size={16} className="spin" /> : <Download size={16} />} 导出备份</button></div>
+        <div className="settings-data-card"><div><h4>恢复学习数据</h4><p>先预览备份内容，确认后恢复学习数据。</p></div><button type="button" onClick={() => fileRef.current?.click()} disabled={Boolean(backupBusy)}>{backupBusy === 'inspect' ? <LoaderCircle size={16} className="spin" /> : <Upload size={16} />} 导入备份</button><input ref={fileRef} type="file" accept=".uta-backup,application/octet-stream" hidden onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onRestore(file) }} /></div>
         {backupError && <p className="settings-message error" role="alert">{backupError}</p>}
         <p className="settings-note">API Key 不会包含在备份中。项目文件夹中的歌曲与音频需另行保留。导入新歌曲请前往歌曲库。</p>
         </>}
@@ -122,7 +123,7 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
             <label className="settings-checkbox"><input type="checkbox" checked={draft.json_mode} onChange={(event) => update('json_mode', event.target.checked)} /> 启用 JSON 输出模式</label><p className="settings-hint">若兼容服务不支持此参数，可关闭；模型仍需能返回 JSON。</p>
             {/* 只对已适配的官方服务开放，明确标注费用和问 AI 的使用范围。 */}
             {isAndroid && <><label className="settings-checkbox"><input type="checkbox" name="web-search" checked={Boolean(draft.web_search_enabled)} disabled={!webSearchAvailable(draft.base_url)} onChange={event=>update('web_search_enabled',event.target.checked)}/>启用联网查询</label><p className="settings-hint">联网查询可能产生更多费用，包括额外模型调用与搜索费用。用于“问 AI”，由模型判断是否搜索；目前支持 DeepSeek 官方接口。</p></>}
-            <label className="settings-checkbox"><input type="checkbox" checked={draft.rememberKey} onChange={(event) => update('rememberKey', event.target.checked)} /> {isAndroid ? '在这部手机上记住 API Key' : '在此浏览器记住 API Key'}</label><p className="settings-hint">{isAndroid ? '勾选后由 Android 系统加密保存；不勾选时仅在本次应用会话中使用。' : '默认仅在当前标签页会话保存。勾选后会明文保存在此浏览器，请只在自己的设备上使用。'}</p>
+            <label className="settings-checkbox"><input type="checkbox" checked={draft.rememberKey} onChange={(event) => update('rememberKey', event.target.checked)} /> {isAndroid ? '在这部手机上记住 API Key' : isDesktop ? '在这台电脑上记住 API Key' : '在此浏览器记住 API Key'}</label><p className="settings-hint">{isAndroid ? '勾选后由 Android 系统加密保存；不勾选时仅在本次应用会话中使用。' : isDesktop ? '勾选后由 Windows 加密保存；未勾选时仅在本次程序会话中使用。' : '默认仅在当前标签页会话保存。勾选后会明文保存在此浏览器，请只在自己的设备上使用。'}</p>
           </>}
         </fieldset>
         <p className="settings-note">{isAndroid ? '手机直接连接你配置的 AI 服务，不需要电脑开机。测试连接会发送一条短测试文本；词句解析会发送对应歌词文字，可能产生费用。' : '测试连接会发送一条短测试文本，可能产生少量费用。使用 AI 功能时，歌词经网站后端发送到你配置的服务。当前支持 Chat Completions 兼容接口。'}</p>

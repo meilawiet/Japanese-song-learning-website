@@ -1,3 +1,4 @@
+import { DesktopChrome, DesktopSongHeader, DesktopLibrary, DesktopReview, DesktopPlayer } from './components/DesktopWorkspace'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
@@ -130,6 +131,8 @@ export default function App() {
   const [learningState, setLearningState] = useState(initialLearning)
   const [activeSongId, setActiveSongId] = useState(initialSong().id)
   // 旧网页入口：useState('lesson')；安卓改为从三栏首页的“学习”页启动。
+  const [desktopAudio, setDesktopAudio] = useState({ time: 0, duration: 0, playing: false })
+  const [desktopVolume, setDesktopVolume] = useState(1)
   const [activePage, setActivePage] = useState(IS_ANDROID_APP ? 'mobile-learn' : 'lesson')
   const [mobileTab, setMobileTab] = useState('learn')
   // 安卓页面原先只切换组件状态，系统返回键因此直接退出；现在记录实际访问顺序。
@@ -773,6 +776,7 @@ export default function App() {
   }
 
   function showReviewQueue() {
+    if (IS_DESKTOP_APP) { setActivePage('review-list'); return }
     if (IS_ANDROID_APP) {
       navigateAndroid('review-list', 'review')
       window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }))
@@ -1342,6 +1346,7 @@ export default function App() {
 
   function choosePlaybackRate(nextRate) {
     setPlaybackRate(nextRate)
+    if (IS_DESKTOP_APP && audioRef.current) audioRef.current.playbackRate = nextRate
     setToast(`已切换为 ${nextRate}× 速度播放。`)
   }
 
@@ -1357,8 +1362,9 @@ export default function App() {
     audio.playbackRate = playbackRate
     try { audio.currentTime = clip.start } catch { /* Wait for metadata if the browser has not seeked yet. */ }
     audio.play()
-      .then(() => { setPlayingLineId(clip.lineId); setAudioError('') })
-      .catch(() => {
+      .then(() => { if (!audio.paused) setPlayingLineId(clip.lineId); setAudioError('') })
+      .catch(error => {
+        if (error.name === 'AbortError') return
         setPlayingLineId(null)
         setAudioError('浏览器未能开始播放该句音频。')
       })
@@ -1411,9 +1417,9 @@ export default function App() {
     }
     pendingContinuousRef.current = null
     try { audio.currentTime = start } catch { setAudioError('无法跳转到选中的歌词位置。'); return }
-    audio.playbackRate = 1
-    audio.play().then(() => { setSingAlongPlaying(true); setAudioError('') })
-      .catch(() => { continuousPlaybackRef.current = false; setSingAlongPlaying(false); setAudioError('未能开始播放歌曲。') })
+    audio.playbackRate = IS_DESKTOP_APP ? playbackRate : 1
+    audio.play().then(() => { setSingAlongPlaying(!audio.paused && !audio.ended); setAudioError('') })
+      .catch(error => { if (error.name === 'AbortError') return; continuousPlaybackRef.current = false; setSingAlongPlaying(false); setAudioError('未能开始播放歌曲。') })
   }
 
   function playSingAlongFromLine(lineId) {
@@ -1429,11 +1435,12 @@ export default function App() {
     if (!audioUrl || !audio) return
     if (!continuousPlaybackRef.current || audio.ended) { startContinuousPlayback(0, activeSong.lines[0]?.id ?? null); return }
     if (!audio.paused) { audio.pause(); setSingAlongPlaying(false); return }
-    audio.play().then(() => { setSingAlongPlaying(true); setAudioError('') })
-      .catch(() => setAudioError('未能继续播放歌曲。'))
+    audio.play().then(() => { setSingAlongPlaying(!audio.paused && !audio.ended); setAudioError('') })
+      .catch(error => { if (error.name !== 'AbortError') setAudioError('未能继续播放歌曲。') })
   }
 
   function handleAudioLoadedMetadata() {
+    updateDesktopAudio()
     const continuous = pendingContinuousRef.current
     if (continuous) { startContinuousPlayback(continuous.start, continuous.lineId); return }
     const clip = pendingClipRef.current
@@ -1443,6 +1450,7 @@ export default function App() {
   }
 
   function handleAudioTimeUpdate() {
+    updateDesktopAudio()
     const audio = audioRef.current
     if (continuousPlaybackRef.current && audio) {
       // LRC 时间戳决定当前句；高亮更新不会暂停或跳转音频。
@@ -1653,7 +1661,43 @@ export default function App() {
     }
   }
 
-  return <>
+  function updateDesktopAudio() {
+    if (!IS_DESKTOP_APP || !audioRef.current) return
+    const audio = audioRef.current
+    setDesktopAudio({ time: audio.currentTime || 0, duration: Number.isFinite(audio.duration) ? audio.duration : 0, playing: !audio.paused && !audio.ended })
+  }
+
+  function seekDesktopAudio(time) {
+    const audio = audioRef.current
+    if (!audio || !audioUrl || !Number.isFinite(audio.duration)) return
+    clipEndRef.current = null
+    continuousPlaybackRef.current = true
+    setPlayingLineId(null)
+    audio.currentTime = Math.max(0, Math.min(time, audio.duration))
+    handleAudioTimeUpdate()
+  }
+
+  function playDesktopAdjacent(offset) {
+    const index = activeSong.lines.findIndex(line => line.id === (singAlongLineId ?? activeLine.id))
+    const line = activeSong.lines[Math.max(0, Math.min(index + offset, activeSong.lines.length - 1))]
+    if (line) startContinuousPlayback(line.start || 0, line.id)
+  }
+
+  useEffect(() => {
+    if (!IS_DESKTOP_APP) return
+    return window.utaDesktop.onCommand(command => {
+      if (command === 'import') openImportDialog()
+      if (command === 'search') showLibraryPage({ focusSearch: true })
+      if (command === 'settings') setSettingsOpen(true)
+      if (command === 'backup') exportLearningData()
+      if (command === 'library') showLibraryPage()
+      if (command === 'lesson') showLessonPage()
+      if (command === 'review') showReviewQueue()
+    })
+  })
+
+  return <div className={IS_DESKTOP_APP ? 'desktop-shell' : undefined}>
+    {IS_DESKTOP_APP && <DesktopChrome page={activePage} song={activeSong} songs={allSongs} reviewCount={reviewQueue.length} onLesson={showLessonPage} onLibrary={() => showLibraryPage()} onReview={showReviewQueue} onSettings={() => setSettingsOpen(true)} onSong={chooseSongFromLibrary}/>}
     {IS_ANDROID_APP && songPickerOpen && <div className="study-song-picker" role="dialog" aria-modal="true" aria-label="选择歌曲"><button className="study-picker-close" type="button" onClick={() => setSongPickerOpen(false)} aria-label="返回当前练习">‹ 返回</button><AndroidSongLibrary selectionMode songs={allSongs.filter((song) => !song.isDemo && normalizeSongSearch(`${song.title}${song.artist}`).includes(normalizeSongSearch(songPickerSearch)))} total={androidLibraryTotal} search={songPickerSearch} onSearch={setSongPickerSearch} artworkFor={artworkForSong} learnedBySong={learnedBySong} activeSongId={activeSong.id} onOpen={(id) => { chooseSong(id); setSongPickerOpen(false); window.scrollTo({ top: 0, behavior: 'instant' }) }} /></div>}
     {/* 长按后只露出编辑入口；完整编辑窗口按需打开。 */}
     {/* 长按抬手会产生一次兼容点击；短暂忽略背景点击，避免刚弹出的菜单自动关闭。 */}
@@ -1665,7 +1709,7 @@ export default function App() {
     })()}
     {IS_ANDROID_APP && androidLaunchVisible && <div className="android-launch-screen" role="img" aria-label="UTA 启动图：私のうた，聴いてください"><img src={androidLaunchPortrait} alt="" /><div className="android-launch-title" lang="ja"><span>私のうた</span><span>聴いてください</span></div></div>}
     <div className="page-grain" aria-hidden="true" />
-    <audio ref={audioRef} src={audioUrl || undefined} preload="metadata" onLoadedMetadata={handleAudioLoadedMetadata} onTimeUpdate={handleAudioTimeUpdate} onEnded={() => { clipEndRef.current = null; continuousPlaybackRef.current = false; setPlayingLineId(null); setSingAlongPlaying(false) }} onError={() => { continuousPlaybackRef.current = false; setPlayingLineId(null); setSingAlongPlaying(false); setAudioError(`未能加载《${activeSong.title}》的音频文件。`) }} />
+    <audio ref={audioRef} src={audioUrl || undefined} preload="metadata" onPlay={updateDesktopAudio} onPause={updateDesktopAudio} onEmptied={updateDesktopAudio} onDurationChange={updateDesktopAudio} onLoadedMetadata={handleAudioLoadedMetadata} onTimeUpdate={handleAudioTimeUpdate} onEnded={() => { clipEndRef.current = null; continuousPlaybackRef.current = false; setPlayingLineId(null); setSingAlongPlaying(false) }} onError={() => { continuousPlaybackRef.current = false; setPlayingLineId(null); setSingAlongPlaying(false); setAudioError(`未能加载《${activeSong.title}》的音频文件。`) }} />
     {/* 学习详情页由歌曲栏承担页头，原品牌栏保留给主页面和网页。 */}
     <header className={`topbar ${IS_ANDROID_APP ? `android-topbar ${['lesson', 'sing-along'].includes(activePage) ? 'study-topbar-hidden' : ''}` : ''}`}>
       <button className="brand" type="button" onClick={showLessonPage} aria-label="UTA 首页"><span className="brand-mark">う</span><span>UTA<span className="brand-dot">.</span></span></button>
@@ -1686,7 +1730,8 @@ export default function App() {
       {/* 问 AI 固定在倍速上方，每首歌曲独立会话，提问实时带入歌词和校正读音。 */}
       {IS_ANDROID_APP && <LyricChat key={activeSong.id} song={activeSong} lineId={activeLine.id} annotations={annotations} corrections={corrections} />}
       {/* 已按用户要求移除逐句页顶部返回按钮；系统返回手势和底部导航继续可用。 */}
-      <section className="hero anime-hero" aria-labelledby="song-title" style={{ '--hero-art': `url(${twilightStation})` }}>
+      {IS_DESKTOP_APP && <DesktopSongHeader song={activeSong} artwork={artworkForSong(activeSong)} learned={learnedLines.size} progress={progress} favorite={isFavorite} busy={aiBusy === 'review'} onFavorite={toggleFavorite} onReview={runAiReview} onPractice={() => startPractice('all', activeSong.id, activeLine.id)}/>}
+      {!IS_DESKTOP_APP && <section className="hero anime-hero" aria-labelledby="song-title" style={{ '--hero-art': `url(${twilightStation})` }}>
         <div className="hero-art" aria-hidden="true" />
         <div className="hero-wash" aria-hidden="true" />
         <div className="hero-inner">
@@ -1715,7 +1760,7 @@ export default function App() {
             </aside>
           </div>
         </div>
-      </section>
+      </section>}
 
       <section className={`practice-layout ${practiceActive ? 'guided-practice-layout' : ''}`} id="lesson" aria-label="歌词发音学习工作区">
         <aside className="lesson-rail">
@@ -1761,7 +1806,7 @@ export default function App() {
               const hasSentenceExplanation = hasCachedSentenceExplanation(currentSentenceCache, line)
               const sentenceExpanded = sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === line.id
               // 原点击播放保留；新增整句长按与滚动取消，抬手后不误触播放或词语详情。
-              return <article id={`lyric-row-${activeSong.id}-${line.id}`} className={`lyric-row ${current ? 'active' : ''}`} onPointerDownCapture={(event) => beginLyricPress(event, line.id)} onPointerMoveCapture={moveLyricPress} onPointerUpCapture={(event) => { cancelLyricPress(); suppressLyricPressClick(event) }} onPointerCancel={cancelLyricPress} onPointerLeave={cancelLyricPress} onClickCapture={suppressLyricPressClick} onContextMenu={(event) => { if (IS_ANDROID_APP) event.preventDefault() }} onClick={(event) => handleLyricRowClick(event, line.id)} key={`${activeSong.id}-${line.id}`}>
+              return <article id={`lyric-row-${activeSong.id}-${line.id}`} className={`lyric-row ${current ? 'active' : ''} ${IS_DESKTOP_APP && singAlongLineId === line.id && singAlongPlaying ? 'desktop-now-playing' : ''}`} onPointerDownCapture={(event) => beginLyricPress(event, line.id)} onPointerMoveCapture={moveLyricPress} onPointerUpCapture={(event) => { cancelLyricPress(); suppressLyricPressClick(event) }} onPointerCancel={cancelLyricPress} onPointerLeave={cancelLyricPress} onClickCapture={suppressLyricPressClick} onContextMenu={(event) => { if (IS_ANDROID_APP) event.preventDefault() }} onClick={(event) => handleLyricRowClick(event, line.id)} key={`${activeSong.id}-${line.id}`}>
                 <span className="line-number">{String(line.displayNumber).padStart(2, '0')}</span>
                 <div className="auto-line-wrap">
                   <div className="japanese"><AnnotatedLine interactive={!IS_ANDROID_APP} tokens={lineTokens} corrections={corrections} songId={activeSong.id} lineId={line.id} mode={mode} readingStyle={readingStyle} selectedIndex={current ? selectedTokenIndex : -1} selectionRange={dragSelection?.lineId === line.id ? dragSelection : selectedPhraseRange?.lineId === line.id ? selectedPhraseRange : null} showSelectionAction={selectedText?.lineId === line.id && selectedPhraseRange?.lineId === line.id} onStartSelection={(tokenIndex) => beginTokenSelection(line.id, tokenIndex)} onExtendSelection={(tokenIndex) => extendTokenSelection(line.id, tokenIndex)} onFinishSelection={finishTokenSelection} onExplainSelection={() => askAiToExplain(selectedText)} onSelectToken={(tokenIndex) => handleTokenClick(line.id, tokenIndex)} /></div>
@@ -1798,15 +1843,16 @@ export default function App() {
       </section>
 
       {/* 旧网页复习区仍保留在学习页；安卓从“复习模式”入口打开独立清单。 */}
-      {!IS_ANDROID_APP && <section className="review-queue-section" id="review-queue" aria-labelledby="review-queue-title">
+      {!IS_ANDROID_APP && !IS_DESKTOP_APP && <section className="review-queue-section" id="review-queue" aria-labelledby="review-queue-title">
         <div className="review-queue-heading"><div><p className="eyebrow">WORDS IN CONTEXT, ONE LINE AT A TIME</p><h2 id="review-queue-title">待复习的句子 <span>{reviewQueue.length}</span></h2><p>练习时选择“还要再练”，句子就会来到这里；学会后会自动移出。</p></div>{currentSongReviewCount > 0 && <button type="button" onClick={() => startPractice('review')}>练习本首待复习句 <ChevronRight size={15} /></button>}</div>
         {reviewQueue.length ? <ol className="review-line-list">{reviewQueue.map(({ song, line }) => <li key={`${song.id}:${line.id}`}><button type="button" onClick={() => startPractice('review', song.id, line.id)}><span>{song.title} · 第 {line.displayNumber} 句</span><b lang="ja">{line.text}</b><small>开始练习 <ChevronRight size={13} /></small></button></li>)}</ol> : <p className="review-queue-empty">目前没有待复习句。开始逐句练习，把没把握的句子留下来。</p>}
       </section>}
 
-      <section className="method-section"><div className="method-title"><p className="eyebrow">THE CORRECTION LOOP</p><h2>自动起稿，<br />由学习者校准。</h2></div><div className="method-cards"><article><span>01</span><h3>全曲自动注音</h3><p>导入任意日语歌词后，由 Sudachi 词典逐词生成读音初稿。</p></article><article><span>02</span><h3>AI 复核与人工确认</h3><p>AI 只标出可能不合理的读法；采用、修改或忽略建议始终由你决定。</p></article><article><span>03</span><h3>按语境理解词汇</h3><p>选中词或短语再请求讲解，结合相邻歌词学习词义和变形。</p></article></div></section>
+      {!IS_DESKTOP_APP && <section className="method-section"><div className="method-title"><p className="eyebrow">THE CORRECTION LOOP</p><h2>自动起稿，<br />由学习者校准。</h2></div><div className="method-cards"><article><span>01</span><h3>全曲自动注音</h3><p>导入任意日语歌词后，由 Sudachi 词典逐词生成读音初稿。</p></article><article><span>02</span><h3>AI 复核与人工确认</h3><p>AI 只标出可能不合理的读法；采用、修改或忽略建议始终由你决定。</p></article><article><span>03</span><h3>按语境理解词汇</h3><p>选中词或短语再请求讲解，结合相邻歌词学习词义和变形。</p></article></div></section>}
 
       </>}
 
+      {IS_DESKTOP_APP && activePage === 'review-list' && <DesktopReview queue={reviewQueue} onPractice={(songId,lineId) => startPractice('review',songId,lineId)}/>}
       {IS_ANDROID_APP && activePage === 'review-list' && <section className="android-review-detail" aria-labelledby="review-queue-title">
         <button className="android-detail-back" type="button" onClick={goBackAndroid}>‹　返回复习</button>
         <p className="android-home-eyebrow">REVIEW / 复习</p>
@@ -1818,7 +1864,8 @@ export default function App() {
       {activePage === 'library' && <section className="library-section library-page" id="library" aria-labelledby="library-title">
         {IS_ANDROID_APP && <AndroidSongLibrary songs={androidLibrarySongs} total={androidLibraryTotal} search={librarySearch} onSearch={setLibrarySearch} onImport={openImportDialog} artworkFor={artworkForSong} learnedBySong={learnedBySong} onOpen={chooseSongFromLibrary} onDelete={removeImportedSong} onArtwork={openArtworkEditor} onEdit={setEditingDetailsSong} deletingSongId={deletingSongId} activeSongId={activeSong.id} />}
         {/* 原网页歌曲库保留作对照；安卓使用上方独立的简洁布局。 */}
-        {!IS_ANDROID_APP && <>
+        {IS_DESKTOP_APP && <DesktopLibrary songs={visibleLibrarySongs} search={librarySearch} onSearch={setLibrarySearch} favoriteIds={favoriteSongIds} learnedBySong={learnedBySong} activeId={activeSong.id} artworkFor={artworkForSong} onOpen={chooseSongFromLibrary} onImport={openImportDialog} onEdit={setEditingDetailsSong} onArtwork={openArtworkEditor} onDelete={removeImportedSong} deletingId={deletingSongId}/>}
+        {!IS_ANDROID_APP && !IS_DESKTOP_APP && <>
         <div className="library-top"><div><p className="eyebrow">YOUR IMPORTED SONGS</p><h2 id="library-title">歌曲库</h2><p>从已导入的歌词中选一首，继续练习发音与词汇。</p></div><div className="library-top-actions"><label className="library-search"><Search size={14} /><input id="library-search" type="search" value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} placeholder="搜索歌名或歌手" aria-label="搜索歌名或歌手" />{librarySearch && <button type="button" onClick={() => setLibrarySearch('')} aria-label="清除搜索"><X size={13} /></button>}</label><span className="library-count">{librarySearch ? `找到 ${visibleLibrarySongs.length} / ${allSongs.length} 首` : `已导入 ${allSongs.length} 首`}</span><button className="library-import-trigger" type="button" onClick={openImportDialog}><Upload size={14} /> 导入歌曲</button>{!IS_ANDROID_APP && !IS_DESKTOP_APP && <button className="library-import-trigger" type="button" onClick={shareComputerSongs}><Upload size={14} /> 共享到手机</button>}</div></div>
         <div className="library-backup-bar"><div><b>保存你的学习记录</b><span>在设置中统一管理数据备份与 AI 服务。</span></div><div className="library-backup-actions"><button type="button" onClick={() => setSettingsOpen(true)}><Settings size={14} /> 数据管理</button></div></div>
         {/* 电脑网页主动开启一次性传歌，手机才能看见网页缓存中的歌曲。 */}
@@ -1857,6 +1904,7 @@ export default function App() {
         </>}
       </section>}
     </main>
+    {IS_DESKTOP_APP && <DesktopPlayer song={activeSong} artwork={artworkForSong(activeSong)} available={Boolean(audioUrl)} playing={desktopAudio.playing} currentTime={desktopAudio.time} duration={desktopAudio.duration} rate={playbackRate} error={audioError || annotationError} onToggle={toggleSingAlong} onSeek={seekDesktopAudio} onRate={choosePlaybackRate} onPrevious={() => playDesktopAdjacent(-1)} onNext={() => playDesktopAdjacent(1)} volume={desktopVolume} onVolume={value => { setDesktopVolume(value); if (audioRef.current) audioRef.current.volume = value }}/>}
     {IS_ANDROID_APP && <AndroidBottomNav activeTab={mobileTab} onSelect={showMobileTab} />}
 
     {editingDetailsSong && <SongDetailsEditor key={editingDetailsSong.id} song={editingDetailsSong} onClose={() => { if (!editingDetailsBusy) setEditingDetailsSong(null) }} onSave={saveSongDetails} busy={editingDetailsBusy} />}
@@ -1871,7 +1919,7 @@ export default function App() {
     </section></div>}
 
     {/* 旧网页页脚保留；安卓让底部主导航固定在屏幕下沿。 */}
-    {!IS_ANDROID_APP && <footer><span>UTA. Learn Japanese, one lyric at a time.</span><span>自动注音在本机生成 · 词义数据：<a href="https://github.com/tomoshi-app/tomoshi-dict-data" target="_blank" rel="noreferrer">Tomoshi / EDRDG</a> · AI 请求仅在你主动点击后发起</span></footer>}
+    {!IS_ANDROID_APP && !IS_DESKTOP_APP && <footer><span>UTA. Learn Japanese, one lyric at a time.</span><span>自动注音在本机生成 · 词义数据：<a href="https://github.com/tomoshi-app/tomoshi-dict-data" target="_blank" rel="noreferrer">Tomoshi / EDRDG</a> · AI 请求仅在你主动点击后发起</span></footer>}
 
     {settingsOpen && <SettingsDialog updates={appUpdates} onCloudExport={createCloudData} readingStyle={readingStyle} onReadingStyleChange={setReadingStyle} onClose={() => setSettingsOpen(false)} onExport={exportLearningData} onRestore={async (file) => { const ready = await prepareBackupRestore(file); if (ready) setSettingsOpen(false) }} backupBusy={backupBusy} backupError={backupError} />}
     {backupPreview && <div className="backup-backdrop" role="presentation" onClick={() => { if (backupBusy !== 'restore') { setBackupPreview(null); setBackupError('') } }}><section className="backup-dialog" role="dialog" aria-modal="true" aria-labelledby="backup-dialog-title" onClick={(event) => event.stopPropagation()}>
@@ -1879,8 +1927,8 @@ export default function App() {
       <p className="eyebrow">RESTORE LOCAL DATA</p><h2 id="backup-dialog-title">确认恢复备份</h2>
       <p className="backup-file-name">{backupPreview.file.name || 'UTA 备份文件'}</p>
       {backupPreview.extras && <p className="backup-cloud-note">包含个人资料、头像和历史对话。{backupPreview.extras.ai?.api_key ? <strong role="alert">此备份包含 API Key，请妥善保管。</strong> : '不含 API Key；恢复后需重新填写 AI 密钥。'}</p>}
-      <dl className="backup-summary"><div><dt>备份时间</dt><dd>{new Date(backupPreview.manifest.createdAt).toLocaleString('zh-CN')}</dd></div><div><dt>网页导入歌曲</dt><dd>{backupPreview.manifest.songs.length} 首（含音频）</dd></div><div><dt>读音修正</dt><dd>{Object.keys(backupPreview.manifest.progress.corrections).length} 处</dd></div><div><dt>待复习句</dt><dd>{backupPreview.manifest.progress.reviewItems.length} 句</dd></div><div><dt>文件大小</dt><dd>{(backupPreview.file.size / 1048576).toFixed(1)} MB</dd></div></dl>
-      <p className="backup-warning"><CircleAlert size={16} /> 恢复会替换当前浏览器中的网页导入歌曲和学习数据，包括已掌握句子、读音修正与复习清单。建议先导出当前数据。</p>
+      <dl className="backup-summary"><div><dt>备份时间</dt><dd>{new Date(backupPreview.manifest.createdAt).toLocaleString('zh-CN')}</dd></div><div><dt>导入歌曲</dt><dd>{backupPreview.manifest.songs.length} 首（含音频）</dd></div><div><dt>读音修正</dt><dd>{Object.keys(backupPreview.manifest.progress.corrections).length} 处</dd></div><div><dt>待复习句</dt><dd>{backupPreview.manifest.progress.reviewItems.length} 句</dd></div><div><dt>文件大小</dt><dd>{(backupPreview.file.size / 1048576).toFixed(1)} MB</dd></div></dl>
+      <p className="backup-warning"><CircleAlert size={16} /> 恢复会替换当前保存的导入歌曲和学习数据，包括已掌握句子、读音修正与复习清单。建议先导出当前数据。</p>
       {backupError && <p className="library-backup-error" role="alert">{backupError}</p>}
       <div className="backup-dialog-actions"><button type="button" disabled={backupBusy === 'restore'} onClick={() => { setBackupPreview(null); setBackupError('') }}>取消</button><button type="button" disabled={backupBusy === 'restore'} onClick={restoreLearningData}>{backupBusy === 'restore' ? <LoaderCircle className="spin" size={14} /> : <Upload size={14} />}{backupBusy === 'restore' ? '正在恢复…' : '覆盖当前数据并恢复'}</button></div>
     </section></div>}
@@ -1931,5 +1979,5 @@ export default function App() {
     {/* 原来所有提示使用相同颜色；失败提示用红色并作为错误宣告。 */}
     {/* <div className={`toast ${toast ? 'visible' : ''}`} role="status">{toast}</div> */}
     <div className={`toast ${toast ? 'visible' : ''} ${/失败|错误|无法/.test(toast) ? 'toast-error' : ''}`} role={/失败|错误|无法/.test(toast) ? 'alert' : 'status'}>{toast}</div>
-  </>
+  </div>
 }
