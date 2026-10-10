@@ -72,3 +72,17 @@
 .uta-desktop .settings-ai-footer .settings-form-actions { margin:0; padding:0; gap:8px; }
 .uta-desktop .settings-ai-footer .settings-form-actions button { font-size:11px; padding:9px 11px; }
 .uta-desktop .settings-ai-footer .settings-form-actions .settings-primary { background:#2867d7; color:#fff; border-color:#2867d7; }
+
+.uta-desktop main#top rt { font-size:var(--reading-font-size,10px); line-height:1.15; }
+.uta-desktop main#top .japanese { line-height:calc(1.5em + var(--reading-font-size,10px)); }
+.reading-font-settings { margin-top:26px; padding-top:24px; border-top:1px solid #dfe6f1; }
+.reading-font-heading { display:flex; align-items:center; justify-content:space-between; color:#445974; font-size:13px; font-weight:600; }
+.reading-font-heading output { padding:4px 9px; background:#eaf1fe; border-radius:5px; color:#2867d7; font-size:12px; font-variant-numeric:tabular-nums; }
+.reading-font-control { display:flex; align-items:center; gap:12px; margin:18px 0; color:#8c9bb0; font-size:11px; }
+.reading-font-control input { flex:1; min-width:0; accent-color:#2867d7; }
+.reading-font-control button { border:1px solid #dce5f2; border-radius:5px; padding:7px 9px; background:#fff; color:#667b98; font-size:11px; white-space:nowrap; }
+.reading-font-preview { border:1px solid #e0e8f6; background:#f3f7ff; border-radius:7px; padding:20px; }
+.reading-font-preview p { font-family:"Yu Gothic UI","Meiryo",var(--sans); font-size:24px; line-height:calc(1.5em + var(--reading-font-size)); color:#334c71; margin:0; }
+.reading-font-preview rt { font-size:var(--reading-font-size); line-height:1.15; color:#2867d7; }
+.reading-font-preview small { display:block; margin-top:10px; color:#94a4bc; font-size:10px; }
+.uta-desktop .reading-font-help { font-size:10px; margin:12px 0 0; }

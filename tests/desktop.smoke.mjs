@@ -6,6 +6,7 @@ import { createServer } from 'node:http'
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { randomBytes } from 'node:crypto'
+import { inspectLearningBackup } from '../src/lib/learningBackup.js'
 
 const root = process.cwd()
 const source = path.join(root, 'release', 'UTA-Windows-x64')
@@ -140,6 +141,25 @@ try {
   await shortcut(',')
   await page.locator('.settings-dialog').waitFor()
   await page.screenshot({ path:path.join(evidence, 'desktop-settings.png') })
+  await page.getByRole('button', { name:'注音显示', exact:true }).click()
+  const sizeSlider=page.getByRole('slider', { name:'假名注音字体大小', exact:true })
+  assert.equal(await sizeSlider.inputValue(),'10')
+  const lyricFont=await page.locator('.japanese').first().evaluate(element=>getComputedStyle(element).fontSize)
+  for(const value of ['8','24']) {
+    await sizeSlider.fill(value)
+    await page.waitForFunction(size=>getComputedStyle(document.querySelector('#top rt')).fontSize === size+'px',value)
+    assert.equal(await page.locator('.reading-font-preview rt').first().evaluate(element=>getComputedStyle(element).fontSize),value+'px')
+    assert.equal(await page.locator('.japanese').first().evaluate(element=>getComputedStyle(element).fontSize),lyricFont)
+  }
+  await page.getByRole('button', { name:'恢复默认字号', exact:true }).click()
+  assert.equal(await sizeSlider.inputValue(),'10')
+  await sizeSlider.fill('16')
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('uta-pronunciation-progress-v2')).readingFontSize === 16)
+  await page.getByRole('radio', { name:/罗马音/ }).check()
+  assert.equal(await page.locator('.reading-font-preview rt').first().textContent(),'gakkou')
+  await page.getByRole('radio', { name:/平假名/ }).check()
+  await page.screenshot({path:path.join(evidence,'reading-font-size.png')})
+
   await page.getByRole('button', { name:'AI 服务', exact:true }).click()
   await page.getByRole('button', { name:'其他兼容服务', exact:true }).click()
   await page.getByLabel('供应商名称', { exact:true }).fill('Windows settings test')
@@ -189,9 +209,13 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 200))
   }
   assert.ok((await fs.stat(backup)).size > wav.length)
+  const inspectedBackup=await inspectLearningBackup(new Blob([await fs.readFile(backup)]))
+  assert.equal(inspectedBackup.manifest.progress.readingFontSize,16)
   await client.close(); client = null
   page = await launch()
   assert.equal(await page.evaluate(() => localStorage.getItem('desktop-persistence-test')), 'persisted')
+  await page.waitForSelector('#top rt')
+  assert.equal(await page.locator('#top rt').first().evaluate(element=>getComputedStyle(element).fontSize),'16px')
   const songs = await page.evaluate(() => new Promise((resolve, reject) => {
     const request = indexedDB.open('uta-local-song-library'); request.onerror = () => reject(request.error)
     request.onsuccess = () => { const database = request.result, all = database.transaction('songs').objectStore('songs').getAll();
@@ -220,7 +244,7 @@ try {
   } finally { child.kill() }
   assert.deepEqual(failures, [])
   const report = { passed: true, runtime, checks: ['packaged-exe', 'relocated-chinese-space-path', 'no-system-node-python', 'bundled-sudachi-tomoshi', 'ai-proxy-mock',
-    'ui-import-wav-lrc', 'backup-export', 'indexeddb-localstorage-restart', 'windows-encrypted-key', 'renderer-isolation', 'api-authentication', 'parent-exit-cleanup', 'native-titlebar-shortcuts', 'library-filter-sort-search', 'desktop-player-seek-volume-speed', 'independent-panes-1024-1440', 'dedicated-review-practice', 'ai-settings-visible-footer-small-window-and-zoom', 'ai-settings-test-and-save-through-ui'] }
+    'ui-import-wav-lrc', 'backup-export', 'indexeddb-localstorage-restart', 'windows-encrypted-key', 'renderer-isolation', 'api-authentication', 'parent-exit-cleanup', 'native-titlebar-shortcuts', 'library-filter-sort-search', 'desktop-player-seek-volume-speed', 'independent-panes-1024-1440', 'dedicated-review-practice', 'ai-settings-visible-footer-small-window-and-zoom', 'ai-settings-test-and-save-through-ui', 'reading-size-live-preview-reset', 'reading-size-restart-and-backup'] }
   await fs.writeFile(path.join(evidence, 'desktop-smoke.json'), JSON.stringify(report, null, 2))
   console.log(JSON.stringify(report, null, 2))
 } finally { if (client) await client.close().catch(() => {}); mock.close(); }

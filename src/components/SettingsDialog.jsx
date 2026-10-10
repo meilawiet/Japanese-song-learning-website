@@ -7,8 +7,9 @@ import ProfilePanel from './ProfilePanel'
 import { webSearchAvailable } from '../lib/mobileWebSearch'
 import WebDavPanel from './WebDavPanel'
 import {AboutPanel} from './AppUpdates'
+import { DEFAULT_READING_FONT_SIZE } from '../lib/readingDisplay'
 
-export default function SettingsDialog({ onClose, onExport, onRestore, onCloudExport, updates, backupBusy, backupError, readingStyle = 'hiragana', onReadingStyleChange, initialTab = 'data' }) {
+export default function SettingsDialog({ onClose, onExport, onRestore, onCloudExport, updates, backupBusy, backupError, readingStyle = 'hiragana', onReadingStyleChange, readingFontSize = DEFAULT_READING_FONT_SIZE, onReadingFontSizeChange, initialTab = 'data' }) {
   const isDesktop = Boolean(globalThis.window?.utaDesktop)
   const [tab, setTab] = useState(Capacitor.isNativePlatform() && initialTab === 'reading' ? 'data' : initialTab)
   const [draft, setDraft] = useState(loadAiSettings)
@@ -99,6 +100,12 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
           <label><input type="radio" name="reading-style" value="hiragana" checked={readingStyle === 'hiragana'} onChange={() => onReadingStyleChange('hiragana')} /><span><b>平假名</b><small>夢 → ゆめ　·　学校 → がっこう</small></span></label>
           <label><input type="radio" name="reading-style" value="romaji" checked={readingStyle === 'romaji'} onChange={() => onReadingStyleChange('romaji')} /><span><b>罗马音</b><small>夢 → yume　·　学校 → gakkou</small></span></label>
         </fieldset>
+        {isDesktop && <section className="reading-font-settings" aria-labelledby="reading-font-size-label">
+          <div className="reading-font-heading"><label id="reading-font-size-label" htmlFor="reading-font-size">假名注音字体大小</label><output htmlFor="reading-font-size">{readingFontSize} px</output></div>
+          <div className="reading-font-control"><span>小</span><input id="reading-font-size" type="range" min="8" max="24" step="1" value={readingFontSize} onChange={event => onReadingFontSizeChange(Number(event.target.value))}/><span>大</span><button type="button" disabled={readingFontSize === DEFAULT_READING_FONT_SIZE} onClick={() => onReadingFontSizeChange(DEFAULT_READING_FONT_SIZE)}>恢复默认字号</button></div>
+          <div className="reading-font-preview" aria-label="注音字号预览" style={{ '--reading-font-size': `${readingFontSize}px` }}><p lang="ja"><ruby>学校<rt>{readingStyle === 'romaji' ? 'gakkou' : 'がっこう'}</rt></ruby>へ<ruby>帰<rt>{readingStyle === 'romaji' ? 'kae' : 'かえ'}</rt></ruby>る。</p><small>预览 · 立即生效，自动保存</small></div>
+          <p className="settings-description reading-font-help">仅调整歌词上方注音，歌词原文大小不变。罗马音显示时也适用。</p>
+        </section>}
         <p className="settings-note">歌词上方注音、下方读音行、逐句练习及词语读音会随之切换。罗马音根据现有读音在本地转换，不额外调用 AI；长音使用连续元音表示。校对时仍输入假名，旁边会显示罗马音预览，已有修正不会被改写。</p>
       </div> : tab === 'data' ? <div className="settings-content">
         {/* 安卓端按用户要求暂时移除网站导入导出入口；网页端保留原数据管理。 */}

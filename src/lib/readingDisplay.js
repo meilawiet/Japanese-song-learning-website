@@ -1,6 +1,13 @@
 import { toHiragana, toKatakana, toRomaji } from 'wanakana'
 import { correctionKey } from './ruby.js'
 
+export const DEFAULT_READING_FONT_SIZE = 10
+
+export function normalizeReadingFontSize(value) {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(24, Math.max(8, Math.round(value))) : DEFAULT_READING_FONT_SIZE
+}
+
 export function normalizeReadingStyle(style) {
   return style === 'romaji' ? 'romaji' : 'hiragana'
 }

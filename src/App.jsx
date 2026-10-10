@@ -31,7 +31,7 @@ import { inferAudioMetadata } from './lib/audioMetadata'
 import { cacheArtworkSelection } from './lib/artworkSearch'
 import { isSongHeadingLine, withoutSongHeadingLines } from './lib/songMetadata'
 import { annotationMatchesLine, reconcileLearningState } from './lib/learningIdentity'
-import { displayReading, lineReading as getLineReading, normalizeReadingStyle } from './lib/readingDisplay'
+import { displayReading, lineReading as getLineReading, normalizeReadingStyle, normalizeReadingFontSize } from './lib/readingDisplay'
 import { inspectCloudBackup } from './lib/cloudBackup'
 import { wrapCloudBackup,restoreCloudData } from './lib/cloudData'
 import { markCloudDirty } from './lib/webDav'
@@ -152,6 +152,7 @@ export default function App() {
   const [meaningOverrides, setMeaningOverrides] = useState(savedProgress.meaningOverrides || {})
   const [playbackRate, setPlaybackRate] = useState(savedProgress.playbackRate || 1)
   const [readingStyle, setReadingStyle] = useState(() => normalizeReadingStyle(savedProgress.readingStyle))
+  const [readingFontSize, setReadingFontSize] = useState(() => normalizeReadingFontSize(savedProgress.readingFontSize))
   // 原网页端保持原字体；仅安卓 WebView 切换为用户提供的本地字体。
   useEffect(() => {
     if (!IS_ANDROID_APP) return undefined
@@ -426,8 +427,8 @@ export default function App() {
 
   useEffect(() => {
     // 人工单句歌词随学习进度保存。
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify({ learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, lyricEditsBySong }))
-  }, [learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, lyricEditsBySong])
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify({ learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, readingFontSize, lyricEditsBySong }))
+  }, [learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, readingFontSize, lyricEditsBySong])
 
   useEffect(() => { localStorage.setItem(ANNOTATION_KEY, JSON.stringify(annotationsBySong)) }, [annotationsBySong])
   useEffect(() => { localStorage.setItem(AI_REVIEW_KEY, JSON.stringify(aiReviews)) }, [aiReviews])
@@ -1008,7 +1009,7 @@ export default function App() {
     setBackupError('')
     try {
       const records = await loadLocalSongs()
-      const progressState = { learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, lyricEditsBySong }
+      const progressState = { learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, readingFontSize, lyricEditsBySong }
       const blob = createLearningBackup(records, {
         progress: progressState, annotations: annotationsBySong, aiReviews,
         sentenceExplanations: sentenceExplanationsBySong,
@@ -1098,7 +1099,7 @@ export default function App() {
     setComputerShare({ busy: true, error: '' })
     try {
       const records = await loadLocalSongs()
-      const progressState = { learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, lyricEditsBySong }
+      const progressState = { learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, readingFontSize, lyricEditsBySong }
       const session = await startComputerTransfer(records, {
         progress: progressState, annotations: annotationsBySong, aiReviews,
         sentenceExplanations: sentenceExplanationsBySong,
@@ -1720,7 +1721,7 @@ export default function App() {
 
     {IS_ANDROID_APP && <WebDavAutoSync onCreateBackup={createCloudData} onNotice={setToast}/>}
     {IS_ANDROID_APP && <AppUpdatePrompt updates={appUpdates}/>}
-    <main id="top" className={IS_ANDROID_APP ? `android-main ${activePage === 'lesson' ? 'android-lesson-page' : ''}` : ''} data-reading-style={readingStyle}>
+    <main id="top" className={IS_ANDROID_APP ? `android-main ${activePage === 'lesson' ? 'android-lesson-page' : ''}` : ''} data-reading-style={readingStyle} style={IS_DESKTOP_APP ? { '--reading-font-size': `${readingFontSize}px` } : undefined}>
       {/* 安卓三屏首页按确认稿呈现，模式卡片只负责进入现有功能。 */}
       {IS_ANDROID_APP && activePage.startsWith('mobile-') && <AndroidHome tab={mobileTab} recentLearn={recentLearnSong ? { song: recentLearnSong, artwork: artworkForSong(recentLearnSong) } : null} recentSing={recentSingSong ? { song: recentSingSong, artwork: artworkForSong(recentSingSong) } : null} onEnterLearn={() => { exitPractice(); if (recentLearnSong && recentLearnSong.id !== activeSong.id) chooseSong(recentLearnSong.id); navigateAndroid('lesson', 'learn'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onEnterSingAlong={showSingAlong} onEnterReview={showReviewQueue} onOpenLibrary={() => showLibraryPage()} onOpenSettings={() => setSettingsOpen(true)} />}
       {IS_ANDROID_APP && activePage === 'sing-along' && <AndroidSingAlong song={activeSong} songs={allSongs} artwork={artworkForSong(activeSong)} audioReady={Boolean(audioUrl)} playing={singAlongPlaying} currentLineId={singAlongLineId} onSelectSong={chooseSong} onPlayFromStart={() => startContinuousPlayback(0, activeSong.lines[0]?.id ?? null)} onPlayFromLine={playSingAlongFromLine} onToggle={toggleSingAlong} error={audioError} onChoose={openStudySongPicker} annotations={annotations} corrections={corrections} readingStyle={readingStyle} />}
@@ -1921,7 +1922,7 @@ export default function App() {
     {/* 旧网页页脚保留；安卓让底部主导航固定在屏幕下沿。 */}
     {!IS_ANDROID_APP && !IS_DESKTOP_APP && <footer><span>UTA. Learn Japanese, one lyric at a time.</span><span>自动注音在本机生成 · 词义数据：<a href="https://github.com/tomoshi-app/tomoshi-dict-data" target="_blank" rel="noreferrer">Tomoshi / EDRDG</a> · AI 请求仅在你主动点击后发起</span></footer>}
 
-    {settingsOpen && <SettingsDialog updates={appUpdates} onCloudExport={createCloudData} readingStyle={readingStyle} onReadingStyleChange={setReadingStyle} onClose={() => setSettingsOpen(false)} onExport={exportLearningData} onRestore={async (file) => { const ready = await prepareBackupRestore(file); if (ready) setSettingsOpen(false) }} backupBusy={backupBusy} backupError={backupError} />}
+    {settingsOpen && <SettingsDialog updates={appUpdates} onCloudExport={createCloudData} readingStyle={readingStyle} onReadingStyleChange={setReadingStyle} readingFontSize={readingFontSize} onReadingFontSizeChange={value => setReadingFontSize(normalizeReadingFontSize(value))} onClose={() => setSettingsOpen(false)} onExport={exportLearningData} onRestore={async (file) => { const ready = await prepareBackupRestore(file); if (ready) setSettingsOpen(false) }} backupBusy={backupBusy} backupError={backupError} />}
     {backupPreview && <div className="backup-backdrop" role="presentation" onClick={() => { if (backupBusy !== 'restore') { setBackupPreview(null); setBackupError('') } }}><section className="backup-dialog" role="dialog" aria-modal="true" aria-labelledby="backup-dialog-title" onClick={(event) => event.stopPropagation()}>
       <button className="backup-close" type="button" disabled={backupBusy === 'restore'} onClick={() => { setBackupPreview(null); setBackupError('') }} aria-label="关闭备份预览"><X size={18} /></button>
       <p className="eyebrow">RESTORE LOCAL DATA</p><h2 id="backup-dialog-title">确认恢复备份</h2>

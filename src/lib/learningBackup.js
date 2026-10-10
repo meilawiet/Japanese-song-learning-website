@@ -50,6 +50,7 @@ function checkState(manifest) {
         || Object.entries(lines).some(([id, text]) => !/^\d+$/.test(id) || typeof text !== 'string' || !text.trim() || text.length > 500))))
     || (progress.playbackRate != null && ![1, 0.75, 0.5, 0.25].includes(progress.playbackRate))
     || (progress.readingStyle != null && !['hiragana', 'romaji'].includes(progress.readingStyle))
+    || (progress.readingFontSize != null && (!Number.isInteger(progress.readingFontSize) || progress.readingFontSize < 8 || progress.readingFontSize > 24))
     || (progress.lyricSnapshots != null && (!isRecord(progress.lyricSnapshots)
       || Object.values(progress.lyricSnapshots).some((snapshot) => !isRecord(snapshot) || !Array.isArray(snapshot.lines)
         || snapshot.lines.some((line) => !isRecord(line) || !Number.isSafeInteger(line.id) || typeof line.text !== 'string'))))
