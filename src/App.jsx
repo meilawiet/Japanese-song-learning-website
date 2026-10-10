@@ -1,3 +1,6 @@
+import DesktopLyricRangeControls from './components/DesktopLyricRangeControls'
+import { lyricRangeBounds } from './lib/lyricRange'
+import BatchSongImportDialog from './components/BatchSongImportDialog'
 import { DesktopChrome, DesktopSongHeader, DesktopLibrary, DesktopReview, DesktopPlayer } from './components/DesktopWorkspace'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
@@ -23,7 +26,7 @@ import twilightStation from './assets/uta-twilight-station.png'
 // 安卓启动页沿用用户提供的原图，图标另使用加上「うた」背景字样的版本。
 import androidLaunchPortrait from './assets/uta-launch-portrait.png'
 import { annotateSongLines, explainSelectionWithAi, explainSentenceBatchWithAi, reviewSongWithAi, searchSongArtwork } from './lib/annotationApi'
-import { createAndStoreLocalSong, deleteLocalSong, loadLocalSongs, parseLrcFile, replaceLocalSongs, storeTransferredSong, updateLocalSongArtworkIfUrl, updateLocalSongMetadata } from './lib/localSongStore'
+import { createAndStoreLocalSong, createAndStoreLocalSongs, deleteLocalSong, loadLocalSongs, parseLrcFile, replaceLocalSongs, storeTransferredSong, updateLocalSongArtworkIfUrl, updateLocalSongMetadata } from './lib/localSongStore'
 import { downloadComputerSong, mergeTransferredLearning, startComputerTransfer } from './lib/computerSongTransfer'
 import { BACKUP_STORAGE_KEYS, createLearningBackup, inspectLearningBackup, songsFromLearningBackup } from './lib/learningBackup'
 import { correctionKey, hasKanji } from './lib/ruby'
@@ -31,7 +34,7 @@ import { inferAudioMetadata } from './lib/audioMetadata'
 import { cacheArtworkSelection } from './lib/artworkSearch'
 import { isSongHeadingLine, withoutSongHeadingLines } from './lib/songMetadata'
 import { annotationMatchesLine, reconcileLearningState } from './lib/learningIdentity'
-import { displayReading, lineReading as getLineReading, normalizeReadingStyle, normalizeReadingFontSize } from './lib/readingDisplay'
+import { displayReading, lineReading as getLineReading, normalizeReadingStyle, normalizeReadingFontSize, normalizeLineReadingFontSize } from './lib/readingDisplay'
 import { inspectCloudBackup } from './lib/cloudBackup'
 import { wrapCloudBackup,restoreCloudData } from './lib/cloudData'
 import { markCloudDirty } from './lib/webDav'
@@ -153,6 +156,7 @@ export default function App() {
   const [playbackRate, setPlaybackRate] = useState(savedProgress.playbackRate || 1)
   const [readingStyle, setReadingStyle] = useState(() => normalizeReadingStyle(savedProgress.readingStyle))
   const [readingFontSize, setReadingFontSize] = useState(() => normalizeReadingFontSize(savedProgress.readingFontSize))
+  const [lineReadingFontSize, setLineReadingFontSize] = useState(() => normalizeLineReadingFontSize(savedProgress.lineReadingFontSize))
   // 原网页端保持原字体；仅安卓 WebView 切换为用户提供的本地字体。
   useEffect(() => {
     if (!IS_ANDROID_APP) return undefined
@@ -187,6 +191,8 @@ export default function App() {
   const [aiBusy, setAiBusy] = useState('')
   const [aiError, setAiError] = useState('')
   const [playingLineId, setPlayingLineId] = useState(null)
+  const [desktopLyricSelection, setDesktopLyricSelection] = useState(null)
+  const [selectedRangePlaying, setSelectedRangePlaying] = useState(false)
   // 跟唱模式不截断每句；播放位置只用于高亮当前歌词。
   const [singAlongPlaying, setSingAlongPlaying] = useState(false)
   const [singAlongLineId, setSingAlongLineId] = useState(null)
@@ -235,6 +241,9 @@ export default function App() {
   const dragSelectionRef = useRef(null)
   const suppressNextTokenClick = useRef(false)
   const audioRef = useRef(null)
+  const desktopSelectionAnchorRef = useRef(null)
+  const selectedRangePlaybackRef = useRef(null)
+  const selectedRangeEndTimerRef = useRef(null)
   const clipEndRef = useRef(null)
   const pendingClipRef = useRef(null)
   const continuousPlaybackRef = useRef(false)
@@ -398,6 +407,10 @@ export default function App() {
   const annotations = useMemo(() => annotationsBySong[activeSong.id]?.filter((annotation) =>
     activeSong.lines.some((line) => annotationMatchesLine(annotation, line))), [annotationsBySong, activeSong])
   const activeAnnotation = annotations?.find((line) => line.id === activeLine.id)
+  const desktopLyricRange = useMemo(() => desktopLyricSelection?.songId === activeSong.id
+    ? lyricRangeBounds(activeSong.lines, desktopLyricSelection.anchorId, desktopLyricSelection.focusId, desktopAudio.duration) : null,
+  [desktopLyricSelection, activeSong.id, activeSong.lines, desktopAudio.duration])
+  const desktopSelectedLineIds = useMemo(() => new Set(desktopLyricRange?.lineIds || []), [desktopLyricRange])
   const activeLineReading = getLineReading(activeAnnotation?.tokens, corrections, activeSong.id, activeLine.id, readingStyle)
   const activeTokens = useMemo(
     () => activeAnnotation?.tokens || fallbackTokens(activeLine.text),
@@ -427,8 +440,8 @@ export default function App() {
 
   useEffect(() => {
     // 人工单句歌词随学习进度保存。
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify({ learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, readingFontSize, lyricEditsBySong }))
-  }, [learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, readingFontSize, lyricEditsBySong])
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify({ learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, readingFontSize, lineReadingFontSize, lyricEditsBySong }))
+  }, [learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, readingFontSize, lineReadingFontSize, lyricEditsBySong])
 
   useEffect(() => { localStorage.setItem(ANNOTATION_KEY, JSON.stringify(annotationsBySong)) }, [annotationsBySong])
   useEffect(() => { localStorage.setItem(AI_REVIEW_KEY, JSON.stringify(aiReviews)) }, [aiReviews])
@@ -559,6 +572,15 @@ export default function App() {
   }, [activeSong.id])
 
   useEffect(() => {
+    if (!IS_DESKTOP_APP) return
+    setDesktopLyricSelection(null)
+    desktopSelectionAnchorRef.current = null
+    if (selectedRangePlaybackRef.current) stopLinePlayback()
+  }, [activeSong.id, activeSong.lines, practiceActive])
+
+  useEffect(() => () => clearSelectedRangeEndTimer(), [])
+
+  useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = playbackRate
   }, [playbackRate])
 
@@ -578,6 +600,7 @@ export default function App() {
   useEffect(() => { setDraftMeaning(wordMeaning) }, [meaningKey, wordMeaning])
 
   function stopLinePlayback() {
+    clearSelectedRangePlayback()
     audioRef.current?.pause()
     clipEndRef.current = null
     pendingClipRef.current = null
@@ -606,7 +629,46 @@ export default function App() {
     setToast('已切换歌词，正在准备自动读音。')
   }
 
-  function chooseLine(lineId) { setActiveLineId(lineId) }
+  function clearDesktopLyricSelection() {
+    if (selectedRangePlaybackRef.current || pendingClipRef.current?.kind === 'selected-range') stopLinePlayback()
+    setDesktopLyricSelection(null)
+  }
+
+  function chooseLine(lineId) {
+    if (IS_DESKTOP_APP) {
+      clearDesktopLyricSelection()
+      desktopSelectionAnchorRef.current = lineId
+    }
+    setActiveLineId(lineId)
+  }
+
+  function selectDesktopLyricRange(lineId) {
+    if (selectedRangePlaybackRef.current || pendingClipRef.current?.kind === 'selected-range') stopLinePlayback()
+    const anchorId = desktopLyricSelection?.songId === activeSong.id ? desktopLyricSelection.anchorId
+      : desktopSelectionAnchorRef.current ?? activeLine.id
+    setDesktopLyricSelection({ songId: activeSong.id, anchorId, focusId: lineId })
+    setActiveLineId(lineId)
+    dragSelectionRef.current = null
+    setDragSelection(null)
+    setSelectedText(null)
+    setSelectedPhraseRange(null)
+  }
+
+  function isDesktopRangeClick(event) {
+    return IS_DESKTOP_APP && event.ctrlKey && !event.target.closest('.line-actions, .sentence-inline-analysis, .phrase-explain-button')
+  }
+
+  function handleLyricPointerDown(event, lineId) {
+    if (event.button === 0 && isDesktopRangeClick(event)) { event.preventDefault(); event.stopPropagation(); return }
+    beginLyricPress(event, lineId)
+  }
+
+  function handleLyricClickCapture(event, lineId) {
+    if (isDesktopRangeClick(event)) {
+      event.preventDefault(); event.stopPropagation(); selectDesktopLyricRange(lineId); return
+    }
+    suppressLyricPressClick(event)
+  }
 
   // 长按覆盖整句区域，移动超过阈值时取消，保证正常上下滚动。
   function cancelLyricPress() {
@@ -1009,7 +1071,7 @@ export default function App() {
     setBackupError('')
     try {
       const records = await loadLocalSongs()
-      const progressState = { learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, readingFontSize, lyricEditsBySong }
+      const progressState = { learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, readingFontSize, lineReadingFontSize, lyricEditsBySong }
       const blob = createLearningBackup(records, {
         progress: progressState, annotations: annotationsBySong, aiReviews,
         sentenceExplanations: sentenceExplanationsBySong,
@@ -1033,7 +1095,7 @@ export default function App() {
 
   // 云端保存当前完整数据，并由用户决定是否包含 AI Key。
   async function createCloudData(includeKey=false) {
-    const core=createLearningBackup(await loadLocalSongs(),{progress:{learnedBySong,reviewItems,favoriteSongIds,corrections,meaningOverrides,playbackRate,lyricSnapshots,readingStyle,lyricEditsBySong},annotations:annotationsBySong,aiReviews,sentenceExplanations:sentenceExplanationsBySong,artworkOverrides})
+    const core=createLearningBackup(await loadLocalSongs(),{progress:{learnedBySong,reviewItems,favoriteSongIds,corrections,meaningOverrides,playbackRate,lyricSnapshots,readingStyle,readingFontSize,lineReadingFontSize,lyricEditsBySong},annotations:annotationsBySong,aiReviews,sentenceExplanations:sentenceExplanationsBySong,artworkOverrides})
     return wrapCloudBackup(core,includeKey)
   }
   useEffect(()=>{if(IS_ANDROID_APP&&localSongsReady)markCloudDirty()},[localSongsReady,localSongs,learningState,artworkOverrides,readingStyle,playbackRate])
@@ -1099,7 +1161,7 @@ export default function App() {
     setComputerShare({ busy: true, error: '' })
     try {
       const records = await loadLocalSongs()
-      const progressState = { learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, readingFontSize, lyricEditsBySong }
+      const progressState = { learnedBySong, reviewItems, favoriteSongIds, corrections, meaningOverrides, playbackRate, lyricSnapshots, readingStyle, readingFontSize, lineReadingFontSize, lyricEditsBySong }
       const session = await startComputerTransfer(records, {
         progress: progressState, annotations: annotationsBySong, aiReviews,
         sentenceExplanations: sentenceExplanationsBySong,
@@ -1195,6 +1257,26 @@ export default function App() {
       setBackupError(error instanceof Error ? error.message : '恢复失败，原有数据未更改。')
       setBackupBusy('')
     }
+  }
+
+  async function importLocalSongBatch(items) {
+    setImportBusy(true)
+    try {
+      const records = await createAndStoreLocalSongs(items.map(item => ({ ...item, metadata: { artworkChoice: 'default', artworkProvider: '默认封面' } })))
+      const urls = {}, songs = []
+      for (const { audioBlob, ...song } of records) {
+        urls[song.id] = URL.createObjectURL(audioBlob)
+        songs.push(song)
+      }
+      localAudioUrlRef.current = { ...localAudioUrlRef.current, ...urls }
+      setLocalAudioUrls(previous => ({ ...previous, ...urls }))
+      setLocalSongs(previous => [...songs, ...previous])
+      setImportOpen(false)
+      setImportSource('phone')
+      setLibrarySearch('')
+      showLibraryPage()
+      setToast(`已批量导入 ${songs.length} 首歌曲。`)
+    } finally { setImportBusy(false) }
   }
 
   async function importLocalSong() {
@@ -1351,7 +1433,92 @@ export default function App() {
     setToast(`已切换为 ${nextRate}× 速度播放。`)
   }
 
+  function clearSelectedRangeEndTimer() {
+    if (selectedRangeEndTimerRef.current != null) window.clearTimeout(selectedRangeEndTimerRef.current)
+    selectedRangeEndTimerRef.current = null
+  }
+
+  function clearSelectedRangePlayback() {
+    clearSelectedRangeEndTimer()
+    selectedRangePlaybackRef.current = null
+    setSelectedRangePlaying(false)
+  }
+
+  function finishSelectedRangePlayback() {
+    const range = selectedRangePlaybackRef.current, audio = audioRef.current
+    if (!range || !audio) return
+    clearSelectedRangePlayback()
+    clipEndRef.current = null
+    continuousPlaybackRef.current = false
+    audio.pause()
+    audio.currentTime = range.end
+    setPlayingLineId(null)
+    setSingAlongPlaying(false)
+    updateDesktopAudio()
+  }
+
+  // timeupdate alone can arrive after the next lyric has started. A timer based
+  // on media time and rate also guards the boundary while the window is hidden.
+  function scheduleSelectedRangeEnd() {
+    clearSelectedRangeEndTimer()
+    const range = selectedRangePlaybackRef.current, audio = audioRef.current
+    if (!range || !audio || audio.paused) return
+    const remaining = range.end - audio.currentTime
+    if (remaining <= 0) { finishSelectedRangePlayback(); return }
+    selectedRangeEndTimerRef.current = window.setTimeout(() => {
+      selectedRangeEndTimerRef.current = null
+      scheduleSelectedRangeEnd()
+    }, Math.max(8, Math.min(2147483647, remaining * 1000 / (audio.playbackRate || 1))))
+  }
+
+  function startSelectedRangePlayback(clip) {
+    const audio = audioRef.current
+    if (!audio) return
+    const range = lyricRangeBounds(activeSong.lines, clip.anchorId, clip.focusId, audio.duration)
+    if (!range || range.error || !Number.isFinite(range.end)) {
+      setAudioError(range?.error || '无法确定选段的音频结束位置，请检查音频与时间轴。'); return
+    }
+    const run = { ...clip, start: range.start, end: range.end }
+    selectedRangePlaybackRef.current = run
+    clipEndRef.current = range.end
+    continuousPlaybackRef.current = true
+    continuousLineIdRef.current = range.first.id
+    setSingAlongLineId(range.first.id)
+    setPlayingLineId(null)
+    audio.playbackRate = playbackRate
+    try { audio.currentTime = range.start } catch { clearSelectedRangePlayback(); clipEndRef.current = null; continuousPlaybackRef.current = false; setAudioError('无法跳转到选段起点。'); return }
+    audio.play().then(() => {
+      if (selectedRangePlaybackRef.current !== run) return
+      setSingAlongPlaying(!audio.paused && !audio.ended)
+      setAudioError('')
+      updateDesktopAudio()
+    }).catch(error => {
+      if (error.name === 'AbortError' || selectedRangePlaybackRef.current !== run) return
+      clearSelectedRangePlayback(); clipEndRef.current = null; continuousPlaybackRef.current = false
+      setSingAlongPlaying(false); setAudioError('未能播放选中的歌词片段。')
+    })
+  }
+
+  function playSelectedLyricRange() {
+    const audio = audioRef.current
+    if (!desktopLyricSelection || !audioUrl || !audio || !desktopLyricRange || desktopLyricRange.error) return
+    stopLinePlayback()
+    const clip = { kind: 'selected-range', anchorId: desktopLyricSelection.anchorId, focusId: desktopLyricSelection.focusId }
+    if (audio.readyState < 1) { pendingClipRef.current = clip; audio.load(); return }
+    startSelectedRangePlayback(clip)
+  }
+
+  function toggleSelectedLyricRange() {
+    const audio = audioRef.current, range = selectedRangePlaybackRef.current
+    if (!range || !audio || audio.ended || audio.currentTime >= range.end) { playSelectedLyricRange(); return }
+    if (!audio.paused) { audio.pause(); setSingAlongPlaying(false); updateDesktopAudio(); return }
+    audio.play().then(() => {
+      if (selectedRangePlaybackRef.current === range) { setSingAlongPlaying(!audio.paused); setAudioError(''); updateDesktopAudio() }
+    }).catch(error => { if (error.name !== 'AbortError') setAudioError('未能继续播放选中片段。') })
+  }
+
   function startClipPlayback(clip) {
+    clearSelectedRangePlayback()
     const audio = audioRef.current
     if (!audio) return
     // 逐句播放沿用旧截断行为，进入时关闭连续跟唱状态。
@@ -1372,6 +1539,7 @@ export default function App() {
   }
 
   function playLine(lineId) {
+    if (selectedRangePlaybackRef.current) stopLinePlayback()
     if (!audioUrl) {
       setAudioError('未找到与这首歌词同名的音频文件。')
       return
@@ -1403,6 +1571,7 @@ export default function App() {
 
   // 跟唱从指定时间开始持续播放到音频结束；不设置逐句的 clipEnd。
   function startContinuousPlayback(start, lineId) {
+    clearSelectedRangePlayback()
     const audio = audioRef.current
     if (!audioUrl || !audio) { setAudioError('这首歌尚无可播放的音频。'); return }
     pendingClipRef.current = null
@@ -1432,6 +1601,7 @@ export default function App() {
   }
 
   function toggleSingAlong() {
+    if (selectedRangePlaybackRef.current) { toggleSelectedLyricRange(); return }
     const audio = audioRef.current
     if (!audioUrl || !audio) return
     if (!continuousPlaybackRef.current || audio.ended) { startContinuousPlayback(0, activeSong.lines[0]?.id ?? null); return }
@@ -1447,17 +1617,21 @@ export default function App() {
     const clip = pendingClipRef.current
     if (!clip) return
     pendingClipRef.current = null
+    if (clip.kind === 'selected-range') { startSelectedRangePlayback(clip); return }
     startClipPlayback(clip)
   }
 
   function handleAudioTimeUpdate() {
     updateDesktopAudio()
     const audio = audioRef.current
+    if (selectedRangePlaybackRef.current && audio && audio.currentTime >= selectedRangePlaybackRef.current.end) {
+      finishSelectedRangePlayback(); return
+    }
     if (continuousPlaybackRef.current && audio) {
       // LRC 时间戳决定当前句；高亮更新不会暂停或跳转音频。
       let lineId = activeSong.lines[0]?.id ?? null
       for (const line of activeSong.lines) {
-        if ((line.start || 0) > audio.currentTime + 0.04) break
+        if ((line.start || 0) > audio.currentTime + (selectedRangePlaybackRef.current ? 0 : 0.04)) break
         lineId = line.id
       }
       if (lineId !== continuousLineIdRef.current) {
@@ -1666,9 +1840,12 @@ export default function App() {
     if (!IS_DESKTOP_APP || !audioRef.current) return
     const audio = audioRef.current
     setDesktopAudio({ time: audio.currentTime || 0, duration: Number.isFinite(audio.duration) ? audio.duration : 0, playing: !audio.paused && !audio.ended })
+    setSelectedRangePlaying(Boolean(selectedRangePlaybackRef.current && !audio.paused && !audio.ended))
+    scheduleSelectedRangeEnd()
   }
 
   function seekDesktopAudio(time) {
+    clearSelectedRangePlayback()
     const audio = audioRef.current
     if (!audio || !audioUrl || !Number.isFinite(audio.duration)) return
     clipEndRef.current = null
@@ -1710,7 +1887,7 @@ export default function App() {
     })()}
     {IS_ANDROID_APP && androidLaunchVisible && <div className="android-launch-screen" role="img" aria-label="UTA 启动图：私のうた，聴いてください"><img src={androidLaunchPortrait} alt="" /><div className="android-launch-title" lang="ja"><span>私のうた</span><span>聴いてください</span></div></div>}
     <div className="page-grain" aria-hidden="true" />
-    <audio ref={audioRef} src={audioUrl || undefined} preload="metadata" onPlay={updateDesktopAudio} onPause={updateDesktopAudio} onEmptied={updateDesktopAudio} onDurationChange={updateDesktopAudio} onLoadedMetadata={handleAudioLoadedMetadata} onTimeUpdate={handleAudioTimeUpdate} onEnded={() => { clipEndRef.current = null; continuousPlaybackRef.current = false; setPlayingLineId(null); setSingAlongPlaying(false) }} onError={() => { continuousPlaybackRef.current = false; setPlayingLineId(null); setSingAlongPlaying(false); setAudioError(`未能加载《${activeSong.title}》的音频文件。`) }} />
+    <audio ref={audioRef} src={audioUrl || undefined} preload="metadata" onPlay={updateDesktopAudio} onPause={updateDesktopAudio} onEmptied={updateDesktopAudio} onDurationChange={updateDesktopAudio} onLoadedMetadata={handleAudioLoadedMetadata} onTimeUpdate={handleAudioTimeUpdate} onRateChange={scheduleSelectedRangeEnd} onSeeking={clearSelectedRangeEndTimer} onSeeked={scheduleSelectedRangeEnd} onEnded={() => { clearSelectedRangePlayback(); clipEndRef.current = null; continuousPlaybackRef.current = false; setPlayingLineId(null); setSingAlongPlaying(false) }} onError={() => { clearSelectedRangePlayback(); continuousPlaybackRef.current = false; setPlayingLineId(null); setSingAlongPlaying(false); setAudioError(`未能加载《${activeSong.title}》的音频文件。`) }} />
     {/* 学习详情页由歌曲栏承担页头，原品牌栏保留给主页面和网页。 */}
     <header className={`topbar ${IS_ANDROID_APP ? `android-topbar ${['lesson', 'sing-along'].includes(activePage) ? 'study-topbar-hidden' : ''}` : ''}`}>
       <button className="brand" type="button" onClick={showLessonPage} aria-label="UTA 首页"><span className="brand-mark">う</span><span>UTA<span className="brand-dot">.</span></span></button>
@@ -1721,7 +1898,7 @@ export default function App() {
 
     {IS_ANDROID_APP && <WebDavAutoSync onCreateBackup={createCloudData} onNotice={setToast}/>}
     {IS_ANDROID_APP && <AppUpdatePrompt updates={appUpdates}/>}
-    <main id="top" className={IS_ANDROID_APP ? `android-main ${activePage === 'lesson' ? 'android-lesson-page' : ''}` : ''} data-reading-style={readingStyle} style={IS_DESKTOP_APP ? { '--reading-font-size': `${readingFontSize}px` } : undefined}>
+    <main id="top" className={IS_ANDROID_APP ? `android-main ${activePage === 'lesson' ? 'android-lesson-page' : ''}` : ''} data-reading-style={readingStyle} style={IS_DESKTOP_APP ? { '--reading-font-size': `${readingFontSize}px`, '--line-reading-font-size': `${lineReadingFontSize}px` } : undefined}>
       {/* 安卓三屏首页按确认稿呈现，模式卡片只负责进入现有功能。 */}
       {IS_ANDROID_APP && activePage.startsWith('mobile-') && <AndroidHome tab={mobileTab} recentLearn={recentLearnSong ? { song: recentLearnSong, artwork: artworkForSong(recentLearnSong) } : null} recentSing={recentSingSong ? { song: recentSingSong, artwork: artworkForSong(recentSingSong) } : null} onEnterLearn={() => { exitPractice(); if (recentLearnSong && recentLearnSong.id !== activeSong.id) chooseSong(recentLearnSong.id); navigateAndroid('lesson', 'learn'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onEnterSingAlong={showSingAlong} onEnterReview={showReviewQueue} onOpenLibrary={() => showLibraryPage()} onOpenSettings={() => setSettingsOpen(true)} />}
       {IS_ANDROID_APP && activePage === 'sing-along' && <AndroidSingAlong song={activeSong} songs={allSongs} artwork={artworkForSong(activeSong)} audioReady={Boolean(audioUrl)} playing={singAlongPlaying} currentLineId={singAlongLineId} onSelectSong={chooseSong} onPlayFromStart={() => startContinuousPlayback(0, activeSong.lines[0]?.id ?? null)} onPlayFromLine={playSingAlongFromLine} onToggle={toggleSingAlong} error={audioError} onChoose={openStudySongPicker} annotations={annotations} corrections={corrections} readingStyle={readingStyle} />}
@@ -1777,7 +1954,7 @@ export default function App() {
           {!practiceActive && <div className="sentence-explanation-status"><div><Sparkles size={15} /><span>{sentenceExplanationJob?.songId === activeSong.id ? `正在生成整句解析 ${sentenceExplanationJob.ready} / ${sentenceExplanationJob.total}` : readySentenceCount === activeSong.lines.length ? `整首歌的 ${readySentenceCount} 句解析已就绪` : `整句解析已准备 ${readySentenceCount} / ${activeSong.lines.length} 句`}</span></div>{readySentenceCount < activeSong.lines.length && <button type="button" disabled={Boolean(sentenceExplanationJob)} onClick={generateCurrentSongExplanations}>{sentenceExplanationJob?.songId === activeSong.id ? '生成中…' : '生成剩余解析'}</button>}</div>}
           {!practiceActive && readySentenceCount < activeSong.lines.length && <p className="sentence-explanation-disclosure">生成时会将歌词及已有译文发送给设置中的 AI 服务，可能产生 API 调用费用。</p>}
           {!practiceActive && sentenceExplanationError?.songId === activeSong.id && <p className="sentence-explanation-error" role="alert"><CircleAlert size={13} /> {sentenceExplanationError.message}</p>}
-          {!practiceActive && <div className="practice-launch"><div><b>把这一句真正练会</b><span>先听、自己读并猜意思，再揭晓答案。</span></div><div><button className="practice-start" type="button" onClick={() => startPractice('all', activeSong.id, activeLine.id)}><BookOpenCheck size={15} /> 开始逐句练习</button>{currentSongReviewCount > 0 && <button className="practice-review-start" type="button" onClick={() => startPractice('review')}>只练待复习的 {currentSongReviewCount} 句</button>}</div></div>}
+          {!IS_DESKTOP_APP && !practiceActive && <div className="practice-launch"><div><b>把这一句真正练会</b><span>先听、自己读并猜意思，再揭晓答案。</span></div><div><button className="practice-start" type="button" onClick={() => startPractice('all', activeSong.id, activeLine.id)}><BookOpenCheck size={15} /> 开始逐句练习</button>{currentSongReviewCount > 0 && <button className="practice-review-start" type="button" onClick={() => startPractice('review')}>只练待复习的 {currentSongReviewCount} 句</button>}</div></div>}
           {practiceActive && <section className="guided-card" id="guided-practice" aria-label="逐句练习卡片">
             <div className="guided-card-top"><span>{practiceScope === 'review' ? '待复习句练习' : '全曲逐句练习'}</span><button type="button" onClick={exitPractice}>退出练习 <X size={13} /></button></div>
             {practiceFinished ? <div className="guided-finished" role="status"><BookOpenCheck size={28} /><h3>本轮练习完成</h3><p>已掌握的句子会计入歌曲进度；没把握的句子留在复习清单中。</p><div><button type="button" onClick={() => startPractice('all')}>再练整首</button><button type="button" disabled={!currentSongReviewCount} onClick={() => startPractice('review')}>练习待复习的 {currentSongReviewCount} 句</button></div></div> : <>
@@ -1796,6 +1973,7 @@ export default function App() {
           {reviewNeeded > 0 && <p className="annotation-tip warn"><CircleAlert size={13} /> 有 {reviewNeeded} 个词典未能确定读音，请优先人工校对。</p>}
           {aiError && <p className="annotation-tip ai-error"><CircleAlert size={13} /> {aiError}</p>}
           {aiReview && <p className="ai-review-summary"><Sparkles size={13} /> AI 已复核 {aiReview.reviewed_token_count} 个词素：{pendingAiSuggestions.length ? <>还有 {pendingAiSuggestions.length} 处待处理建议，<button type="button" onClick={() => document.getElementById('ai-review-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>查看全部</button></> : aiReview.suggestions?.length ? '所有建议均已处理。' : '未发现明显异常；仍建议以原唱为准。'}</p>}
+          {IS_DESKTOP_APP && <DesktopLyricRangeControls range={desktopLyricRange} available={Boolean(audioUrl)} playing={selectedRangePlaying} paused={Boolean(selectedRangePlaybackRef.current) && !selectedRangePlaying} rate={playbackRate} onRate={choosePlaybackRate} onToggle={toggleSelectedLyricRange} onReplay={playSelectedLyricRange} onClear={clearDesktopLyricSelection}/>}
           <div className="lyrics-list">
             {activeSong.lines.map((line) => {
               const annotation = annotations?.find((item) => item.id === line.id)
@@ -1807,7 +1985,7 @@ export default function App() {
               const hasSentenceExplanation = hasCachedSentenceExplanation(currentSentenceCache, line)
               const sentenceExpanded = sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === line.id
               // 原点击播放保留；新增整句长按与滚动取消，抬手后不误触播放或词语详情。
-              return <article id={`lyric-row-${activeSong.id}-${line.id}`} className={`lyric-row ${current ? 'active' : ''} ${IS_DESKTOP_APP && singAlongLineId === line.id && singAlongPlaying ? 'desktop-now-playing' : ''}`} onPointerDownCapture={(event) => beginLyricPress(event, line.id)} onPointerMoveCapture={moveLyricPress} onPointerUpCapture={(event) => { cancelLyricPress(); suppressLyricPressClick(event) }} onPointerCancel={cancelLyricPress} onPointerLeave={cancelLyricPress} onClickCapture={suppressLyricPressClick} onContextMenu={(event) => { if (IS_ANDROID_APP) event.preventDefault() }} onClick={(event) => handleLyricRowClick(event, line.id)} key={`${activeSong.id}-${line.id}`}>
+              return <article id={`lyric-row-${activeSong.id}-${line.id}`} className={`lyric-row ${current ? 'active' : ''} ${IS_DESKTOP_APP && desktopSelectedLineIds.has(line.id) ? 'desktop-range-selected' : ''} ${IS_DESKTOP_APP && singAlongLineId === line.id && singAlongPlaying ? 'desktop-now-playing' : ''}`} onPointerDownCapture={(event) => handleLyricPointerDown(event, line.id)} onPointerMoveCapture={moveLyricPress} onPointerUpCapture={(event) => { cancelLyricPress(); suppressLyricPressClick(event) }} onPointerCancel={cancelLyricPress} onPointerLeave={cancelLyricPress} onClickCapture={(event) => handleLyricClickCapture(event, line.id)} onContextMenu={(event) => { if (IS_ANDROID_APP) event.preventDefault() }} onClick={(event) => handleLyricRowClick(event, line.id)} key={`${activeSong.id}-${line.id}`}>
                 <span className="line-number">{String(line.displayNumber).padStart(2, '0')}</span>
                 <div className="auto-line-wrap">
                   <div className="japanese"><AnnotatedLine interactive={!IS_ANDROID_APP} tokens={lineTokens} corrections={corrections} songId={activeSong.id} lineId={line.id} mode={mode} readingStyle={readingStyle} selectedIndex={current ? selectedTokenIndex : -1} selectionRange={dragSelection?.lineId === line.id ? dragSelection : selectedPhraseRange?.lineId === line.id ? selectedPhraseRange : null} showSelectionAction={selectedText?.lineId === line.id && selectedPhraseRange?.lineId === line.id} onStartSelection={(tokenIndex) => beginTokenSelection(line.id, tokenIndex)} onExtendSelection={(tokenIndex) => extendTokenSelection(line.id, tokenIndex)} onFinishSelection={finishTokenSelection} onExplainSelection={() => askAiToExplain(selectedText)} onSelectToken={(tokenIndex) => handleTokenClick(line.id, tokenIndex)} /></div>
@@ -1922,7 +2100,7 @@ export default function App() {
     {/* 旧网页页脚保留；安卓让底部主导航固定在屏幕下沿。 */}
     {!IS_ANDROID_APP && !IS_DESKTOP_APP && <footer><span>UTA. Learn Japanese, one lyric at a time.</span><span>自动注音在本机生成 · 词义数据：<a href="https://github.com/tomoshi-app/tomoshi-dict-data" target="_blank" rel="noreferrer">Tomoshi / EDRDG</a> · AI 请求仅在你主动点击后发起</span></footer>}
 
-    {settingsOpen && <SettingsDialog updates={appUpdates} onCloudExport={createCloudData} readingStyle={readingStyle} onReadingStyleChange={setReadingStyle} readingFontSize={readingFontSize} onReadingFontSizeChange={value => setReadingFontSize(normalizeReadingFontSize(value))} onClose={() => setSettingsOpen(false)} onExport={exportLearningData} onRestore={async (file) => { const ready = await prepareBackupRestore(file); if (ready) setSettingsOpen(false) }} backupBusy={backupBusy} backupError={backupError} />}
+    {settingsOpen && <SettingsDialog updates={appUpdates} onCloudExport={createCloudData} readingStyle={readingStyle} onReadingStyleChange={setReadingStyle} readingFontSize={readingFontSize} onReadingFontSizeChange={value => setReadingFontSize(normalizeReadingFontSize(value))} lineReadingFontSize={lineReadingFontSize} onLineReadingFontSizeChange={value => setLineReadingFontSize(normalizeLineReadingFontSize(value))} onClose={() => setSettingsOpen(false)} onExport={exportLearningData} onRestore={async (file) => { const ready = await prepareBackupRestore(file); if (ready) setSettingsOpen(false) }} backupBusy={backupBusy} backupError={backupError} />}
     {backupPreview && <div className="backup-backdrop" role="presentation" onClick={() => { if (backupBusy !== 'restore') { setBackupPreview(null); setBackupError('') } }}><section className="backup-dialog" role="dialog" aria-modal="true" aria-labelledby="backup-dialog-title" onClick={(event) => event.stopPropagation()}>
       <button className="backup-close" type="button" disabled={backupBusy === 'restore'} onClick={() => { setBackupPreview(null); setBackupError('') }} aria-label="关闭备份预览"><X size={18} /></button>
       <p className="eyebrow">RESTORE LOCAL DATA</p><h2 id="backup-dialog-title">确认恢复备份</h2>
@@ -1941,9 +2119,11 @@ export default function App() {
         <p className="eyebrow">CHOOSE A SOURCE</p><h2 id="import-source-title">从哪里导入歌曲？</h2>
         <p className="song-import-intro">你可以选手机上的歌词和音频文件，也可以连接电脑网页，选择它已经保存的歌曲。</p>
         <div className="import-source-options"><button type="button" onClick={() => setImportSource('phone')}><strong>从手机文件导入</strong><span>选择手机里的 LRC 歌词和音频文件。</span></button><button type="button" onClick={() => setImportSource('computer')}><strong>从电脑网页导入</strong><span>连接电脑后查看已有歌曲，可全部或部分导入。</span></button></div>
-      </section> : importSource === 'computer' ? <ComputerImportDialog onClose={closeImportDialog} onImport={importSelectedComputerSongs} existingSongIds={localSongs.map((song) => song.id)} /> : <form className="song-import-dialog" onSubmit={(event) => { event.preventDefault(); importLocalSong() }} onClick={(event) => event.stopPropagation()}>
+      </section> : importSource === 'computer' ? <ComputerImportDialog onClose={closeImportDialog} onImport={importSelectedComputerSongs} existingSongIds={localSongs.map((song) => song.id)} /> : IS_DESKTOP_APP && importSource === 'batch' ? <BatchSongImportDialog onClose={closeImportDialog} onSwitchSingle={() => setImportSource('phone')} onImport={importLocalSongBatch} busy={importBusy} /> : <form className="song-import-dialog" onSubmit={(event) => { event.preventDefault(); importLocalSong() }} onClick={(event) => event.stopPropagation()}>
       <button className="song-import-close" type="button" onClick={closeImportDialog} aria-label="关闭导入窗口"><X size={18} /></button>
-      <p className="eyebrow">ADD A LOCAL SONG</p><h2>导入歌曲开始学习</h2><p className="song-import-intro">选择音频和 LRC，或先选音频再联网查找歌词。检查歌词、时间与封面后即可保存。</p>
+      <p className="eyebrow">ADD A LOCAL SONG</p><h2>导入歌曲开始学习</h2>
+      {IS_DESKTOP_APP && <nav className="desktop-import-modes" aria-label="歌曲导入方式"><button type="button" aria-pressed="true">单首导入</button><button type="button" disabled={importBusy || importPreparing} onClick={() => setImportSource('batch')}>批量导入</button></nav>}
+      <p className="song-import-intro">选择音频和 LRC，或先选音频再联网查找歌词。检查歌词、时间与封面后即可保存。</p>
       {/* 旧版先选 LRC 再选音频；现在让音频在前，选中后即可自动搜索歌词。 */}
       <label className={`song-file-field ${importAudioFile ? 'selected' : ''}`}><span>01 · 原声音频</span><strong>{importAudioFile?.name || '选择 MP3、M4A、WAV、OGG 等音频'}</strong><small>{importAudioGuess?.title ? `识别：${importAudioGuess.title}${importAudioGuess.artist ? ` · ${importAudioGuess.artist}` : ''}，正在自动查找歌词` : '选择后会按音频标签或文件名自动查找歌词'}</small><input key={importAudioFile?.name || 'empty-audio'} type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.webm" onChange={(event) => chooseImportAudioFile(event.target.files?.[0] || null)} /></label>
       <label className={`song-file-field ${importLrcFile ? 'selected' : ''}`}><span>02 · 歌词文件</span><strong>{importLrcFile?.name || '选择 .lrc 文件，或从搜索结果选用'}</strong><small>需要每句开头的时间戳，例如 [01:23.45]</small><input key={importLrcFile?.name || 'empty-lrc'} type="file" accept=".lrc,text/plain" onChange={(event) => prepareLrcPreview(event.target.files?.[0] || null)} /></label>

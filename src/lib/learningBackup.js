@@ -51,6 +51,7 @@ function checkState(manifest) {
     || (progress.playbackRate != null && ![1, 0.75, 0.5, 0.25].includes(progress.playbackRate))
     || (progress.readingStyle != null && !['hiragana', 'romaji'].includes(progress.readingStyle))
     || (progress.readingFontSize != null && (!Number.isInteger(progress.readingFontSize) || progress.readingFontSize < 8 || progress.readingFontSize > 24))
+    || (progress.lineReadingFontSize != null && (!Number.isInteger(progress.lineReadingFontSize) || progress.lineReadingFontSize < 8 || progress.lineReadingFontSize > 24))
     || (progress.lyricSnapshots != null && (!isRecord(progress.lyricSnapshots)
       || Object.values(progress.lyricSnapshots).some((snapshot) => !isRecord(snapshot) || !Array.isArray(snapshot.lines)
         || snapshot.lines.some((line) => !isRecord(line) || !Number.isSafeInteger(line.id) || typeof line.text !== 'string'))))

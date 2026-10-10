@@ -9,7 +9,7 @@ import { randomBytes } from 'node:crypto'
 import { inspectLearningBackup } from '../src/lib/learningBackup.js'
 
 const root = process.cwd()
-const source = path.join(root, 'release', 'UTA-Windows-x64')
+const source = process.env.UTA_DESKTOP_TEST_SOURCE ? path.resolve(process.env.UTA_DESKTOP_TEST_SOURCE) : path.join(root, 'release', 'UTA-Windows-x64')
 const testDir = path.join(root, 'work', '便携 验证')
 assert.equal(path.dirname(testDir), path.join(root, 'work'))
 await fs.rm(testDir, { recursive: true, force: true })
@@ -87,11 +87,11 @@ try {
   await page.screenshot({ path: path.join(evidence, 'desktop-library.png') })
 
   // Import through the actual UI; the original test audio is a short silent WAV.
-  const samples = 8000 * 2, wav = Buffer.alloc(44 + samples * 2)
+  const samples = 8000 * 6, wav = Buffer.alloc(44 + samples * 2)
   wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8); wav.writeUInt32LE(16, 16)
   wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22); wav.writeUInt32LE(8000, 24); wav.writeUInt32LE(16000, 28)
   wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(samples * 2, 40)
-  const lyrics = '[ti:Windows便携测试]\n[ar:UTA原创]\n[00:00.00]学校へ帰る。\n[00:01.00]夢を見よう。\n'
+  const lyrics = '[ti:Windows便携测试]\n[ar:UTA原创]\n[00:00.50]学校へ帰る。\n[00:01.00]夢を見よう。\n[00:02.00]雨が降る。\n[00:04.00]風を感じよう。\n'
   await page.getByRole('button', { name: '歌曲库', exact: true }).click()
   await shortcut('O')
   const form = page.locator('.song-import-dialog')
@@ -113,6 +113,69 @@ try {
   assert.equal(await page.locator('audio').evaluate(audio => audio.volume), 0.5)
   await page.getByRole('button', { name: '播放下一句', exact: true }).click()
   await page.getByRole('button', { name: '暂停歌曲', exact: true }).click()
+  // Record real play calls so exact starts are verified without wall-clock drift.
+  await page.evaluate(()=>{
+    window.__clipStarts=[];window.__originalPlay=HTMLMediaElement.prototype.play
+    HTMLMediaElement.prototype.play=function(...args){window.__clipStarts.push({time:this.currentTime,rate:this.playbackRate});return window.__originalPlay.apply(this,args)}
+  })
+  const lyricRows=page.locator('.lyrics-list .lyric-row')
+  const selection=page.getByRole('region',{name:'选中歌词片段',exact:true})
+  await lyricRows.nth(1).locator('.line-number').click()
+  await lyricRows.nth(2).locator('.lyric-token').first().click({modifiers:['Control']})
+  assert.equal(await page.locator('.desktop-range-selected').count(),2)
+  assert.equal(await selection.getAttribute('data-start'),'1')
+  assert.equal(await selection.getAttribute('data-end'),'4')
+  await lyricRows.nth(3).locator('.reading').click({modifiers:['Control']})
+  assert.equal(await page.locator('.desktop-range-selected').count(),3)
+  assert.equal(await selection.getAttribute('data-end'),'6')
+  await lyricRows.nth(0).locator('.line-number').click({modifiers:['Control']})
+  assert.equal(await page.locator('.desktop-range-selected').count(),2)
+  assert.equal(await selection.getAttribute('data-start'),'0.5')
+  assert.equal(await selection.getAttribute('data-end'),'2')
+  await lyricRows.nth(1).locator('.line-number').click()
+  await lyricRows.nth(2).locator('.lyric-token').first().click({modifiers:['Control']})
+  await page.getByLabel('选段播放速度',{exact:true}).selectOption('0.5')
+  await page.getByRole('button',{name:'播放选中片段',exact:true}).click()
+  await page.getByRole('button',{name:'暂停选中片段',exact:true}).waitFor()
+  assert.deepEqual(await page.evaluate(()=>window.__clipStarts.at(-1)),{time:1,rate:0.5})
+  assert.equal(await page.getByLabel('歌曲播放速度').inputValue(),'0.5')
+  await page.getByRole('button',{name:'暂停歌曲',exact:true}).click()
+  assert.equal(await page.locator('audio').evaluate(audio=>audio.paused),true)
+  const pausedTime=await page.locator('audio').evaluate(audio=>audio.currentTime)
+  await page.getByRole('button',{name:'继续选中片段',exact:true}).click()
+  await page.getByRole('button',{name:'暂停选中片段',exact:true}).waitFor()
+  assert.ok(Math.abs((await page.evaluate(()=>window.__clipStarts.at(-1).time))-pausedTime)<0.002)
+  await page.getByLabel('选段播放速度',{exact:true}).selectOption('0.25')
+  assert.equal(await page.locator('audio').evaluate(audio=>audio.playbackRate),0.25)
+  await page.locator('audio').evaluate(audio=>{audio.currentTime=3.99;audio.dispatchEvent(new Event('timeupdate'))})
+  await page.waitForFunction(()=>{const audio=document.querySelector('audio');return audio.paused && Math.abs(audio.currentTime-4)<0.002},{},{timeout:3000})
+  await page.getByRole('button',{name:'重播选中片段',exact:true}).click()
+  await page.getByRole('button',{name:'暂停选中片段',exact:true}).waitFor()
+  assert.equal(await page.evaluate(()=>window.__clipStarts.at(-1).time),1)
+  await page.getByRole('button',{name:'暂停选中片段',exact:true}).click()
+  await client.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1440,960))
+  await page.screenshot({path:path.join(evidence,'lyric-range-playback.png')})
+  await page.getByRole('button',{name:'取消歌词多选',exact:true}).click()
+  assert.equal(await page.locator('.desktop-range-selected').count(),0)
+  assert.equal(await page.locator('audio').evaluate(audio=>audio.paused),true)
+  await lyricRows.nth(2).locator('.line-number').click()
+  await lyricRows.nth(3).locator('.lyric-token').first().click({modifiers:['Control']})
+  assert.equal(await selection.getAttribute('data-start'),'2')
+  assert.equal(await selection.getAttribute('data-end'),'6')
+  await page.getByRole('button',{name:'播放选中片段',exact:true}).click()
+  await page.getByRole('button',{name:'暂停选中片段',exact:true}).waitFor()
+  assert.equal(await page.evaluate(()=>window.__clipStarts.at(-1).time),2)
+  await page.locator('audio').evaluate(audio=>{audio.currentTime=5.98;audio.dispatchEvent(new Event('timeupdate'))})
+  await page.waitForFunction(()=>{const audio=document.querySelector('audio');return audio.paused && Math.abs(audio.currentTime-6)<0.002},{},{timeout:3000})
+  // A normal word click cancels range selection; original line playback still starts 0.5s early.
+  await lyricRows.first().locator('.lyric-token').first().click()
+  assert.equal(await page.locator('.desktop-range-selected').count(),0)
+  await page.getByRole('button',{name:'播放第 1 句',exact:true}).click()
+  await page.getByRole('button',{name:'暂停第 1 句',exact:true}).waitFor()
+  assert.equal(await page.evaluate(()=>window.__clipStarts.at(-1).time),0)
+  await page.getByRole('button',{name:'暂停第 1 句',exact:true}).click()
+  await page.getByLabel('歌曲播放速度').selectOption('0.5')
+  await page.evaluate(()=>{HTMLMediaElement.prototype.play=window.__originalPlay;delete window.__originalPlay})
   for (const [width,height] of [[1024,768], [1440,960]]) {
     await client.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setSize(...size), [width,height])
     await page.waitForTimeout(250)
@@ -142,23 +205,106 @@ try {
   await page.locator('.settings-dialog').waitFor()
   await page.screenshot({ path:path.join(evidence, 'desktop-settings.png') })
   await page.getByRole('button', { name:'注音显示', exact:true }).click()
-  const sizeSlider=page.getByRole('slider', { name:'假名注音字体大小', exact:true })
+  const sizeSlider=page.getByRole('slider', { name:'歌词上方假名字体大小', exact:true })
   assert.equal(await sizeSlider.inputValue(),'10')
+  const lineSizeSlider=page.getByRole('slider', { name:'下方整句注音字体大小', exact:true })
+  assert.equal(await lineSizeSlider.inputValue(),'11')
   const lyricFont=await page.locator('.japanese').first().evaluate(element=>getComputedStyle(element).fontSize)
   for(const value of ['8','24']) {
     await sizeSlider.fill(value)
     await page.waitForFunction(size=>getComputedStyle(document.querySelector('#top rt')).fontSize === size+'px',value)
     assert.equal(await page.locator('.reading-font-preview rt').first().evaluate(element=>getComputedStyle(element).fontSize),value+'px')
     assert.equal(await page.locator('.japanese').first().evaluate(element=>getComputedStyle(element).fontSize),lyricFont)
+    assert.equal(await page.locator('.lyrics-list .reading').first().evaluate(element=>getComputedStyle(element).fontSize),'11px')
   }
   await page.getByRole('button', { name:'恢复默认字号', exact:true }).click()
   assert.equal(await sizeSlider.inputValue(),'10')
   await sizeSlider.fill('16')
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('uta-pronunciation-progress-v2')).readingFontSize === 16)
+  for(const value of ['8','24']) {
+    await lineSizeSlider.fill(value)
+    await page.waitForFunction(size=>getComputedStyle(document.querySelector('.lyrics-list .reading')).fontSize === size+'px',value)
+    assert.equal(await page.locator('.line-reading-font-preview').evaluate(element=>getComputedStyle(element).fontSize),value+'px')
+    assert.equal(await page.locator('#top rt').first().evaluate(element=>getComputedStyle(element).fontSize),'16px')
+    assert.equal(await page.locator('.japanese').first().evaluate(element=>getComputedStyle(element).fontSize),lyricFont)
+  }
+  await page.getByRole('button', { name:'恢复整句默认字号', exact:true }).click()
+  assert.equal(await lineSizeSlider.inputValue(),'11')
+  await lineSizeSlider.fill('20')
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('uta-pronunciation-progress-v2')).lineReadingFontSize === 20)
   await page.getByRole('radio', { name:/罗马音/ }).check()
   assert.equal(await page.locator('.reading-font-preview rt').first().textContent(),'gakkou')
+  assert.equal(await page.locator('.line-reading-font-preview').textContent(),'gakkou e kaeru')
   await page.getByRole('radio', { name:/平假名/ }).check()
   await page.screenshot({path:path.join(evidence,'reading-font-size.png')})
+  await page.getByRole('button', { name:'关闭设置', exact:true }).click()
+  await page.screenshot({path:path.join(evidence,'independent-reading-size.png')})
+  await shortcut('O')
+  await page.locator('.song-import-dialog').getByRole('button',{name:'批量导入',exact:true}).click()
+  const batch=page.locator('.batch-import-dialog')
+  assert.equal(await batch.locator('input[aria-label="批量选择音频文件"]').getAttribute('multiple'),'')
+  const batchAudioNames=['雨.wav','春.wav','手動.wav','壊れ.wav','未選択.wav']
+  await batch.getByLabel('批量选择音频文件',{exact:true}).setInputFiles(batchAudioNames.map(name=>({name,mimeType:'audio/wav',buffer:wav})))
+  await page.waitForFunction(()=>!document.querySelector('.batch-import-progress') && document.querySelector('.batch-import-rows')?.children.length===5)
+  await batch.getByLabel('批量选择歌词文件',{exact:true}).setInputFiles([
+    {name:'春.lrc',mimeType:'text/plain',buffer:Buffer.from('[ti:春の歌]\n[ar:UTA春]\n[00:00.00]はるが来る。\n')},
+    {name:'違う名前.lrc',mimeType:'text/plain',buffer:Buffer.from('[ti:手動原曲]\n[00:00.00]そらを見よう。\n')},
+    {name:'雨.lrc',mimeType:'text/plain',buffer:Buffer.from('[ti:雨の歌]\n[ar:UTA雨]\n[00:00.00]あめが降る。\n')},
+    {name:'壊れ.lrc',mimeType:'text/plain',buffer:Buffer.from('no timestamp or Japanese lyrics')},
+    {name:'未選択.lrc',mimeType:'text/plain',buffer:Buffer.from('[00:00.00]うたを歌う。\n')},
+    {name:'孤立.lrc',mimeType:'text/plain',buffer:Buffer.from('[00:00.00]ゆめを見よう。\n')},
+  ])
+  await batch.getByRole('button',{name:'导入选中的 3 首歌曲',exact:true}).waitFor()
+  assert.equal(await batch.getByLabel('第 1 首对应歌词',{exact:true}).locator('option:checked').textContent(),'雨.lrc')
+  assert.equal(await batch.getByLabel('第 2 首对应歌词',{exact:true}).locator('option:checked').textContent(),'春.lrc')
+  assert.equal(await batch.getByLabel('第 3 首对应歌词',{exact:true}).inputValue(),'')
+  assert.equal(await batch.getByLabel('选择第 4 首歌曲',{exact:true}).isDisabled(),true)
+  assert.match(await batch.locator('.batch-import-row').nth(3).innerText(),/未在 LRC 中找到/)
+  await batch.getByLabel('第 3 首对应歌词',{exact:true}).selectOption({label:'違う名前.lrc'})
+  await batch.getByLabel('第 3 首歌曲名',{exact:true}).fill('批量手動テスト')
+  await batch.getByLabel('第 3 首歌手',{exact:true}).fill('UTA手動')
+  await batch.getByLabel('选择第 5 首歌曲',{exact:true}).uncheck()
+  // Adding another audio preserves manually reviewed pairings and deselection.
+  await batch.getByLabel('批量选择音频文件',{exact:true}).setInputFiles({name:'追加.wav',mimeType:'audio/wav',buffer:wav})
+  await page.waitForFunction(()=>!document.querySelector('.batch-import-progress'))
+  assert.equal(await batch.locator('.batch-import-row').count(),6)
+  assert.equal(await batch.getByLabel('第 3 首歌曲名',{exact:true}).inputValue(),'批量手動テスト')
+  assert.equal(await batch.getByLabel('选择第 5 首歌曲',{exact:true}).isChecked(),false)
+  for(const [width,height,zoom] of [[1000,680,1],[1440,960,1],[1024,768,1.5]]) {
+    await client.evaluate(({BrowserWindow},size)=>{const window=BrowserWindow.getAllWindows()[0];window.setSize(size[0],size[1]);window.webContents.setZoomFactor(size[2])},[width,height,zoom])
+    const bounds=await batch.evaluate(dialog=>{const footer=dialog.querySelector('.batch-import-footer').getBoundingClientRect();const content=dialog.querySelector('.batch-import-content');return {bottom:footer.bottom,height:innerHeight,width:content.clientWidth,scrollWidth:content.scrollWidth}})
+    assert.ok(bounds.bottom<=bounds.height && bounds.scrollWidth<=bounds.width+1)
+  }
+  await client.evaluate(({BrowserWindow})=>{const window=BrowserWindow.getAllWindows()[0];window.webContents.setZoomFactor(1);window.setSize(1440,960)})
+  await page.screenshot({path:path.join(evidence,'batch-import.png')})
+  const localRecords=()=>page.evaluate(()=>new Promise((resolve,reject)=>{
+    const request=indexedDB.open('uta-local-song-library');request.onerror=()=>reject(request.error)
+    request.onsuccess=()=>{const database=request.result,all=database.transaction('songs').objectStore('songs').getAll();all.onsuccess=()=>{database.close();resolve(all.result.map(song=>({title:song.title,artist:song.artist,audioName:song.audioName,size:song.audioBlob.size,sourceFile:song.sourceFile,text:song.lines[0].text})))}}
+  }))
+  const countBeforeBatch=(await localRecords()).length
+  await page.evaluate(()=>{
+    const original=IDBObjectStore.prototype.add;let calls=0
+    IDBObjectStore.prototype.add=function(...args){
+      if(this.name==='songs' && ++calls===2){IDBObjectStore.prototype.add=original;throw new DOMException('模拟存储空间不足','QuotaExceededError')}
+      return original.apply(this,args)
+    }
+  })
+  await batch.getByRole('button',{name:'导入选中的 3 首歌曲',exact:true}).click()
+  await batch.getByRole('alert').waitFor()
+  assert.match(await batch.getByRole('alert').innerText(),/模拟存储空间不足/)
+  assert.equal((await localRecords()).length,countBeforeBatch)
+  await batch.getByRole('button',{name:'导入选中的 3 首歌曲',exact:true}).click()
+  await batch.waitFor({state:'detached'})
+  const batchRecords=await localRecords()
+  assert.equal(batchRecords.length,countBeforeBatch+3)
+  for(const [title,artist,audioName,sourceFile,text] of [
+    ['雨の歌','UTA雨','雨.wav','雨.lrc','あめが降る。'],['春の歌','UTA春','春.wav','春.lrc','はるが来る。'],
+    ['批量手動テスト','UTA手動','手動.wav','違う名前.lrc','そらを見よう。']
+  ]) assert.ok(batchRecords.some(song=>song.title===title && song.artist===artist && song.audioName===audioName && song.sourceFile===sourceFile && song.text===text && song.size===wav.length))
+  assert.ok(!batchRecords.some(song=>['壊れ.wav','未選択.wav','追加.wav'].includes(song.audioName)))
+  await shortcut('1')
+  await shortcut(',')
+  await page.locator('.settings-dialog').waitFor()
 
   await page.getByRole('button', { name:'AI 服务', exact:true }).click()
   await page.getByRole('button', { name:'其他兼容服务', exact:true }).click()
@@ -211,17 +357,23 @@ try {
   assert.ok((await fs.stat(backup)).size > wav.length)
   const inspectedBackup=await inspectLearningBackup(new Blob([await fs.readFile(backup)]))
   assert.equal(inspectedBackup.manifest.progress.readingFontSize,16)
+  assert.equal(inspectedBackup.manifest.progress.lineReadingFontSize,20)
+  assert.ok(inspectedBackup.manifest.songs.some(song=>song.title==='批量手動テスト' && song.audioName==='手動.wav'))
+  assert.equal(inspectedBackup.manifest.songs.length,4)
   await client.close(); client = null
   page = await launch()
   assert.equal(await page.evaluate(() => localStorage.getItem('desktop-persistence-test')), 'persisted')
   await page.waitForSelector('#top rt')
   assert.equal(await page.locator('#top rt').first().evaluate(element=>getComputedStyle(element).fontSize),'16px')
+  assert.equal(await page.locator('.lyrics-list .reading').first().evaluate(element=>getComputedStyle(element).fontSize),'20px')
   const songs = await page.evaluate(() => new Promise((resolve, reject) => {
     const request = indexedDB.open('uta-local-song-library'); request.onerror = () => reject(request.error)
     request.onsuccess = () => { const database = request.result, all = database.transaction('songs').objectStore('songs').getAll();
       all.onsuccess = () => { database.close(); resolve(all.result.map((song) => ({ title: song.title, size: song.audioBlob.size }))) }; }
   }))
   assert.ok(songs.some((song) => song.title === 'Windows便携测试' && song.size === wav.length))
+  assert.equal(songs.length,4)
+  assert.ok(songs.some(song=>song.title==='批量手動テスト' && song.size===wav.length))
   assert.equal(await page.evaluate(() => window.utaDesktop.loadCredential()), 'desktop-encrypted-test-key')
   await client.close(); client = null
 
@@ -244,7 +396,16 @@ try {
   } finally { child.kill() }
   assert.deepEqual(failures, [])
   const report = { passed: true, runtime, checks: ['packaged-exe', 'relocated-chinese-space-path', 'no-system-node-python', 'bundled-sudachi-tomoshi', 'ai-proxy-mock',
-    'ui-import-wav-lrc', 'backup-export', 'indexeddb-localstorage-restart', 'windows-encrypted-key', 'renderer-isolation', 'api-authentication', 'parent-exit-cleanup', 'native-titlebar-shortcuts', 'library-filter-sort-search', 'desktop-player-seek-volume-speed', 'independent-panes-1024-1440', 'dedicated-review-practice', 'ai-settings-visible-footer-small-window-and-zoom', 'ai-settings-test-and-save-through-ui', 'reading-size-live-preview-reset', 'reading-size-restart-and-backup'] }
+    'ui-import-wav-lrc', 'backup-export', 'indexeddb-localstorage-restart', 'windows-encrypted-key', 'renderer-isolation', 'api-authentication', 'parent-exit-cleanup', 'native-titlebar-shortcuts', 'library-filter-sort-search', 'desktop-player-seek-volume-speed', 'independent-panes-1024-1440', 'dedicated-review-practice', 'ai-settings-visible-footer-small-window-and-zoom', 'ai-settings-test-and-save-through-ui', 'ctrl-contiguous-lines-token-and-reverse-selection', 'selected-range-exact-start-stop-and-tail', 'selected-range-slow-pause-resume-replay', 'single-line-lead-in-preserved', 'batch-import-matching-manual-and-selection', 'batch-import-atomic-failure-retry', 'batch-import-restart-and-backup', 'independent-line-and-ruby-reading-sizes', 'reading-size-live-preview-reset', 'reading-size-restart-and-backup'] }
   await fs.writeFile(path.join(evidence, 'desktop-smoke.json'), JSON.stringify(report, null, 2))
   console.log(JSON.stringify(report, null, 2))
+} catch (error) {
+  if (client) {
+    const page=await client.firstWindow().catch(()=>null)
+    if(page) {
+      await page.screenshot({path:path.join(evidence,'desktop-failure.png')}).catch(()=>{})
+      console.error(await page.locator('.batch-import-dialog').innerText().catch(()=>''))
+    }
+  }
+  throw error
 } finally { if (client) await client.close().catch(() => {}); mock.close(); }

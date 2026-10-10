@@ -12,6 +12,7 @@ const state = {
     playbackRate: 0.75,
     readingStyle: 'romaji',
     readingFontSize: 16,
+    lineReadingFontSize: 20,
     lyricSnapshots: { 'local-test': { sourceFile: 'test.lrc', lines: [{ id: 0, text: '夢ならば' }] } },
   },
   annotations: {},
@@ -38,6 +39,7 @@ test('backed-up songs, audio and learning state round-trip', async () => {
   assert.deepEqual(inspection.manifest.progress.lyricSnapshots, state.progress.lyricSnapshots)
   assert.equal(inspection.manifest.progress.readingStyle, 'romaji')
   assert.equal(inspection.manifest.progress.readingFontSize,16)
+  assert.equal(inspection.manifest.progress.lineReadingFontSize,20)
   assert.equal(inspection.manifest.sentenceExplanations['local-test'][0].explanation.meaning, '如果是梦')
   assert.equal(restored.lines[0].translation, '如果是梦')
   assert.equal(restored.audioName, 'test.mp3')
@@ -77,6 +79,7 @@ test('backups created before whole-line analysis remain restorable', async () =>
   delete manifest.sentenceExplanations
   delete manifest.progress.lyricSnapshots
   delete manifest.progress.readingFontSize
+  delete manifest.progress.lineReadingFontSize
   delete manifest.progress.readingStyle
   const metadata = new TextEncoder().encode(JSON.stringify(manifest))
   const nextLength = new Uint8Array(4)
@@ -90,6 +93,7 @@ test('backups created before whole-line analysis remain restorable', async () =>
   assert.equal(inspected.manifest.progress.lyricSnapshots, undefined)
   assert.equal(inspected.manifest.progress.readingStyle, undefined)
   assert.equal(inspected.manifest.progress.readingFontSize, undefined)
+  assert.equal(inspected.manifest.progress.lineReadingFontSize, undefined)
 })
 
 test('invalid lyric snapshots cannot be saved in backups', () => {

@@ -8,6 +8,13 @@ export function normalizeReadingFontSize(value) {
     ? Math.min(24, Math.max(8, Math.round(value))) : DEFAULT_READING_FONT_SIZE
 }
 
+export const DEFAULT_LINE_READING_FONT_SIZE = 11
+
+export function normalizeLineReadingFontSize(value) {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(24, Math.max(8, Math.round(value))) : DEFAULT_LINE_READING_FONT_SIZE
+}
+
 export function normalizeReadingStyle(style) {
   return style === 'romaji' ? 'romaji' : 'hiragana'
 }

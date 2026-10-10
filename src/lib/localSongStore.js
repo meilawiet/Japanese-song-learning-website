@@ -23,7 +23,7 @@ function runTransaction(mode, action) {
     const transaction = database.transaction(SONG_STORE, mode)
     const store = transaction.objectStore(SONG_STORE)
     let result
-    try { result = action(store) } catch (error) { database.close(); reject(error); return }
+    try { result = action(store) } catch (error) { transaction.abort(); database.close(); reject(error); return }
     transaction.oncomplete = () => { database.close(); resolve(result?.result) }
     transaction.onerror = () => { database.close(); reject(transaction.error || new Error('本地歌曲库写入失败。')) }
     transaction.onabort = () => { database.close(); reject(transaction.error || new Error('本地歌曲库操作已取消。')) }
@@ -90,17 +90,22 @@ function createSongId() {
   return `local-${suffix}`
 }
 
+export async function createAndStoreLocalSongs(items) {
+  if (!items.length) throw new Error('没有可导入的歌曲。')
+  const records = items.map(({ parsed, audioFile, metadata = {} }) => {
+    if (!parsed?.lines?.length || !(audioFile instanceof Blob)) throw new Error('歌曲的歌词或音频文件无效。')
+    return {
+      ...parsed, ...metadata, id: createSongId(), isLocal: true,
+      audioName: audioFile.name, audioBlob: audioFile, createdAt: Date.now(),
+    }
+  })
+  // One transaction keeps a failed batch from leaving partially imported songs.
+  await runTransaction('readwrite', store => { records.forEach(record => store.add(record)) })
+  return records
+}
+
 export async function createAndStoreLocalSong(parsed, audioFile, metadata = {}) {
-  const record = {
-    ...parsed,
-    ...metadata,
-    id: createSongId(),
-    isLocal: true,
-    audioName: audioFile.name,
-    audioBlob: audioFile,
-    createdAt: Date.now(),
-  }
-  await runTransaction('readwrite', (store) => store.put(record))
+  const [record] = await createAndStoreLocalSongs([{ parsed, audioFile, metadata }])
   return record
 }
 
