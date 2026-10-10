@@ -17,6 +17,29 @@ before(async () => {
 })
 after(async () => { await server?.close() })
 
+// 空读音不输出 ruby，歌词仍在；再次打开编辑器时输入框保持留空。
+test('取消注音在逐句、跟唱和再次编辑中一致', async () => {
+  const tokens = [{ index: 0, surface: '明日', reading: 'あした' }]
+  const corrections = { 'test:0:0': '' }
+  const song = { id: 'test', title: '测试', artist: 'UTA', lines: [{ id: 0, text: '明日' }] }
+  for (const readingStyle of ['hiragana', 'romaji', 'both']) {
+    for (const interactive of [true, false]) {
+      const lesson = renderToStaticMarkup(createElement(AnnotatedLine, { tokens, corrections, songId: 'test', lineId: 0, mode: 'reading', readingStyle, interactive }))
+      assert.ok(lesson.includes('明日') && !lesson.includes('<ruby>') && !lesson.includes('あした'))
+    }
+    const sing = renderToStaticMarkup(createElement(AndroidSingAlong, { song, corrections, annotations: [{ id: 0, tokens }], readingStyle, audioReady: true }))
+    assert.ok(sing.includes('明日') && !sing.includes('<ruby>') && !sing.includes('あした'))
+  }
+  const Editor = (await server.ssrLoadModule('/src/components/LyricLineEditor.jsx')).default
+  const markup = renderToStaticMarkup(createElement(Editor, { song, line: song.lines[0], annotation: { tokens }, corrections }))
+  assert.match(markup, /value=""/)
+  assert.ok(!markup.includes('value="あした"'))
+  // 编辑器显示传入的 LRC 翻译，同时支持空字段。
+  assert.match(markup, /这一句的翻译/)
+  const translated = renderToStaticMarkup(createElement(Editor, { song, line: { ...song.lines[0], translation: '来自 LRC 的翻译' }, annotation: { tokens }, corrections }))
+  assert.match(translated, /来自 LRC 的翻译/)
+})
+
 function lyric(style, mode = 'reading') {
   return renderToStaticMarkup(createElement(AnnotatedLine, {
     tokens: [{ index: 0, surface: '帰る', reading: 'かえる' }], corrections: { 'test:0:0': 'かえる' },
@@ -104,4 +127,44 @@ test('DeepSeek联网问答使用服务端搜索并读取来源', async () => {
     assert.equal(result.sources[0].url,'https://example.org/dictionary')
     assert.ok(result.answer.includes('歌词上下文'))
   } finally {globalThis.fetch=previous}
+})
+
+// 双层汉字注音和完整读音行必须在两种练习中采用相同人工读音。
+test('双注音在逐句与跟唱同步，跟唱提供更多入口', () => {
+  const tokens = [{ index:0, surface:'明日', reading:'あした' }, { index:1, surface:'は', reading:'は', part_of_speech:'助詞・係助詞' }]
+  const corrections = { 's:0:0':'あす' }
+  const song = { id:'s', title:'测试', artist:'UTA', lines:[{ id:0, text:'明日は', translation:'不能显示' }] }
+  const lesson = renderToStaticMarkup(createElement(AnnotatedLine, { tokens, corrections, songId:'s', lineId:0, readingStyle:'both', mode:'reading', interactive:false }))
+  const sing = renderToStaticMarkup(createElement(AndroidSingAlong, { song, annotations:[{ id:0, tokens }], corrections, readingStyle:'both', audioReady:true }))
+  for (const html of [lesson, sing]) {
+    assert.match(html, /lang="ja">あす<\/span>/)
+    assert.match(html, /lang="ja-Latn">asu<\/span>/)
+    assert.ok(!html.includes('あした') && !html.includes('corrected'))
+  }
+  assert.match(sing, /更多跟唱选项/)
+  assert.match(sing, /あす は\nasu wa/)
+  assert.ok(!sing.includes('不能显示'))
+  const original = renderToStaticMarkup(createElement(AnnotatedLine, { tokens, corrections, songId:'s', lineId:0, readingStyle:'both', mode:'original', interactive:false }))
+  assert.ok(!original.includes('<rt'))
+})
+
+test('共用注音菜单包含三种选项并反映当前选择', async () => {
+  const ReadingStyleOptions = (await server.ssrLoadModule('/src/components/ReadingStyleOptions.jsx')).default
+  for (const readingStyle of ['hiragana', 'romaji', 'both']) {
+    const html = renderToStaticMarkup(createElement(ReadingStyleOptions, { readingStyle, onReadingStyle:()=>{} }))
+    assert.match(html, /假名＋罗马音/)
+    assert.equal((html.match(/type="radio"/g)||[]).length, 3)
+    assert.match(html, new RegExp(`checked="" value="${readingStyle}"`))
+  }
+})
+
+// 跟唱自带罗马音不输出另一套自动罗马音，并继续隐藏译文。
+test('跟唱显示用户罗马音并避免重复自动罗马音', () => {
+  const song = {id:'s',title:'原创',artist:'UTA',lines:[{id:0,text:'夢',translation:'不要显示',romaji:'yu me'}]}
+  const tokens = [{index:0,surface:'夢',reading:'ゆめ'}]
+  for (const readingStyle of ['romaji','both']) {
+    const html = renderToStaticMarkup(createElement(AndroidSingAlong,{song,annotations:[{id:0,tokens}],corrections:{},readingStyle,audioReady:true}))
+    assert.ok(html.includes('yu me') && !html.includes('yume') && !html.includes('不要显示'))
+    assert.match(html, /<rt lang="ja">ゆめ/)
+  }
 })

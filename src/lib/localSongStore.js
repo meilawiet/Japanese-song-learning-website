@@ -1,5 +1,6 @@
 import { isCreditLine, isSongHeadingLine } from './songMetadata.js'
 import { decodeLrcBytes } from './lrcEncoding.js'
+import { parseTimedLyrics } from './timedLyrics.js'
 
 const DATABASE_NAME = 'uta-local-song-library'
 const DATABASE_VERSION = 1
@@ -49,31 +50,34 @@ export async function parseLrcFile(file) {
   const title = cleanMetadata(metadata.ti) || fileBaseName(file.name)
   const artist = cleanMetadata(metadata.ar) || '本地导入'
 
-  const seen = new Set()
-  const lyricEntries = []
-  for (const sourceLine of content.split(/\r?\n/)) {
-    const timestamps = [...sourceLine.matchAll(/\[(\d{1,3}):(\d{2}(?:\.\d{1,3})?)\]/g)]
-    if (!timestamps.length) continue
-    const lastTimestamp = timestamps.at(-1)
-    const text = sourceLine.slice(lastTimestamp.index + lastTimestamp[0].length).replace(/\s+/g, ' ').trim()
-    const isJapanese = /[\u3040-\u30ff]/u.test(text)
-    const isChinese = /[\u3400-\u9fff]/u.test(text)
-    if (!text || isCreditLine(text) || isSongHeadingLine(text, title, artist)) continue
-    for (const [, minutes, seconds] of timestamps) {
-      const start = Number(minutes) * 60 + Number(seconds)
-      if (isJapanese) {
-        const key = `${start}-${text}`
-        if (!seen.has(key)) { seen.add(key); lyricEntries.push({ text, start }) }
-      } else if (isChinese) {
-        // The commonly used dual-language LRC layout places the translation
-        // after its Japanese line, even when its timestamp is the next cue.
-        const previousLyric = lyricEntries.at(-1)
-        if (previousLyric && !previousLyric.translation) previousLyric.translation = text
-      }
-    }
-  }
-  lyricEntries.sort((left, right) => left.start - right.start)
-  const lines = lyricEntries.map((line, id) => ({ id, ...line, translation: line.translation || '' }))
+  // 旧版仅凭假名判断原文，纯汉字会被当作翻译，罗马音也会丢失；保留旧逻辑供对照。
+  //   const seen = new Set()
+  //   const lyricEntries = []
+  //   for (const sourceLine of content.split(/\r?\n/)) {
+  //     const timestamps = [...sourceLine.matchAll(/\[(\d{1,3}):(\d{2}(?:\.\d{1,3})?)\]/g)]
+  //     if (!timestamps.length) continue
+  //     const lastTimestamp = timestamps.at(-1)
+  //     const text = sourceLine.slice(lastTimestamp.index + lastTimestamp[0].length).replace(/\s+/g, ' ').trim()
+  //     const isJapanese = /[\u3040-\u30ff]/u.test(text)
+  //     const isChinese = /[\u3400-\u9fff]/u.test(text)
+  //     if (!text || isCreditLine(text) || isSongHeadingLine(text, title, artist)) continue
+  //     for (const [, minutes, seconds] of timestamps) {
+  //       const start = Number(minutes) * 60 + Number(seconds)
+  //       if (isJapanese) {
+  //         const key = `${start}-${text}`
+  //         if (!seen.has(key)) { seen.add(key); lyricEntries.push({ text, start }) }
+  //       } else if (isChinese) {
+  //         // The commonly used dual-language LRC layout places the translation
+  //         // after its Japanese line, even when its timestamp is the next cue.
+  //         const previousLyric = lyricEntries.at(-1)
+  //         if (previousLyric && !previousLyric.translation) previousLyric.translation = text
+  //       }
+  //     }
+  //   }
+  //   lyricEntries.sort((left, right) => left.start - right.start)
+  //   const lines = lyricEntries.map((line, id) => ({ id, ...line, translation: line.translation || '' }))
+  // 按时间戳与行顺序识别三轨歌词，不能单凭汉字推断语言。
+  const lines = parseTimedLyrics(content, title, artist)
   if (!lines.length) throw new Error('未在 LRC 中找到带时间轴的日语歌词。请确认文件是 .lrc 格式。')
   return {
     title,

@@ -47,9 +47,16 @@ function checkState(manifest) {
     // 项目歌曲的单句人工修改与其他学习记录一起备份。
     || (progress.lyricEditsBySong != null && (!isRecord(progress.lyricEditsBySong)
       || Object.values(progress.lyricEditsBySong).some((lines) => !isRecord(lines)
-        || Object.entries(lines).some(([id, text]) => !/^\d+$/.test(id) || typeof text !== 'string' || !text.trim() || text.length > 500))))
+        // 原来只验证字符串歌词；新对象同时保存翻译，翻译可以留空。
+        || Object.entries(lines).some(([id, edit]) => {
+          const text = typeof edit === 'string' ? edit : edit?.text
+          return !/^\d+$/.test(id) || typeof text !== 'string' || !text.trim() || text.length > 500
+            || typeof edit !== 'string' && (!isRecord(edit) || typeof edit.translation !== 'string' || edit.translation.length > 5000)
+        }))))
     || (progress.playbackRate != null && ![1, 0.75, 0.5, 0.25].includes(progress.playbackRate))
-    || (progress.readingStyle != null && !['hiragana', 'romaji'].includes(progress.readingStyle))
+    // 原验证：|| (progress.readingStyle != null && !['hiragana', 'romaji'].includes(progress.readingStyle))
+    // 双注音设置也可备份与恢复。
+    || (progress.readingStyle != null && !['hiragana', 'romaji', 'both'].includes(progress.readingStyle))
     || (progress.lyricSnapshots != null && (!isRecord(progress.lyricSnapshots)
       || Object.values(progress.lyricSnapshots).some((snapshot) => !isRecord(snapshot) || !Array.isArray(snapshot.lines)
         || snapshot.lines.some((line) => !isRecord(line) || !Number.isSafeInteger(line.id) || typeof line.text !== 'string'))))
@@ -85,6 +92,8 @@ function checkSong(song) {
   }
   if (song.lines.length > 2000 || song.lines.some((line) => !isRecord(line)
     || !Number.isSafeInteger(line.id) || typeof line.text !== 'string' || !line.text.trim() || line.text.length > 500
+    // 可选罗马音随歌曲备份，兼容不含此字段的旧备份。
+    || (line.romaji != null && (typeof line.romaji !== 'string' || line.romaji.length > 1000))
     || !Number.isFinite(line.start) || line.start < 0 || typeof line.translation !== 'string' || line.translation.length > 1000)
     || new Set(song.lines.map((line) => line.id)).size !== song.lines.length) {
     throw new Error('备份中的歌词格式不正确。')

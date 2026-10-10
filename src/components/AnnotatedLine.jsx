@@ -1,6 +1,7 @@
 import { hasKanji, splitRuby } from '../lib/ruby'
 import { displayReading } from '../lib/readingDisplay'
 import ReadingLyric from './ReadingLyric'
+import ReadingRuby from './ReadingRuby'
 
 export default function AnnotatedLine({
   tokens,
@@ -28,7 +29,8 @@ export default function AnnotatedLine({
     {tokens.map((token) => {
       const key = `${songId}:${lineId}:${token.index}`
       if (token.is_symbol) return <span className="lyric-symbol" key={key}>{token.surface}</span>
-      const reading = corrections[key] || token.reading
+      // 原来使用 ||，人工取消注音后仍保留歌词原文。
+      const reading = corrections[key] ?? token.reading
       const ruby = splitRuby(token.surface, reading)
       const annotatable = hasKanji(token.surface)
       const isSelected = selectedIndex === token.index
@@ -45,8 +47,10 @@ export default function AnnotatedLine({
       }} onPointerEnter={(event) => {
         if (event.buttons & 1) onExtendSelection?.(token.index)
       }} onPointerUp={() => onFinishSelection?.()} onClick={(event) => { event.stopPropagation(); onSelectToken(token.index) }} aria-label={`${token.surface}，读音 ${displayReading(reading, readingStyle, token, Boolean(corrections[key]))}`}>
-        {annotatable && mode === 'reading' ? <ruby>{ruby.base}<rt lang={readingStyle === 'romaji' ? 'ja-Latn' : 'ja'}>{displayReading(ruby.ruby, readingStyle)}</rt></ruby> : token.surface}
-        {annotatable && mode === 'reading' ? ruby.suffix : ''}
+        {/* 原注音：<ruby>{ruby.base}<rt lang={readingStyle === 'romaji' ? 'ja-Latn' : 'ja'}>{displayReading(ruby.ruby, readingStyle)}</rt></ruby>；新组件共用人工校正。 */}
+        {/* 原条件仅判断 annotatable 和 reading 模式；留空时不生成空 ruby。 */}
+        {annotatable && mode === 'reading' && ruby.ruby ? <ReadingRuby base={ruby.base} reading={ruby.ruby} readingStyle={readingStyle} /> : token.surface}
+        {annotatable && mode === 'reading' && ruby.ruby ? ruby.suffix : ''}
       </button>
       {isRangeEnd && showSelectionAction && <button className="phrase-explain-button" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.preventDefault(); event.stopPropagation(); onExplainSelection?.() }}>AI 解释</button>}</span>
     })}

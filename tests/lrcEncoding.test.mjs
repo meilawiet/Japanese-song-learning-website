@@ -75,3 +75,25 @@ test('sync CLI succeeds on fixtures and leaves original files and last output in
     for (const [encoding, bytes] of fixtures) assert.deepEqual(readFileSync(join(directory, 'geci', `${encoding}.lrc`)), bytes)
   } finally { rmSync(directory, { recursive: true, force: true }) }
 })
+
+// 自创三轨歌词覆盖纯汉字原文、混合译文、分音节罗马音和时间戳去重。
+test('本地三轨LRC保留纯汉字原文并分离译文和罗马音', async () => {
+  const text = '[ti:原创测试]\n[ar:UTA]\n[00:01]空を見よう\n[00:01]看天空\n[00:01]so ra wo mi yo u\n[00:02]星光 夜空\n[00:02]星光与夜空\n[00:02]sei ko u yo zo ra\n[00:03]夢を描く\n[00:03]Dream 描绘梦想\n[00:03]yu me wo e ga ku\n[00:02]星光 夜空'
+  const song = await parseLrcFile(new File([text], '原创测试.lrc'))
+  assert.deepEqual(song.lines.map(({ start,text,translation,romaji })=>({start,text,translation,romaji})), [
+    {start:1,text:'空を見よう',translation:'看天空',romaji:'so ra wo mi yo u'},
+    {start:2,text:'星光 夜空',translation:'星光与夜空',romaji:'sei ko u yo zo ra'},
+    {start:3,text:'夢を描く',translation:'Dream 描绘梦想',romaji:'yu me wo e ga ku'},
+  ])
+})
+
+test('不含翻译的纯汉字与英文原文不应消失', async () => {
+  const song = await parseLrcFile(new File(['[00:01]空を見よう\n[00:02]星光 夜空\n[00:03]Sing with me'], '原创.lrc'))
+  assert.deepEqual(song.lines.map(x=>x.text), ['空を見よう','星光 夜空','Sing with me'])
+})
+
+// 同一时刻确实可能有多句原文，也可能是英文原文搭配中文译文。
+test('同时间戳多句日文与英文原文不误当作翻译', async () => {
+  const song = await parseLrcFile(new File(['[00:01]夢を見よう\n[00:01]空を見よう\n[00:02]Sing with me\n[00:02]和我一起唱'], '原创.lrc'))
+  assert.deepEqual(song.lines.map(x=>[x.text,x.translation]), [['夢を見よう',''],['空を見よう',''],['Sing with me','和我一起唱']])
+})

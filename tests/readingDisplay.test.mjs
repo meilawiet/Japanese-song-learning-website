@@ -2,6 +2,17 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { displayReading, lineReading, normalizeReadingStyle } from '../src/lib/readingDisplay.js'
 
+// 三种注音样式都尊重逐词留空，其余词仍可自动注音。
+test('人工留空不会恢复自动读音或罗马音', () => {
+  const tokens = [{ index: 0, surface: 'LOVE', reading: 'らぶ' }, { index: 1, surface: '2000', reading: 'にせん' }]
+  for (const style of ['hiragana', 'romaji', 'both']) {
+    assert.equal(lineReading(tokens, { 's:0:0': '', 's:0:1': '' }, 's', 0, style), '')
+    assert.ok(lineReading(tokens, { 's:0:0': '' }, 's', 0, style))
+    assert.ok(!lineReading(tokens, { 's:0:0': '' }, 's', 0, style).includes('らぶ'))
+    assert.ok(lineReading(tokens, {}, 's', 0, style))
+  }
+})
+
 test('default and unknown settings preserve the existing reading', () => {
   for (const style of [undefined, null, 'broken', 'hiragana']) {
     assert.equal(normalizeReadingStyle(style), 'hiragana')
@@ -50,4 +61,27 @@ test('line display respects corrections, skips symbols, and never mutates saved 
   assert.equal(lineReading(tokens, corrections, 'song', 0, 'hiragana'), 'きみ は うたう')
   assert.equal(lineReading(undefined, {}, 'song', 0, 'romaji'), '')
   assert.equal(JSON.stringify({ tokens, corrections }), before)
+})
+
+// 双注音必须复用人工校正及助词发音，不能修改原始数据。
+test('双注音按整句分行且沿用人工读音', () => {
+  assert.equal(normalizeReadingStyle('both'), 'both')
+  const tokens = [{ index:0, surface:'明日', reading:'あした' }, { index:1, surface:'は', reading:'は', part_of_speech:'助詞・係助詞' }]
+  const corrections = { 's:0:0':'あす' }
+  const before = JSON.stringify({ tokens, corrections })
+  assert.equal(lineReading(tokens, corrections, 's', 0, 'both'), 'あす は\nasu wa')
+  assert.equal(displayReading('は', 'both', tokens[1]), 'は / wa')
+  assert.equal(lineReading(undefined, {}, 's', 0, 'both'), '')
+  assert.equal(displayReading('', 'both'), '')
+  assert.equal(JSON.stringify({ tokens, corrections }), before)
+})
+
+// 导入的整句罗马音保持用户音节拼写，空值回退自动转换。
+test('整句罗马音优先显示并兼容双注音和空值回退', () => {
+  const tokens = [{index:0,surface:'夢',reading:'ゆめ'}]
+  assert.equal(lineReading(tokens, {}, 's', 0, 'romaji', 'yu me'), 'yu me')
+  assert.equal(lineReading(tokens, {}, 's', 0, 'both', 'yu me'), 'ゆめ\nyu me')
+  assert.equal(lineReading(tokens, {}, 's', 0, 'hiragana', 'yu me'), 'ゆめ')
+  assert.equal(lineReading(tokens, {}, 's', 0, 'romaji', ''), 'yume')
+  assert.equal(lineReading(undefined, {}, 's', 0, 'romaji', 'yu me'), 'yu me')
 })

@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { RefreshCw, X } from 'lucide-react'
-import { toHiragana } from 'wanakana'
+// 原来统一使用 toHiragana；转换由明确的逐词输入方式决定。
+import { defaultManualReadingMode, prepareManualReading } from '../lib/manualReading'
 import { annotateSongLines } from '../lib/annotationApi'
 
 // 单句编辑同时提供词典重注音和逐词人工读音，适配歌手使用的特殊读法。
 export default function LyricLineEditor({ song, line, annotation, corrections, onSave, onClose }) {
   const [text, setText] = useState(line.text)
+  // LRC 自带翻译直接带入，空字符串表示主动清空，不进行必填校验。
+  const [translation, setTranslation] = useState(line.translation || '')
   const [annotatedText, setAnnotatedText] = useState(annotation ? line.text : '')
   const [tokens, setTokens] = useState(annotation?.tokens || [])
-  const [readings, setReadings] = useState(Object.fromEntries((annotation?.tokens || []).map((token) => [token.index, corrections[`${song.id}:${line.id}:${token.index}`] || token.reading])))
+  // 空字符串表示用户主动取消注音，不能用原来的 || 恢复词典读音。
+  const [readings, setReadings] = useState(Object.fromEntries((annotation?.tokens || []).map((token) => [token.index, corrections[`${song.id}:${line.id}:${token.index}`] ?? token.reading])))
+  // 英文词及已有原样读音默认保留文字，日语词默认支持罗马音转假名。
+  const [readingModes, setReadingModes] = useState(Object.fromEntries((annotation?.tokens || []).map(token => [token.index, defaultManualReadingMode(token, corrections[`${song.id}:${line.id}:${token.index}`] ?? token.reading)])))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const requestRef = useRef(0)
@@ -27,6 +33,7 @@ export default function LyricLineEditor({ song, line, annotation, corrections, o
       if (!generated?.length) throw new Error('未能生成读音，请重试。')
       setTokens(generated)
       setReadings(Object.fromEntries(generated.map((token) => [token.index, token.reading])))
+      setReadingModes(Object.fromEntries(generated.map(token => [token.index, defaultManualReadingMode(token, token.reading)])))
       setAnnotatedText(value)
     } catch (reason) { if (request === requestRef.current) setError(reason.message || '重新注音失败。') }
     finally { if (request === requestRef.current) setBusy(false) }
@@ -35,10 +42,13 @@ export default function LyricLineEditor({ song, line, annotation, corrections, o
   async function save(event) {
     event.preventDefault()
     if (text.trim() !== annotatedText || !tokens.length) { setError('歌词已调整，请先点击“重新注音”，再确认读音。'); return }
-    const prepared = Object.fromEntries(tokens.map((token) => [token.index, toHiragana(String(readings[token.index] || '').trim())]))
-    if (tokens.some((token) => !token.is_symbol && !prepared[token.index])) { setError('请补全每个词的读音。'); return }
+    // 原来所有字段都 toHiragana，导致 news 变成 ねws；现按用户选定方式保存。
+    const prepared = Object.fromEntries(tokens.map((token) => [token.index, prepareManualReading(readings[token.index], readingModes[token.index])]))
+    // 按用户要求允许留空：空读音会作为人工校对保存，两个学习模式均不再显示该词注音。
+    // 原限制：if (tokens.some((token) => !token.is_symbol && !prepared[token.index])) { setError('请补全每个词的读音。'); return }
     setBusy(true)
-    try { await onSave({ annotation: { id: line.id, text: annotatedText, tokens }, readings: prepared }) }
+    // 原保存仅提交 annotation 和 readings；翻译与当前句一并保存。
+    try { await onSave({ annotation: { id: line.id, text: annotatedText, tokens }, readings: prepared, translation: translation.trim() }) }
     catch (reason) { setError(reason.message || '保存失败，请重试。') }
     finally { setBusy(false) }
   }
@@ -46,10 +56,14 @@ export default function LyricLineEditor({ song, line, annotation, corrections, o
   return <div className="line-editor-backdrop" onClick={() => { if (!busy) onClose() }}><form className="line-editor" role="dialog" aria-modal="true" aria-labelledby="line-editor-title" onClick={(event) => event.stopPropagation()} onSubmit={save}>
     <header><h2 id="line-editor-title">编辑这一句</h2><button type="button" disabled={busy} onClick={onClose} aria-label="关闭歌词编辑"><X size={20} /></button></header>
     <label className="line-editor-lyric">日文歌词<textarea value={text} lang="ja" maxLength={500} disabled={busy} onChange={(event) => setText(event.target.value)} /></label>
+    {/* 可独立修改翻译，无须重新注音；清空后不再显示该句翻译。 */}
+    <label className="line-editor-lyric line-editor-translation">翻译<textarea aria-label="这一句的翻译" value={translation} maxLength={5000} disabled={busy} placeholder="没有翻译可留空" onChange={event => setTranslation(event.target.value)} /></label>
     <div className="line-editor-reading-head"><strong>读音校对</strong><button type="button" disabled={busy} onClick={regenerate}><RefreshCw size={15} />{busy ? '处理中…' : '重新注音'}</button></div>
-    <p>可按歌手实际唱法修改读音；重新注音会恢复词典读音。</p>
+    {/* 原说明：可按歌手实际唱法修改读音；重新注音会恢复词典读音。 */}
+    <p>留空则不显示注音。日语可用罗马音转假名；英语等请选择按原样保留。重新注音会恢复词典读音。</p>
     {text.trim() !== annotatedText && <p className="line-editor-warning">歌词已变化，请重新注音。</p>}
-    <div className="line-editor-readings">{tokens.filter((token) => !token.is_symbol).map((token) => <label key={token.index}><span lang="ja">{token.surface}</span><input aria-label={`${token.surface}的读音`} lang="ja" value={readings[token.index] || ''} disabled={busy || text.trim() !== annotatedText} onChange={(event) => setReadings((previous) => ({ ...previous, [token.index]: event.target.value }))} /></label>)}</div>
+    {/* 原字段只有单一读音输入框；增加逐词方式，避免自动猜测不同语言。 */}
+    <div className="line-editor-readings">{tokens.filter((token) => !token.is_symbol).map((token) => <label key={token.index}><span lang="ja">{token.surface}</span><select aria-label={`${token.surface}的读音输入方式`} value={readingModes[token.index]} disabled={busy || text.trim() !== annotatedText} onChange={event => setReadingModes(previous => ({ ...previous, [token.index]: event.target.value }))}><option value="romaji">日语罗马音转假名</option><option value="literal">按原样保留</option></select><input aria-label={`${token.surface}的读音`} lang={readingModes[token.index] === 'literal' ? undefined : 'ja'} autoCorrect="off" autoCapitalize="none" spellCheck={false} value={readings[token.index] || ''} disabled={busy || text.trim() !== annotatedText} onChange={(event) => setReadings((previous) => ({ ...previous, [token.index]: event.target.value }))} /></label>)}</div>
     {error && <p className="line-editor-error" role="alert">{error}</p>}
     <footer><button type="button" disabled={busy} onClick={onClose}>取消</button><button type="submit" disabled={busy || !tokens.length || text.trim() !== annotatedText}>保存修改</button></footer>
   </form></div>

@@ -27,6 +27,7 @@ import { downloadComputerSong, mergeTransferredLearning, startComputerTransfer }
 import { BACKUP_STORAGE_KEYS, createLearningBackup, inspectLearningBackup, songsFromLearningBackup } from './lib/learningBackup'
 import { correctionKey, hasKanji } from './lib/ruby'
 import { inferAudioMetadata } from './lib/audioMetadata'
+import { insertLyricLine } from './lib/songTimeline'
 import { cacheArtworkSelection } from './lib/artworkSearch'
 import { isSongHeadingLine, withoutSongHeadingLines } from './lib/songMetadata'
 import { annotationMatchesLine, reconcileLearningState } from './lib/learningIdentity'
@@ -160,7 +161,9 @@ export default function App() {
     const timer = window.setTimeout(() => setAndroidLaunchVisible(false), 1800)
     return () => window.clearTimeout(timer)
   }, [])
-  const readingLabel = readingStyle === 'romaji' ? '罗马音' : '平假名'
+  // 原标签仅区分两种；新增双注音提示。
+  // const readingLabel = readingStyle === 'romaji' ? '罗马音' : '平假名'
+  const readingLabel = readingStyle === 'both' ? '假名＋罗马音' : readingStyle === 'romaji' ? '罗马音' : '平假名'
   const readingLang = readingStyle === 'romaji' ? 'ja-Latn' : 'ja'
   const [localSongs, setLocalSongs] = useState([])
   const [localSongsReady, setLocalSongsReady] = useState(false)
@@ -198,6 +201,8 @@ export default function App() {
   const [pendingAiRevision, setPendingAiRevision] = useState(0)
   const [importPreparing, setImportPreparing] = useState(false)
   const [importDraft, setImportDraft] = useState(null)
+  // 导入预览也支持指定插入位置，默认第一句之前，与歌曲编辑一致。
+  const [importInsertAt, setImportInsertAt] = useState(0)
   const [importArtworkStatus, setImportArtworkStatus] = useState('idle')
   const [importArtwork, setImportArtwork] = useState(null)
   const [importArtworkUrl, setImportArtworkUrl] = useState('')
@@ -393,7 +398,7 @@ export default function App() {
   const annotations = useMemo(() => annotationsBySong[activeSong.id]?.filter((annotation) =>
     activeSong.lines.some((line) => annotationMatchesLine(annotation, line))), [annotationsBySong, activeSong])
   const activeAnnotation = annotations?.find((line) => line.id === activeLine.id)
-  const activeLineReading = getLineReading(activeAnnotation?.tokens, corrections, activeSong.id, activeLine.id, readingStyle)
+  const activeLineReading = getLineReading(activeAnnotation?.tokens, corrections, activeSong.id, activeLine.id, readingStyle, activeLine.romaji)
   const activeTokens = useMemo(
     () => activeAnnotation?.tokens || fallbackTokens(activeLine.text),
     [activeAnnotation, activeLine.text],
@@ -402,7 +407,8 @@ export default function App() {
   const focusToken = lexicalActiveTokens.find((token) => token.index === selectedTokenIndex)
     || lexicalActiveTokens.find((token) => hasKanji(token.surface)) || lexicalActiveTokens[0] || activeTokens[0]
   const focusKey = correctionKey(activeSong.id, activeLine.id, focusToken.index)
-  const focusReading = corrections[focusKey] || focusToken.reading
+  // 原来使用 ||；人工留空应保持不注音。
+  const focusReading = corrections[focusKey] ?? focusToken.reading
   const focusDisplayReading = displayReading(focusReading, readingStyle, focusToken, Boolean(corrections[focusKey]))
   const meaningKey = `${focusToken.dictionary_form || focusToken.surface}:${focusToken.reading}`
   const wordMeaning = meaningOverrides[meaningKey] || focusToken.meaning || ''
@@ -632,12 +638,14 @@ export default function App() {
   function suppressLyricPressClick(event) {
     if (Date.now() < lyricPressSuppressionRef.current) { event.preventDefault(); event.stopPropagation() }
   }
-  async function saveEditedLyric({ annotation, readings }) {
+  // 单句翻译与歌词读音一并保存，编辑翻译不会改变原时间轴。
+  async function saveEditedLyric({ annotation, readings, translation }) {
     const target = editingLyric
     const song = allSongs.find((item) => item.id === target?.songId)
     if (!song) throw new Error('找不到当前歌曲。')
     if (sentenceExplanationJobRef.current === song.id) throw new Error('这首歌正在生成解析，请稍后再编辑。')
-    const editedLines = song.lines.map((line) => line.id === target.lineId ? { ...line, text: annotation.text } : line)
+    // 原来只覆盖 text；显式留空翻译也必须写入。
+    const editedLines = song.lines.map((line) => line.id === target.lineId ? { ...line, text: annotation.text, translation } : line)
     setLyricEditSaving(true)
     try {
       if (song.isLocal) {
@@ -646,7 +654,8 @@ export default function App() {
         const { audioBlob, ...visibleSong } = updated
         setLocalSongs((previous) => previous.map((item) => item.id === song.id ? visibleSong : item))
       }
-      setLearningState((previous) => commitEditedLine(allSongs, previous, song.id, target.lineId, annotation, readings).state)
+      // 原提交没有 translation 参数，现兼容项目歌曲与本地歌曲。
+      setLearningState((previous) => commitEditedLine(allSongs, previous, song.id, target.lineId, annotation, readings, translation).state)
       setEditingLyric(null)
       setSentenceExplanationOpen(null)
       setSelectedTokenIndex(0)
@@ -838,6 +847,7 @@ export default function App() {
     const requestId = ++importPreviewRequestRef.current
     importArtworkRequestRef.current += 1
     setImportLrcFile(file)
+    setImportInsertAt(0)
     setImportDraft(null)
     setImportArtwork(null)
     setImportArtworkUrl('')
@@ -879,19 +889,30 @@ export default function App() {
     } : previous)
   }
 
+  //   function addImportLine() {
+  //     setImportDraft((previous) => {
+  //       if (!previous) return previous
+  //       const lastLine = previous.lines.at(-1)
+  //       const lastStart = parseLrcTimestamp(lastLine?.timeText) ?? 0
+  //       return {
+  //         ...previous,
+  //         lines: [...previous.lines, {
+  //           draftId: globalThis.crypto?.randomUUID?.() || `new-${Date.now()}`,
+  //           timeText: formatLrcTimestamp(lastStart + 5), text: '', translation: '',
+  //         }],
+  //       }
+  //     })
+  //   }
+  //
+  // 将预览字段转换到共用插入算法，保留原有 draftId、罗马音等字段。
   function addImportLine() {
-    setImportDraft((previous) => {
-      if (!previous) return previous
-      const lastLine = previous.lines.at(-1)
-      const lastStart = parseLrcTimestamp(lastLine?.timeText) ?? 0
-      return {
-        ...previous,
-        lines: [...previous.lines, {
-          draftId: globalThis.crypto?.randomUUID?.() || `new-${Date.now()}`,
-          timeText: formatLrcTimestamp(lastStart + 5), text: '', translation: '',
-        }],
-      }
-    })
+    if (!importDraft) return
+    try {
+      const prepared = importDraft.lines.map((line, index) => ({ ...line, id:index, time:line.timeText }))
+      const inserted = insertLyricLine(prepared, Math.min(importInsertAt, prepared.length), parseLrcTimestamp, formatLrcTimestamp)
+      const lines = inserted.map(({ time, ...line }) => ({ ...line, timeText:time, draftId:line.draftId || globalThis.crypto?.randomUUID?.() || `new-${Date.now()}`, romaji:line.romaji || '' }))
+      setImportDraft({ ...importDraft, lines }); setImportError('')
+    } catch (error) { setImportError(error.message || '无法添加歌词，请检查相邻时间。') }
   }
 
   function removeImportLine(draftId) {
@@ -1207,7 +1228,8 @@ export default function App() {
       const text = line.text.trim().replace(/\s+/g, ' ')
       if (start == null) { setImportError(`第 ${index + 1} 行的时间戳无效，请使用 00:12.345 格式。`); return }
       if (!text) { setImportError(`第 ${index + 1} 行缺少日文歌词。`); return }
-      if (!isSongHeadingLine(text, title, artist)) lines.push({ start, text, translation: line.translation.trim() })
+      // 原保存不含罗马音：if (!isSongHeadingLine(text, title, artist)) lines.push({ start, text, translation: line.translation.trim() })
+      if (!isSongHeadingLine(text, title, artist)) lines.push({ start, text, translation: line.translation.trim(), romaji: String(line.romaji || '').trim() })
     }
     if (!lines.length) { setImportError('预览中没有可学习的歌词句子。'); return }
     if (importArtworkStatus === 'manual') {
@@ -1270,7 +1292,11 @@ export default function App() {
     const song = editingDetailsSong
     if (!song?.isLocal) throw new Error('只有本机导入的歌曲可以修改详细信息。')
     if (sentenceExplanationJobRef.current === song.id) throw new Error('这首歌正在生成 AI 解析，请完成后再编辑歌词。')
-    const lineFields = (items) => items.map(({ id, start, text, translation }) => ({ id, start, text, translation: translation || '' }))
+    // 原比较只含 id/start/text/translation，继续用这些字段判定学习内容是否失效。
+    // 原比较包括罗马音，单改罗马音会误清空人工校正和学习进度；保留供对照。
+    // const lineFields = (items) => items.map(({ id, start, text, translation, romaji }) => ({ id, start, text, translation: translation || '', romaji: romaji || '' }))
+    // 罗马音随资料保存并即时显示，仅原文/译文/时间改变才重算学习记录；毫秒统一避免浮点误差。
+    const lineFields = (items) => items.map(({ id, start, text, translation }) => ({ id, start:Math.round(start * 1000) / 1000, text, translation: translation || '' }))
     const lyricsChanged = JSON.stringify(lineFields(song.lines)) !== JSON.stringify(lineFields(lines))
     const metadata = { title, artist, lines, sourceFile, duration: lines.at(-1).start, ...(audioFile ? { audioBlob: audioFile, audioName: audioFile.name } : {}) }
     setEditingDetailsBusy(true)
@@ -1504,7 +1530,7 @@ export default function App() {
 
   function saveCorrection() {
     const nextReading = draftReading.trim()
-    if (!nextReading) { setToast('读音不能为空。'); return }
+    // 用户允许主动取消读音：原限制 if (!nextReading) { setToast('读音不能为空。'); return }
     setCorrections((previous) => ({ ...previous, [focusKey]: nextReading }))
     setToast(`已保存「${focusToken.surface}」的读音修正。`)
   }
@@ -1631,7 +1657,8 @@ export default function App() {
     const token = targetTokens.find((item) => item.surface === target.text)
     return token ? {
       surface: token.surface,
-      reading: corrections[correctionKey(activeSong.id, target.lineId, token.index)] || token.reading,
+      // 问 AI 的上下文也保留人工取消读音，不擅自恢复自动读法。
+      reading: corrections[correctionKey(activeSong.id, target.lineId, token.index)] ?? token.reading,
       dictionary_form: token.dictionary_form,
       part_of_speech: token.part_of_speech,
     } : undefined
@@ -1691,7 +1718,7 @@ export default function App() {
     <main id="top" className={IS_ANDROID_APP ? `android-main ${activePage === 'lesson' ? 'android-lesson-page' : ''}` : ''} data-reading-style={readingStyle}>
       {/* 安卓三屏首页按确认稿呈现，模式卡片只负责进入现有功能。 */}
       {IS_ANDROID_APP && activePage.startsWith('mobile-') && <AndroidHome tab={mobileTab} recentLearn={recentLearnSong ? { song: recentLearnSong, artwork: artworkForSong(recentLearnSong) } : null} recentSing={recentSingSong ? { song: recentSingSong, artwork: artworkForSong(recentSingSong) } : null} onEnterLearn={() => { exitPractice(); if (recentLearnSong && recentLearnSong.id !== activeSong.id) chooseSong(recentLearnSong.id); navigateAndroid('lesson', 'learn'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onEnterSingAlong={showSingAlong} onEnterReview={showReviewQueue} onOpenLibrary={() => showLibraryPage()} onOpenSettings={() => setSettingsOpen(true)} />}
-      {IS_ANDROID_APP && activePage === 'sing-along' && <AndroidSingAlong song={activeSong} songs={allSongs} artwork={artworkForSong(activeSong)} audioReady={Boolean(audioUrl)} playing={singAlongPlaying} currentLineId={singAlongLineId} onSelectSong={chooseSong} onPlayFromStart={() => startContinuousPlayback(0, activeSong.lines[0]?.id ?? null)} onPlayFromLine={playSingAlongFromLine} onToggle={toggleSingAlong} error={audioError} onChoose={openStudySongPicker} annotations={annotations} corrections={corrections} readingStyle={readingStyle} />}
+      {IS_ANDROID_APP && activePage === 'sing-along' && <AndroidSingAlong song={activeSong} songs={allSongs} artwork={artworkForSong(activeSong)} audioReady={Boolean(audioUrl)} playing={singAlongPlaying} currentLineId={singAlongLineId} onSelectSong={chooseSong} onPlayFromStart={() => startContinuousPlayback(0, activeSong.lines[0]?.id ?? null)} onPlayFromLine={playSingAlongFromLine} onToggle={toggleSingAlong} error={audioError} onChoose={openStudySongPicker} annotations={annotations} corrections={corrections} readingStyle={readingStyle} onReadingStyle={setReadingStyle} />}
       {activePage === 'lesson' && <>
       {IS_ANDROID_APP && <AndroidLessonHeader song={activeSong} artwork={artworkForSong(activeSong)} learned={learnedLines.size} mode={mode} onMode={setMode} readingStyle={readingStyle} onReadingStyle={setReadingStyle} onChoose={openStudySongPicker} ready={readySentenceCount} generating={Boolean(sentenceExplanationJob)} onGenerate={generateCurrentSongExplanations} onWordDetails={openWordDetails} error={annotationError || audioError || sentenceExplanationError?.songId === activeSong.id && sentenceExplanationError.message} />}
       {IS_ANDROID_APP && <FloatingPlaybackSpeed rate={playbackRate} onChange={choosePlaybackRate} />}
@@ -1769,15 +1796,16 @@ export default function App() {
               const current = line.id === activeLine.id
               const isPlaying = playingLineId === line.id
               const isLearned = learnedLines.has(line.id)
-              const lineReading = getLineReading(lineTokens, corrections, activeSong.id, line.id, readingStyle)
+              const lineReading = getLineReading(lineTokens, corrections, activeSong.id, line.id, readingStyle, line.romaji)
               const hasSentenceExplanation = hasCachedSentenceExplanation(currentSentenceCache, line)
               const sentenceExpanded = sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === line.id
               // 原点击播放保留；新增整句长按与滚动取消，抬手后不误触播放或词语详情。
               return <article id={`lyric-row-${activeSong.id}-${line.id}`} className={`lyric-row ${current ? 'active' : ''}`} onPointerDownCapture={(event) => beginLyricPress(event, line.id)} onPointerMoveCapture={moveLyricPress} onPointerUpCapture={(event) => { cancelLyricPress(); suppressLyricPressClick(event) }} onPointerCancel={cancelLyricPress} onPointerLeave={cancelLyricPress} onClickCapture={suppressLyricPressClick} onContextMenu={(event) => { if (IS_ANDROID_APP) event.preventDefault() }} onClick={(event) => handleLyricRowClick(event, line.id)} key={`${activeSong.id}-${line.id}`}>
                 <span className="line-number">{String(line.displayNumber).padStart(2, '0')}</span>
                 <div className="auto-line-wrap">
-                  <div className="japanese"><AnnotatedLine interactive={!IS_ANDROID_APP} tokens={lineTokens} corrections={corrections} songId={activeSong.id} lineId={line.id} mode={mode} readingStyle={readingStyle} selectedIndex={current ? selectedTokenIndex : -1} selectionRange={dragSelection?.lineId === line.id ? dragSelection : selectedPhraseRange?.lineId === line.id ? selectedPhraseRange : null} showSelectionAction={selectedText?.lineId === line.id && selectedPhraseRange?.lineId === line.id} onStartSelection={(tokenIndex) => beginTokenSelection(line.id, tokenIndex)} onExtendSelection={(tokenIndex) => extendTokenSelection(line.id, tokenIndex)} onFinishSelection={finishTokenSelection} onExplainSelection={() => askAiToExplain(selectedText)} onSelectToken={(tokenIndex) => handleTokenClick(line.id, tokenIndex)} /></div>
-                  <div className={`reading ${lineTokens ? '' : 'needs-review'}`}>{mode === 'reading' ? lineReading || '正在生成读音…' : mode === 'practice' ? '读音已隐藏，尝试自己读出这一句' : `切换到“${readingLabel}”查看自动标注`}</div>
+                  {/* 自带罗马音显示在整句读音行；汉字注音保留假名，不强行匹配罗马音音节。 */}<div className="japanese"><AnnotatedLine interactive={!IS_ANDROID_APP} tokens={lineTokens} corrections={corrections} songId={activeSong.id} lineId={line.id} mode={mode} readingStyle={line.romaji && readingStyle !== 'hiragana' ? 'hiragana' : readingStyle} selectedIndex={current ? selectedTokenIndex : -1} selectionRange={dragSelection?.lineId === line.id ? dragSelection : selectedPhraseRange?.lineId === line.id ? selectedPhraseRange : null} showSelectionAction={selectedText?.lineId === line.id && selectedPhraseRange?.lineId === line.id} onStartSelection={(tokenIndex) => beginTokenSelection(line.id, tokenIndex)} onExtendSelection={(tokenIndex) => extendTokenSelection(line.id, tokenIndex)} onFinishSelection={finishTokenSelection} onExplainSelection={() => askAiToExplain(selectedText)} onSelectToken={(tokenIndex) => handleTokenClick(line.id, tokenIndex)} /></div>
+                  {/* 原来空读音始终显示“正在生成读音…”；已校对留空时隐藏读音行。 */}
+                  {(mode !== 'reading' || !lineTokens || lineReading) && <div className={`reading ${lineTokens ? '' : 'needs-review'}`}>{mode === 'reading' ? lineTokens ? lineReading : '正在生成读音…' : mode === 'practice' ? '读音已隐藏，尝试自己读出这一句' : `切换到“${readingLabel}”查看自动标注`}</div>}
                   {line.translation && <div className="translation lyric-translation">{line.translation}</div>}
                 </div>
                 <div className="line-actions"><button className={`line-action line-play ${isPlaying ? 'playing' : ''}`} type="button" onClick={(event) => { event.stopPropagation(); playLine(line.id) }} aria-label={`${isPlaying ? '暂停' : '播放'}第 ${line.displayNumber} 句`} title={`${isPlaying ? '暂停' : '播放'}这一句`}>{isPlaying ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}</button><button className={`line-mastery ${isLearned ? 'mastered' : ''}`} type="button" aria-pressed={isLearned} onClick={(event) => { event.stopPropagation(); toggleLearnedLine(line.id) }} title={isLearned ? '点击改为未掌握' : '点击标记为已掌握'}>{isLearned ? <Check size={12} /> : <Circle size={11} />}<span>{isLearned ? '已掌握' : '未掌握'}</span></button><button className="sentence-explain-link" type="button" aria-expanded={sentenceExpanded} aria-controls={`sentence-analysis-${activeSong.id}-${line.id}`} disabled={!hasSentenceExplanation && Boolean(sentenceExplanationJob)} onClick={(event) => { event.stopPropagation(); showSentenceExplanation(line) }}><Sparkles size={11} /> {sentenceExpanded ? '收起解析' : hasSentenceExplanation ? '查看解析' : sentenceExplanationJob ? '生成中…' : '生成解析'}</button></div>
@@ -1921,8 +1949,11 @@ export default function App() {
         <div className="import-meta-fields"><label>歌曲名<input value={importDraft.title} onChange={(event) => updateImportMetadata('title', event.target.value)} maxLength={160} /></label><label>歌手<input value={importDraft.artist} onChange={(event) => updateImportMetadata('artist', event.target.value)} maxLength={160} /></label></div>
         {/* 旧单来源封面预览保留作对照，实际使用下方多来源选择器。 */}{false && <div className="import-cover-preview"><div className="import-cover-thumb"><span>{importDraft.title.slice(0, 2) || 'UTA'}</span>{/^https?:\/\//i.test(importArtworkUrl) && <img key={importArtworkUrl} src={importArtworkUrl} alt="候选歌曲封面" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true }} />}</div><div className="import-cover-controls"><b>封面预览</b><p>{importArtworkStatus === 'loading' ? '正在按歌名与歌手查找封面…' : importArtworkStatus === 'found' ? '已找到候选封面，请核对是否正确。' : importArtworkStatus === 'none' ? '未找到可靠封面，可填写链接或使用默认封面。' : importArtworkStatus === 'manual' ? '使用你填写的封面链接。' : importArtworkStatus === 'default' ? '将使用默认封面。' : '请查找封面，或选择默认封面。'}</p><div><button type="button" disabled={importArtworkStatus === 'loading'} onClick={() => searchImportArtwork(importDraft.title, importDraft.artist)}>重新查找</button><button type="button" onClick={useDefaultImportArtwork}>使用默认封面</button></div><label>也可以填写封面图片链接<input type="url" value={importArtworkUrl} onChange={(event) => changeImportArtworkUrl(event.target.value)} placeholder="https://example.com/cover.jpg" /></label>{importArtworkStatus === 'found' && importArtwork?.artworkSourceUrl && <a href={importArtwork.artworkSourceUrl} target="_blank" rel="noreferrer">查看封面来源 · {importArtwork.artworkProvider || 'Apple Music'}</a>}</div></div>}
         <ArtworkPicker title={importDraft.title} artist={importDraft.artist} selected={importArtwork} onSelect={selectImportArtwork} />
-        <div className="import-lines-heading"><div><b>歌词与时间轴</b><span>可修改时间、日文、中文译文；保存时会按时间排序。</span></div><button type="button" onClick={addImportLine}><Plus size={13} /> 添加一句</button></div>
-        <ol className="import-preview-lines">{importDraft.lines.map((line, index) => <li key={line.draftId}><span>{String(index + 1).padStart(2, '0')}</span><div><label>时间戳<input value={line.timeText} onChange={(event) => updateImportLine(line.draftId, 'timeText', event.target.value)} placeholder="00:12.345" aria-label={`第 ${index + 1} 句时间戳`} /></label><label>日文歌词<input value={line.text} onChange={(event) => updateImportLine(line.draftId, 'text', event.target.value)} maxLength={500} lang="ja" aria-label={`第 ${index + 1} 句日文歌词`} /></label><label>中文译文<input value={line.translation} onChange={(event) => updateImportLine(line.draftId, 'translation', event.target.value)} maxLength={500} aria-label={`第 ${index + 1} 句中文译文`} placeholder="没有译文可留空" /></label></div><button className="import-remove-line" type="button" onClick={() => removeImportLine(line.draftId)} aria-label={`删除第 ${index + 1} 句`} title="删除这一句"><Trash2 size={14} /></button></li>)}</ol>
+        {/* 原入口只在末尾添加：<button type="button" onClick={addImportLine}><Plus size={13} /> 添加一句</button> */}
+        <div className="import-lines-heading"><div><b>歌词与时间轴</b><span>可修改时间、日文、译文和罗马音；保存时按时间排序。</span></div></div>
+        {/* 导入与编辑页一致，通过添加位置选择句首、句中或句尾。 */}
+        <div className="song-editor-insert import-line-insert"><label>添加位置<select value={Math.min(importInsertAt, importDraft.lines.length)} onChange={(event) => setImportInsertAt(Number(event.target.value))}><option value={0}>第1句之前</option>{importDraft.lines.map((line,index) => <option key={line.draftId} value={index+1}>第{index+1}句之后{index === importDraft.lines.length-1 ? '（最后）' : ''}</option>)}</select></label><button type="button" onClick={addImportLine}><Plus size={15} />添加一句</button></div>
+        <ol className="import-preview-lines">{importDraft.lines.map((line, index) => <li key={line.draftId}><span>{String(index + 1).padStart(2, '0')}</span><div><label>时间戳<input value={line.timeText} onChange={(event) => updateImportLine(line.draftId, 'timeText', event.target.value)} placeholder="00:12.345" aria-label={`第 ${index + 1} 句时间戳`} /></label><label>日文歌词<input value={line.text} onChange={(event) => updateImportLine(line.draftId, 'text', event.target.value)} maxLength={500} lang="ja" aria-label={`第 ${index + 1} 句日文歌词`} /></label><label>中文译文<input value={line.translation} onChange={(event) => updateImportLine(line.draftId, 'translation', event.target.value)} maxLength={500} aria-label={`第 ${index + 1} 句中文译文`} placeholder="没有译文可留空" /></label>{/* 导入自动填入 LRC 罗马音，也允许逐句人工输入。 */}<label>罗马音<input value={line.romaji || ''} onChange={(event) => updateImportLine(line.draftId, 'romaji', event.target.value)} maxLength={1000} lang="ja-Latn" aria-label={`第 ${index + 1} 句罗马音`} placeholder="可留空，留空使用自动注音" /></label></div><button className="import-remove-line" type="button" onClick={() => removeImportLine(line.draftId)} aria-label={`删除第 ${index + 1} 句`} title="删除这一句"><Trash2 size={14} /></button></li>)}</ol>
       </section>}
       {/* 原来强制导入时等待全曲解析；现在让用户明确选择，保存成功即关闭导入窗口。 */}
       <fieldset className="import-ai-choice"><legend>AI 解析</legend><label><input type="radio" name="import-ai-mode" checked={importAiMode === 'later'} onChange={() => setImportAiMode('later')} /><span><strong>直接导入</strong><small>立即开始学习，需要时在学习页生成整句解析。</small></span></label><label><input type="radio" name="import-ai-mode" checked={importAiMode === 'background'} onChange={() => setImportAiMode('background')} /><span><strong>导入并在后台生成</strong><small>保存后即可继续使用；解析会逐句完成，可能产生 AI 调用费用。</small></span></label></fieldset>

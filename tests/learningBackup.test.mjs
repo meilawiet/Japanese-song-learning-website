@@ -29,6 +29,14 @@ const song = {
   audioBlob: new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'audio/mpeg' }),
 }
 
+// 云备份和恢复既支持旧的纯歌词覆盖，也支持新翻译和空翻译。
+test('单句翻译覆盖记录备份往返且兼容旧字符串', async () => {
+  const next = { ...state, progress: { ...state.progress, lyricEditsBySong: { demo: { 0: { text: '夢', translation: '梦' }, 1: { text: '歌', translation: '' }, 2: '明日' } } } }
+  const backup = createLearningBackup([song], next)
+  const inspection = await inspectLearningBackup(backup)
+  assert.deepEqual(inspection.manifest.progress.lyricEditsBySong, next.progress.lyricEditsBySong)
+})
+
 test('backed-up songs, audio and learning state round-trip', async () => {
   const backup = createLearningBackup([song], state)
   const inspection = await inspectLearningBackup(backup)
@@ -95,4 +103,18 @@ test('invalid lyric snapshots cannot be saved in backups', () => {
 
 test('unsupported reading styles are rejected by backup validation', () => {
   assert.throws(() => createLearningBackup([], { ...state, progress: { ...state.progress, readingStyle: 'invalid' } }), /学习记录格式不正确/)
+})
+
+// 双注音设置也必须通过 WebDAV 使用的备份验证并完整恢复。
+test('双注音设置可备份与恢复', async () => {
+  const inspection = await inspectLearningBackup(createLearningBackup([], { ...state, progress:{ ...state.progress, readingStyle:'both' } }))
+  assert.equal(inspection.manifest.progress.readingStyle, 'both')
+})
+
+// 文件自带的罗马音应随歌词进入备份并恢复，旧备份仍可缺省。
+test('导入的罗马音可完整备份恢复', async () => {
+  const withRomaji = {...song, lines:song.lines.map(line=>({...line,romaji:'yu me na ra ba'}))}
+  const inspection = await inspectLearningBackup(createLearningBackup([withRomaji],state))
+  assert.equal(songsFromLearningBackup(inspection)[0].lines[0].romaji,'yu me na ra ba')
+  assert.throws(()=>createLearningBackup([{...withRomaji,lines:[{...withRomaji.lines[0],romaji:42}]}],state),/歌词格式/)
 })

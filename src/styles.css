@@ -481,9 +481,12 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .android-mode-card.singing .android-mode-icon { background:#a66f36; }
 .android-mode-card.singing .android-mode-action { border-top-color:#ebd7b1; color:#875c2e; }
 .android-mode-card.learning,.android-mode-card.singing { position:relative; min-height:215px; }
-.android-mode-card.learning > strong,.android-mode-card.singing > strong,.android-mode-card.learning > .android-mode-description,.android-mode-card.singing > .android-mode-description { max-width:calc(100% - 145px); }
-.android-mode-recent { position:absolute; top:17px; right:14px; display:grid; width:125px; gap:2px; color:#52675a; text-align:center; }
-.android-mode-recent-cover { display:grid; width:88px; height:88px; overflow:hidden; place-items:center; justify-self:center; border-radius:12px; color:#fff; background:#6b9989; font:600 24px var(--serif); }
+/* 原尺寸：正文 max-width:calc(100% - 145px)，最近歌曲宽125px，封面88px × 88px。
+   按红框参考放大到136px，小屏按视口缩放，同时给左侧文字预留间距。 */
+.android-mode-card.learning,.android-mode-card.singing { --recent-cover-size:clamp(104px,33vw,136px); }
+.android-mode-card.learning > strong,.android-mode-card.singing > strong,.android-mode-card.learning > .android-mode-description,.android-mode-card.singing > .android-mode-description { max-width:calc(100% - var(--recent-cover-size) - 20px); }
+.android-mode-recent { position:absolute; top:17px; right:14px; display:grid; width:var(--recent-cover-size); gap:2px; color:#52675a; text-align:center; }
+.android-mode-recent-cover { display:grid; width:var(--recent-cover-size); height:var(--recent-cover-size); overflow:hidden; place-items:center; justify-self:center; border-radius:12px; color:#fff; background:#6b9989; font:600 24px var(--serif); }
 .android-mode-recent-cover img,.android-lesson-cover img,.android-sing-cover img { width:100%; height:100%; object-fit:cover; }
 .android-mode-recent-label { margin-top:4px; font-size:10px; }
 .android-mode-recent-title,.android-mode-recent-artist { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -658,9 +661,13 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .line-editor { max-height:85dvh; overflow:auto; }
 .line-editor header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }.line-editor h2 { margin:0; font-size:22px; }.line-editor header button { border:0; background:transparent; color:#57725e; }
 .line-editor-lyric { display:grid; gap:8px; font-size:13px; }.line-editor textarea { width:100%; min-height:84px; padding:12px; border:1px solid #cfd9ce; border-radius:10px; background:white; color:#294333; font:18px/1.6 var(--serif); resize:vertical; }
+/* 翻译置于原文下方，保持与现有输入框一致并留出间距。 */
+.line-editor-translation { margin-top:16px; }
 .line-editor-reading-head { display:flex; align-items:center; justify-content:space-between; margin-top:22px; }.line-editor-reading-head button { display:flex; align-items:center; gap:5px; padding:8px; border:0; background:#e8f0e8; color:#345c46; border-radius:8px; }
 .line-editor p { font-size:12px; line-height:1.65; color:#829080; }.line-editor .line-editor-warning,.line-editor .line-editor-error { color:#ae5843; }
 .line-editor-readings { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }.line-editor-readings label { display:grid; gap:6px; min-width:0; }.line-editor-readings input { width:100%; padding:10px; border:1px solid #d5dfd2; border-radius:8px; color:#294333; background:#fff; font-size:15px; }
+/* 逐词输入方式保持轻量，窄屏也不超出两列字段。 */
+.line-editor-readings select { width:100%; min-width:0; min-height:36px; padding:5px 4px; border:1px solid #d5dfd2; border-radius:8px; color:#52675a; background:#f5f8f2; font-size:12px; }
 .line-editor footer { display:flex; justify-content:flex-end; gap:10px; margin-top:22px; padding:12px 0 0; border-top:1px solid #e3e8de; background:transparent; }.line-editor footer button { padding:10px 20px; border:1px solid #cfd9ce; border-radius:9px; color:#345c46; background:white; }.line-editor footer button:last-child { background:#3c6a51; color:white; border-color:#3c6a51; }.line-editor button:disabled { opacity:.5; }
 /* 采用已确认的安卓概念稿；上方旧网页布局规则保留供对照。 */
 .study-topbar-hidden { display:none; }
@@ -794,3 +801,15 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .app-update-notes p { margin:8px 0; }
 .app-update-notes ul { margin:8px 0; padding-left:22px; list-style:disc outside; }
 .app-update-notes li { margin:7px 0; font-size:14px; line-height:1.8; }
+
+/* 双注音上下排列，整句读音保留换行并允许长罗马音换行，避免窄屏溢出。 */
+.reading-ruby-dual { display:inline-flex; flex-direction:column; align-items:center; line-height:1.25; font-size:10px; white-space:nowrap; }
+[data-reading-style="both"] .japanese, [data-reading-style="both"] .android-sing-text strong { line-height:2.2; }
+[data-reading-style="both"] .reading, .dual-line-reading { white-space:pre-line; overflow-wrap:anywhere; letter-spacing:.01em; }
+/* 第三种选项在小屏幕自动换行；跟唱更多入口靠右，保持原从头跟唱入口。 */
+.study-options fieldset { flex-wrap:wrap; row-gap:14px; }
+.android-sing-controls .android-study-more { margin-left:auto; width:50px; background:#e6ede6; color:#486e4e; }
+
+/* 导入预览中的插入控件沿用歌曲编辑布局，手机上保留充足点击面积。 */
+.import-line-insert { margin:14px 0; }
+.import-line-insert select, .import-line-insert button { min-height:44px; font-size:15px; }
