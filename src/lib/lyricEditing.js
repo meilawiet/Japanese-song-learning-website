@@ -14,7 +14,7 @@ export function applyLyricEdits(song, editsBySong = {}) {
 
 // 只替换被编辑句子的读音与词索引，其他句子的掌握记录继续保留。
 // translation 未传入时保留旧行为，传入空字符串时清空翻译。
-export function commitEditedLine(songs, state, songId, lineId, annotation, readings, translation) {
+export function commitEditedLine(songs, state, songId, lineId, annotation, readings, translation, manualIndices) {
   const song = songs.find((item) => item.id === songId)
   if (!song || !song.lines.some((line) => line.id === lineId)) throw new Error('找不到要编辑的歌词。')
   // 原来只替换 text，翻译编辑不影响时间、罗马音及其他句子。
@@ -24,7 +24,8 @@ export function commitEditedLine(songs, state, songId, lineId, annotation, readi
   const prefix = `${songId}:${lineId}:`
   next.progress.corrections = Object.fromEntries(Object.entries(next.progress.corrections).filter(([key]) => !key.startsWith(prefix)))
   annotation.tokens.forEach((token) => {
-    if (!token.is_symbol && readings[token.index] !== token.reading) next.progress.corrections[`${prefix}${token.index}`] = readings[token.index]
+    // 旧调用按词典差异保存；新编辑器只保存用户明确修改的字段（包括留空）。
+    if (!token.is_symbol && (manualIndices ? manualIndices.includes(token.index) : readings[token.index] !== token.reading)) next.progress.corrections[`${prefix}${token.index}`] = readings[token.index]
   })
   // 原项目歌曲覆盖值为 annotation.text；传入翻译时保存对象，兼容旧字符串。
   if (!song.isLocal) next.progress.lyricEditsBySong = { ...next.progress.lyricEditsBySong, [songId]: { ...next.progress.lyricEditsBySong?.[songId], [lineId]: typeof translation === 'string' ? { text: annotation.text, translation } : annotation.text } }

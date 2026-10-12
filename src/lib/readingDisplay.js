@@ -1,5 +1,7 @@
 import { toHiragana, toKatakana, toRomaji } from 'wanakana'
 import { correctionKey } from './ruby.js'
+// 原导入：import { prepareLyricReadings, tokenReading } from './lyricReadings.js'
+import { isLatinLyric, prepareLyricReadings, tokenReading } from './lyricReadings.js'
 
 export function normalizeReadingStyle(style) {
   // 原二选一：return style === 'romaji' ? 'romaji' : 'hiragana'
@@ -36,15 +38,29 @@ export function displayReading(value, style = 'hiragana', token = null, correcte
   })
 }
 
-// 可选的整句罗马音优先用于罗马音行，不把音节强行对齐到汉字 ruby。
+// 旧实现仅把来源罗马音用于整句行；现在可靠对齐后同样用于 ruby，仍不猜测歧义边界。
 // 原签名：lineReading(tokens, corrections, songId, lineId, style = 'hiragana')
 export function lineReading(tokens, corrections, songId, lineId, style = 'hiragana', importedRomaji = '') {
-  if (style === 'romaji' && String(importedRomaji || '').trim()) return importedRomaji.trim()
+  // 原来整句罗马音直接返回，导致人工校正无法覆盖；现在统一读音优先级。
+  // if (style === 'romaji' && String(importedRomaji || '').trim()) return importedRomaji.trim()
+  const prepared = prepareLyricReadings(tokens, importedRomaji, corrections, songId, lineId)
+  const hasManual = tokens?.some(token=>corrections[correctionKey(songId,lineId,token.index)]!=null)
+  // 全英文句保留原来的大小写、空格及标点，不重复生成假名或两行相同注音。
+  // 人工明确填写的读音（包括留空）仍优先，英语词也可以手动指定日语唱法。
+  const originalText = tokens?.map(token => token.surface).join('') || ''
+  if (!hasManual && isLatinLyric(originalText)) return originalText
+  if (style === 'romaji' && prepared.hasSource && !hasManual) return importedRomaji.trim()
   // 两行均从同一份人工校正生成，避免逐词交错、避免修改保存的假名。
-  if (style === 'both') return [lineReading(tokens, corrections, songId, lineId, 'hiragana'), lineReading(tokens, corrections, songId, lineId, 'romaji', importedRomaji)].filter(Boolean).join('\n')
-  return tokens?.filter((token) => !token.is_symbol).map((token) => {
+  if (style === 'both') return [lineReading(tokens, corrections, songId, lineId, 'hiragana', importedRomaji), lineReading(tokens, corrections, songId, lineId, 'romaji', importedRomaji)].filter(Boolean).join('\n')
+  if(style==='hiragana'&&prepared.hasSource&&!prepared.aligned&&!hasManual)return prepared.sourceKana || importedRomaji.trim()
+  return prepared.tokens?.filter((token) => !token.is_symbol).map((token) => {
     const correction = corrections[correctionKey(songId, lineId, token.index)]
     // 原来使用 correction || token.reading；空字符串也是有效的人工校对。
-    return displayReading(correction ?? token.reading, style, token, correction != null)
+    // 原来同一读音用于两个模式。假名保留助词字形，罗马音仍按来源实际唱法。
+    // return displayReading(tokenReading(token,corrections,songId,lineId), style, token, correction != null || token.source_reading!=null)
+    const manual=correction!=null || token.manual_group_reading!=null
+    // 原来源字段兼作字形与发音；现在づ字形仍用づ，来源zu的罗马音仍按ず发音转换。
+    const reading=style==='romaji'&&!manual&&token.source_reading!=null?(token.source_pronunciation??token.source_reading):tokenReading(token,corrections,songId,lineId)
+    return displayReading(reading, style, token, manual || token.source_reading!=null)
   }).filter(Boolean).join(' ') || ''
 }

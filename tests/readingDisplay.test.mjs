@@ -85,3 +85,17 @@ test('整句罗马音优先显示并兼容双注音和空值回退', () => {
   assert.equal(lineReading(tokens, {}, 's', 0, 'romaji', ''), 'yume')
   assert.equal(lineReading(undefined, {}, 's', 0, 'romaji', 'yu me'), 'yu me')
 })
+// 来源 wa/e/o 用于唱法，假名行仍按日语助词书写，两个模式共用本函数。
+test('自带罗马音助词唱法和假名字形分开，普通词与人工留空不变',()=>{
+  const tokens=[{index:0,surface:'私',reading:'わたし'},{index:1,surface:'は',reading:'は',part_of_speech:'助詞・係助詞'},
+    {index:2,surface:'あの',reading:'あの'},{index:3,surface:'場所',reading:'ばしょ'},
+    {index:4,surface:'へ',reading:'へ',part_of_speech:'助詞・格助詞'},{index:5,surface:'行き',reading:'いき'},{index:6,surface:'ます',reading:'ます'}]
+  const source='wa ta shi wa a no ba sho e i ki ma su',before=JSON.stringify(tokens)
+  assert.equal(lineReading(tokens,{},'s',0,'hiragana',source),'わたし は あの ばしょ へ いき ます')
+  assert.equal(lineReading(tokens,{},'s',0,'both',source),'わたし は あの ばしょ へ いき ます\n'+source)
+  assert.equal(lineReading(tokens,{'s:0:0':'わたくし'},'s',0,'romaji',source),'watakushi wa ano basho e iki masu')
+  assert.equal(lineReading(tokens,{'s:0:1':''},'s',0,'hiragana',source),'わたし あの ばしょ へ いき ます')
+  assert.equal(lineReading(tokens,{'s:0:1':'わ'},'s',0,'hiragana',source),'わたし わ あの ばしょ へ いき ます')
+  assert.equal(lineReading([{index:0,surface:'を',reading:'を',part_of_speech:'助詞'}],{},'s',0,'both','o'),'を\no')
+  assert.equal(JSON.stringify(tokens),before)
+})

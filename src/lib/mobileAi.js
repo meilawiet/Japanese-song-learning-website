@@ -1,6 +1,7 @@
 import { CapacitorHttp } from '@capacitor/core'
 import { loadAiSettingsFromDevice } from './aiSettings'
 import { askWithWebSearch } from './mobileWebSearch'
+import { LYRIC_REVIEW_PROMPT, validateReviewResult } from './lyricAiReview.js'
 // 原静态导入：import { annotateLinesOffline } from './offlineAnnotation'
 // 聊天不需要初始化词典，仅读音分析功能使用时加载，避免问答额外启动成本。
 async function annotateLinesOffline(lines) {
@@ -143,6 +144,11 @@ async function explainSelection(payload, settings, signal) {
 
 // 与现有网页 API 保持相同的返回结构，学习页和缓存逻辑无需分叉。
 export async function postMobileAi(path, payload, settings, signal) {
+  // 安卓歌词查漏补缺使用详细提示词与严格校验，旧网页复核接口仍保留。
+  if (path === '/api/ai/review-imported-lyrics') {
+    const { result } = await requestJson(LYRIC_REVIEW_PROMPT, payload, settings, 4200, signal)
+    return validateReviewResult(result, payload.lines)
+  }
   // 歌词问答复用用户配置和原生请求，包含上下文与多轮对话，不使用选词释义接口。
   if (path === '/api/ai/lyric-chat') {
     const config = settings || await loadAiSettingsFromDevice()

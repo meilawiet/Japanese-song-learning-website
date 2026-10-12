@@ -18,6 +18,8 @@ export async function searchSyncedLyrics(query, signal) {
 
 export function lyricsRecordToFile(record) {
   const base = `${record.title}-${record.artist}`.replace(/[\\/:*?"<>|]/gu, '_').slice(0, 100)
-  const content = `[ti:${record.title}]\n[ar:${record.artist}]\n${record.lyrics}`
+  // 原来直接拼接标题和作者；平台文本不能插入新元数据行或伪时间戳。
+  const metadata = value => String(value || '').replace(/[\r\n\[\]]/g, ' ')
+  const content = `[ti:${metadata(record.title)}]\n[ar:${metadata(record.artist)}]\n${record.lyrics}`
   return new File([content], `${base}.lrc`, { type: 'text/plain;charset=utf-8' })
 }

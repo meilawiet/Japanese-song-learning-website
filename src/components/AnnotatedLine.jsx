@@ -2,6 +2,7 @@ import { hasKanji, splitRuby } from '../lib/ruby'
 import { displayReading } from '../lib/readingDisplay'
 import ReadingLyric from './ReadingLyric'
 import ReadingRuby from './ReadingRuby'
+import { plainLyric } from '../lib/lyricReadings'
 
 export default function AnnotatedLine({
   tokens,
@@ -10,6 +11,7 @@ export default function AnnotatedLine({
   lineId,
   mode,
   readingStyle = 'hiragana',
+  importedRomaji = '',
   selectedIndex,
   selectionRange,
   showSelectionAction,
@@ -23,7 +25,7 @@ export default function AnnotatedLine({
   if (!tokens?.length) return <span className="auto-lyric loading-lyric">正在生成自动读音…</span>
 
   // 安卓逐句取消旧选词/拖选入口，静态注音仍使用同一人工校正数据；整句点击由父层播放。
-  if (!interactive) return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>{mode === 'reading' ? <ReadingLyric tokens={tokens} corrections={corrections} songId={songId} lineId={lineId} readingStyle={readingStyle} /> : tokens.map(token => token.surface).join('')}</span>
+  if (!interactive) return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>{mode === 'reading' ? <ReadingLyric tokens={tokens} corrections={corrections} songId={songId} lineId={lineId} readingStyle={readingStyle} importedRomaji={importedRomaji} /> : plainLyric(tokens.map(token => token.surface).join(''))}</span>
 
   return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>
     {tokens.map((token) => {

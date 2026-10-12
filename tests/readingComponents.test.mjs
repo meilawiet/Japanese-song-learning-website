@@ -17,6 +17,20 @@ before(async () => {
 })
 after(async () => { await server?.close() })
 
+// 重新打开有效结果即可试听，不能因查看缓存而再次调用AI；无音频时禁用播放。
+test('AI复核缓存结果提供对应句试听和暂停，关闭重开无需重新复核',async()=>{
+  const Review=(await server.ssrLoadModule('/src/components/LyricAiReview.jsx')).default
+  const song={id:'test',lines:[{id:10,text:'歌'},{id:20,text:'夢'}]}
+  const initialResult={suggestions:[{line_id:20,token_index:0,surface:'夢',suggested_reading:'ゆめ',reason:'待校对'}],issues:[]}
+  const html=renderToStaticMarkup(createElement(Review,{song,initialResult,audioReady:true,playingLineId:20}))
+  assert.match(html,/暂停第 2 句/)
+  assert.match(html,/暂停试听/)
+  assert.match(html,/重新复核/)
+  assert.ok(!html.includes('开始复核'))
+  const disabled=renderToStaticMarkup(createElement(Review,{song,initialResult,audioReady:false}))
+  assert.match(disabled,/disabled=""[^>]*aria-label="试听第 2 句"/)
+})
+
 // 空读音不输出 ruby，歌词仍在；再次打开编辑器时输入框保持留空。
 test('取消注音在逐句、跟唱和再次编辑中一致', async () => {
   const tokens = [{ index: 0, surface: '明日', reading: 'あした' }]
@@ -158,13 +172,14 @@ test('共用注音菜单包含三种选项并反映当前选择', async () => {
   }
 })
 
-// 跟唱自带罗马音不输出另一套自动罗马音，并继续隐藏译文。
-test('跟唱显示用户罗马音并避免重复自动罗马音', () => {
+// 自带罗马音同时用于 ruby，整句行保留平台拼写，继续隐藏译文。
+test('跟唱自带罗马音优先用于 ruby 与整句行', () => {
   const song = {id:'s',title:'原创',artist:'UTA',lines:[{id:0,text:'夢',translation:'不要显示',romaji:'yu me'}]}
   const tokens = [{index:0,surface:'夢',reading:'ゆめ'}]
   for (const readingStyle of ['romaji','both']) {
     const html = renderToStaticMarkup(createElement(AndroidSingAlong,{song,annotations:[{id:0,tokens}],corrections:{},readingStyle,audioReady:true}))
-    assert.ok(html.includes('yu me') && !html.includes('yume') && !html.includes('不要显示'))
-    assert.match(html, /<rt lang="ja">ゆめ/)
+    assert.ok(html.includes('yu me') && !html.includes('不要显示'))
+    if(readingStyle==='both')assert.match(html, /<span lang="ja">ゆめ/)
+    else assert.match(html, /<rt lang="ja-Latn">yume/)
   }
 })

@@ -46,6 +46,26 @@ test('联网查找包括下歌吧且歌曲宝只有一个入口',()=>{
   for(const name of ['Toomic / MusicEnc','爱歌词网','世纪音乐网']) assert.ok(html.includes(name))
 })
 
+// 默认不开放三个音乐平台，用户显式添加网址后才启用对应适配器。
+test('歌词来源仅在安卓开放且平台必须由用户配置',async()=>{
+  const {Capacitor}=await server.ssrLoadModule('@capacitor/core')
+  const original=Capacitor.isNativePlatform
+  const oldStorage=globalThis.localStorage
+  try {
+    Capacitor.isNativePlatform=()=>false
+    const web=renderToStaticMarkup(createElement(OnlineSongSearch,{onChooseLyrics:()=>{}}))
+    assert.doesNotMatch(web,/aria-label="歌词来源"/)
+    Capacitor.isNativePlatform=()=>true
+    const mobile=renderToStaticMarkup(createElement(OnlineSongSearch,{onChooseLyrics:()=>{}}))
+    assert.match(mobile,/aria-label="歌词来源"/)
+    assert.ok(mobile.includes('LRCLIB'))
+    for(const name of ['网易云音乐','酷狗音乐','酷我音乐']) assert.ok(!mobile.includes(name))
+    globalThis.localStorage={getItem:()=>JSON.stringify([{id:'user-net',name:'网易云音乐',url:'https://music.163.com/'}])}
+    const configured=renderToStaticMarkup(createElement(OnlineSongSearch,{onChooseLyrics:()=>{}}))
+    assert.match(configured,/<option value="user-net" selected="">网易云音乐<\/option>/)
+  } finally {Capacitor.isNativePlatform=original;globalThis.localStorage=oldStorage}
+})
+
 test('更新提示不显示标题井号，项目使用真实列表节点',()=>{
   const html=renderToStaticMarkup(createElement(AppUpdatePrompt,{updates:{prompt:true,release:{version:'1.0.3',notes:'### 更新内容\n- 修复界面\n- 优化操作'},downloadState:{busy:false},dismiss:()=>{},download:()=>{}}}))
   assert.match(html,/<h4>更新内容<\/h4>/)

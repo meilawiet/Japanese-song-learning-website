@@ -1,5 +1,9 @@
 import { Capacitor } from '@capacitor/core'
 import { aiRequestHeaders } from './aiSettings'
+import { prepareLyricReadings } from './lyricReadings'
+// 原导入仅有整曲复核；新增问题调整结果合并，保留未选择的建议。
+import { mergeIssueAdjustment, reviewFingerprint, reviewLines } from './lyricAiReview'
+import { annotationMatchesLine } from './learningIdentity'
 
 const apiOrigin = import.meta.env.VITE_ANNOTATION_API_URL || 'http://127.0.0.1:8000'
 
@@ -57,6 +61,52 @@ export function reviewSongWithAi(song) {
     artist: song.artist,
     lines: song.lines.map(({ id, text }) => ({ id, text })),
   })
+}
+
+// 分批复核，整曲上下文保留；所有批次成功后才允许应用，取消不会改动歌曲。
+// 原签名五个参数；可选 selectedIssues 仅复核用户点选的问题所在句。
+export async function reviewImportedLyrics(song, cached, corrections, onProgress, signal, selectedIssues = null) {
+  const missing=song.lines.filter(line=>!cached.some(item=>annotationMatchesLine(item,line)))
+  const generated=missing.length?await annotateSongLines(missing):[]
+  const rawAnnotations=song.lines.map(line=>{
+    const raw=[...generated,...cached].find(item=>annotationMatchesLine(item,line))
+    if(!raw)throw new Error('自动注音尚未准备好，请稍后重试。')
+    return raw
+  })
+  // 复核可使用合并词，但未采用的词保留原缓存和旧人工校正索引。
+  const annotations=rawAnnotations.map(raw=>({...raw,tokens:prepareLyricReadings(raw.tokens,song.lines.find(line=>line.id===raw.id)?.romaji,corrections,song.id,raw.id).tokens}))
+  const contextLines=reviewLines(song,annotations,corrections)
+  const lines=selectedIssues?contextLines.filter(line=>selectedIssues.some(issue=>issue.line_id===line.id)):contextLines
+  const suggestions=[],issues=[],clearedLineIds=[]
+  const rejectedItems=[]
+  let rejectedCount=0
+  for(let offset=0;offset<lines.length;offset+=5){
+    if(signal?.aborted)throw new DOMException('请求已取消','AbortError')
+    const batch=lines.slice(offset,offset+5)
+    const result=await postAi('/api/ai/review-imported-lyrics',{
+      title:song.title,artist:song.artist,target_line_ids:batch.map(line=>line.id),lines:batch,
+      context:contextLines.map(({id,raw_text,translation,imported_romaji})=>({id,raw_text,translation,imported_romaji})),
+      ...(selectedIssues?{selected_issues:selectedIssues.filter(issue=>batch.some(line=>line.id===issue.line_id))}:{}),
+    },undefined,signal)
+    suggestions.push(...result.suggestions);issues.push(...result.issues)
+    clearedLineIds.push(...(result.cleared_line_ids || []))
+    rejectedCount+=result.rejected_count || 0
+    rejectedItems.push(...(result.rejected_items || []))
+    onProgress?.(Math.min(offset+5,lines.length))
+  }
+  return {annotations:rawAnnotations,reviewAnnotations:annotations,suggestions,issues,cleared_line_ids:clearedLineIds,rejected_count:rejectedCount,rejected_items:rejectedItems,fingerprint:reviewFingerprint(song,corrections)}
+}
+
+// 选中问题后再次请求AI给出具体读音，应用前仍须预览确认并校验快照。
+export async function adjustSelectedLyricIssues(song,snapshot,corrections,indices,onProgress,signal) {
+  if(reviewFingerprint(song,corrections)!==snapshot.fingerprint)throw new Error('歌词或人工读音已变化，请重新复核。')
+  const selected=[...new Set(indices)].filter(index=>Number.isSafeInteger(index)&&snapshot.issues[index])
+  if(!selected.length)throw new Error('请先选择需要AI调整的问题。')
+  const next=await reviewImportedLyrics(song,snapshot.annotations,corrections,onProgress,signal,selected.map(index=>snapshot.issues[index]))
+  // 统计二次请求尚未解决的所选问题，用于红字反馈，不能只判断是否有新建议。
+  const result=mergeIssueAdjustment(snapshot,selected,next)
+  const targetLines=new Set(selected.map(index=>snapshot.issues[index].line_id))
+  return {result,newSuggestions:next.suggestions,unresolvedCount:result.issues.filter(issue=>targetLines.has(issue.line_id)).length}
 }
 
 export function explainSelectionWithAi(payload) {

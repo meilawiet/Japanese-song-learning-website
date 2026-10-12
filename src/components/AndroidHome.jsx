@@ -26,6 +26,9 @@ export default function AndroidHome({ tab, onEnterLearn, onEnterSingAlong, onEnt
     </section>
   }
 
+  // 安卓复习暂未适配，直接展示待开发提示；下方旧入口保留供后续研发对照。
+  if (tab === 'review') return <section className="android-home" aria-label="复习"><p className="android-home-eyebrow">REVIEW / 复习</p><h1>复习</h1><p className="android-review-pending">复习功能尚未完善，请等待后续版本发布</p></section>
+
   const learning = tab === 'learn'
   const title = learning ? '今天开始学习' : '巩固已学内容'
   const intro = learning ? '选择一个入口，开始你的日语歌曲练习。' : '从这里进入复习，熟悉每一句歌词。'

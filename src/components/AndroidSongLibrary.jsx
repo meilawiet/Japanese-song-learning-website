@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { BookOpenCheck, Grid2X2, List, MoreVertical, Search, Upload, X } from 'lucide-react'
+// 原导入图标 Upload 向上；改用 Download 向下，保留上传类操作的原图标。
+import { BookOpenCheck, Download, Grid2X2, List, MoreVertical, Search, Upload, X } from 'lucide-react'
 
 const VIEW_KEY = 'uta-android-library-view-v1'
 
@@ -58,7 +59,7 @@ export default function AndroidSongLibrary({ songs, total, search, onSearch, onI
     </header>
     <div className="android-library-tools">
       <label className="android-library-search"><Search size={18} /><input id="library-search" type="search" value={search} onChange={(event) => onSearch(event.target.value)} placeholder="搜索歌曲或歌手" aria-label="搜索歌曲或歌手" />{search && <button type="button" onClick={() => onSearch('')} aria-label="清除搜索"><X size={16} /></button>}</label>
-      {!selectionMode && <button className="android-library-import" type="button" onClick={onImport} aria-label="导入歌曲"><Upload size={20} /><span>导入</span></button>}
+      {!selectionMode && <button className="android-library-import" type="button" onClick={onImport} aria-label="导入歌曲"><Download size={20} /><span>导入</span></button>}
     </div>
     {songs.length ? <div className={`android-library-songs ${view}`}>
       {songs.map((song) => {
