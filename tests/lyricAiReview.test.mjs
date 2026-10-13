@@ -19,14 +19,16 @@ test('二次调整保留未选问题、已选建议和空响应未解决的问�
 })
 
 // 检查真实模型边界：人工留空、英文、未知索引、虚构读音、低置信度都拒绝。
-test('复核输入带入来源和人工锁定，模型无权覆盖留空或给英文注音',()=>{
+test('复核输入带入人工状态，允许质疑留空但不为英文注音',()=>{
   const lines=reviewLines(song,annotations,{'s:0:2':''})
   assert.equal(lines[0].tokens[2].manual,true)
   assert.equal(lines[0].tokens[2].current_reading,'')
   lines[0].tokens[0].current_reading=''
   lines[0].source_alignment='unresolved'
   const result=validateReviewResult({suggestions:[proposal(0,'とわ'),proposal(0,'とわ'),proposal(0,'えいえん'),proposal(2,'きみ'),proposal(3,'にゅーす'),proposal(99,'うた'),{...proposal(0,'とわ'),confidence:NaN}],issues:[{line_id:0,kind:'lyric_text',token_indices:[0],observed:'永遠',expected:'永久',confidence:0.9,reason:'可能缺字'},{line_id:99,reason:'伪造句子'}]},lines)
-  assert.equal(result.suggestions.length,1)
+  // 旧规则为1条，人工留空禁止建议；新规则允许用户自行选择填入。
+  assert.equal(result.suggestions.length,2)
+  assert.equal(result.suggestions[1].manual_challenge,true)
   assert.equal(result.suggestions[0].suggested_reading,'とわ')
   assert.equal(result.issues.length,1)
   assert.ok(LYRIC_REVIEW_PROMPT.includes('完整词面'))
@@ -87,7 +89,8 @@ test('无来源永久的中等置信度とわ候选不再被丢弃，不自动�
   assert.deepEqual(legacy.issues[0].token_indices,[0])
   assert.equal(legacy.issues[0].expected,'とわ')
   assert.equal(validateReviewResult({suggestions:[]},reviewLines(s,ann,{})).suggestions.length,0)
-  assert.equal(validateReviewResult({suggestions:[{...proposal(0,'とわ'),confidence:0.7}]},reviewLines(s,ann,{'s:0:0':''})).suggestions.length,0)
+  // 原期望0条；人工留空可被质疑但必须明确确认。
+  assert.equal(validateReviewResult({suggestions:[{...proposal(0,'とわ'),confidence:0.7}]},reviewLines(s,ann,{'s:0:0':''})).suggestions[0].manual_challenge,true)
 })
 
 test('同一句多条建议和问题归组一次，保持原歌词次序及问题选择索引',()=>{
@@ -145,7 +148,8 @@ test('AI可以校验并合并一人，保存后ひとり整词显示，其他索
   assert.equal(state.annotations.s[0].tokens[0].surface,'一人')
   assert.equal(lineReading(state.annotations.s[0].tokens,state.progress.corrections,'s',0,'hiragana'),'ひとり で')
   assert.equal(validateReviewResult({suggestions:[{...next.suggestions[0],token_indices:[5,7]}]},lines).suggestions.length,0)
-  assert.equal(validateReviewResult({suggestions:next.suggestions},reviewLines(s,ann,{'s:0:6':''})).suggestions.length,0)
+  // 原期望0条；包含人工校正的整组也允许提出候选。
+  assert.equal(validateReviewResult({suggestions:next.suggestions},reviewLines(s,ann,{'s:0:6':''})).suggestions[0].manual_challenge,true)
 })
 test('用户采用后共享人工校正，来源变化拒绝旧建议，其他进度保留',()=>{
   const corrections={'s:0:2':''},state={progress:{corrections,learnedBySong:{s:[0]}},annotations:{other:[]}}

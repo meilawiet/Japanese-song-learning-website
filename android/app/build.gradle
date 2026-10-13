@@ -43,8 +43,12 @@ android {
         // 用户将本次功能版本调整为 1.1.0，旧 1.0.5 撤回；内部编号递增以支持已安装用户升级。
         // versionCode 16
         // versionName "1.0.5"
-        versionCode 17
-        versionName "1.1.0"
+        // 旧正式版：versionCode 17 / versionName "1.1.0"。
+        // versionCode 17
+        // versionName "1.1.0"
+        // 1.2.0 新增词界编辑、复核历史和按首云下载，递增编号支持覆盖升级。
+        versionCode 18
+        versionName "1.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

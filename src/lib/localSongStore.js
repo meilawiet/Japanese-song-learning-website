@@ -129,6 +129,8 @@ export async function updateLocalSongMetadata(songId, metadata) {
     request.onsuccess = () => {
       if (!request.result) return
       updatedRecord = { ...request.result, ...metadata }
+      // 替换音频或歌词后旧云附件哈希失效，不能在下一次目录恢复时误复用旧内容。
+      if(metadata.audioBlob||metadata.lines)delete updatedRecord.cloudAsset
       store.put(updatedRecord)
     }
     return request

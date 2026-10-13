@@ -10,8 +10,10 @@ import {AboutPanel} from './AppUpdates'
 import { ArrowLeft, ChevronRight, Info, Palette } from 'lucide-react'
 import ThemePanel from './ThemePanel'
 import ResourceSourcesPanel from './ResourceSourcesPanel'
+import useModalScrollLock from '../lib/useModalScrollLock'
 
 export default function SettingsDialog({ onClose, onExport, onRestore, onCloudExport, updates, backupBusy, backupError, readingStyle = 'hiragana', onReadingStyleChange, initialTab = 'data' }) {
+  useModalScrollLock()
   // 原安卓默认直接打开数据管理；现在先显示五个纵向入口。
   // const [tab, setTab] = useState(Capacitor.isNativePlatform() && initialTab === 'reading' ? 'data' : initialTab)
   const [tab, setTab] = useState(Capacitor.isNativePlatform() ? null : initialTab)
@@ -39,8 +41,9 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
 
   useEffect(() => {
     const previousFocus = document.activeElement
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    // 原仅设置 body overflow；现在由共享滚动锁固定页面并恢复位置。
+    // const previousOverflow = document.body.style.overflow
+    // document.body.style.overflow = 'hidden'
     dialogRef.current?.focus()
     const controller = new AbortController()
     getAiStatus(controller.signal).then(setServerStatus).catch(() => {})
@@ -62,8 +65,9 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
     return () => {
       controller.abort(); controllerRef.current?.abort()
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = previousOverflow
-      previousFocus?.focus()
+      // document.body.style.overflow = previousOverflow
+      // 原 previousFocus?.focus() 可能在解锁后自动卷动背景，恢复焦点时保持页面位置。
+      previousFocus?.focus({preventScroll:true})
     }
   }, [])
 

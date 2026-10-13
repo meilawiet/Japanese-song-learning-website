@@ -106,7 +106,8 @@ function checkSong(song) {
   }
 }
 
-export function createLearningBackup(songs, state) {
+// 可选固定时间用于不可变歌曲附件，避免每次学习记录变化都重新生成不同附件。
+export function createLearningBackup(songs, state, options = {}) {
   const audioParts = []
   let offset = 0
   const songEntries = songs.map(({ audioBlob, ...song }) => {
@@ -118,7 +119,8 @@ export function createLearningBackup(songs, state) {
   })
   const manifest = {
     version: VERSION,
-    createdAt: new Date().toISOString(),
+    // 原 createdAt: new Date().toISOString()；普通导出仍沿用当前时间。
+    createdAt: options.createdAt || new Date().toISOString(),
     progress: state.progress,
     annotations: state.annotations,
     aiReviews: state.aiReviews,

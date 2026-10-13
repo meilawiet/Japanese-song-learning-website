@@ -44,6 +44,7 @@ export default function AndroidSongLibrary({ songs, total, search, onSearch, onI
   function endPress() { window.clearTimeout(pressTimer.current) }
 
   function openSong(song) {
+    // 原操作菜单只按 isLocal 判断可编辑；未下载的歌曲先下载，避免把占位歌词保存成原文。
     if (longPressed.current) { longPressed.current = false; return }
     onOpen(song.id)
   }
@@ -65,16 +66,17 @@ export default function AndroidSongLibrary({ songs, total, search, onSearch, onI
       {songs.map((song) => {
         const artwork = artworkFor(song)
         const learned = (learnedBySong[song.id] || []).filter((lineId) => song.lines.some((line) => line.id === lineId)).length
-        return <article className={`android-library-song ${song.id === activeSongId ? 'current' : ''}`} key={song.id}>
+        // 未下载歌曲仍显示封面、名称和进度，暗色封面提示需要按首下载。
+        return <article className={`android-library-song ${song.cloudPending?'cloud-pending':''} ${song.id === activeSongId ? 'current' : ''}`} key={song.id}>
           <button className="android-library-song-main" type="button" onClick={() => openSong(song)} aria-label={`学习 ${song.title}，${song.artist}`}>
             {/* 仅封面承接长按；轻点卡片其他区域仍直接进入歌曲。 */}
             <span className="android-library-cover" onPointerDown={view === 'grid' && !selectionMode ? () => beginPress(song) : undefined} onPointerUp={endPress} onPointerCancel={endPress} onPointerLeave={endPress} onContextMenu={(event) => { event.preventDefault(); if (!selectionMode) { endPress(); longPressed.current = true; setMenuSong(song) } }}><span aria-hidden="true">{song.title.slice(0, 2)}</span>{artwork?.artworkUrl && <img src={artwork.artworkUrl} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true }} />}</span>
-            <span className="android-library-song-copy"><strong>{song.title}</strong><small>{song.artist || '未知歌手'}</small><span className="android-library-progress"><BookOpenCheck size={14} /> {learned} / {song.lines.length} 句已掌握</span></span>
+            <span className="android-library-song-copy"><strong>{song.title}</strong><small>{song.artist || '未知歌手'}{song.cloudPending?' · 待下载':''}</small><span className="android-library-progress"><BookOpenCheck size={14} /> {learned} / {song.lines.length} 句已掌握</span></span>
           </button>
           {view === 'list' && !selectionMode && <button className="android-library-more" type="button" onClick={() => setMenuSong(song)} aria-label={`更多操作：${song.title}`} aria-haspopup="dialog"><MoreVertical size={20} /></button>}
         </article>
       })}
     </div> : <div className="android-library-empty"><BookOpenCheck size={28} /><p>{search ? '没有找到这首歌' : '歌曲库还是空的'}</p><span>{search ? '换个歌名或歌手试试' : '导入歌曲后，就可以从这里开始学习'}</span>{!search && !selectionMode && <button type="button" onClick={onImport}>导入歌曲</button>}</div>}
-    {menuSong && <div className="android-library-menu-backdrop" onClick={() => setMenuSong(null)}><div className="android-library-menu" role="dialog" aria-modal="true" aria-label={`${menuSong.title}的操作`} onClick={(event) => event.stopPropagation()}><div className="android-library-menu-handle" /><strong>{menuSong.title}</strong><button className="danger" type="button" disabled={!menuSong.isLocal || deletingSongId === menuSong.id} onClick={() => { const song = menuSong; setMenuSong(null); onDelete(song) }}>{menuSong.isLocal ? '删除歌曲' : '此歌曲不可删除'}</button>{/* 封面编辑已移入“编辑歌曲信息”下的独立分区。 */}{/* 原菜单仅有删除与封面操作；本机歌曲现在可编辑完整资料。 */}<button type="button" disabled={!menuSong.isLocal} onClick={() => { const song = menuSong; setMenuSong(null); onEdit(song) }}>{menuSong.isLocal ? '编辑歌曲信息' : '此歌曲不可编辑'}</button><button type="button" onClick={() => setMenuSong(null)}>取消</button></div></div>}
+    {menuSong && <div className="android-library-menu-backdrop" onClick={() => setMenuSong(null)}><div className="android-library-menu" role="dialog" aria-modal="true" aria-label={`${menuSong.title}的操作`} onClick={(event) => event.stopPropagation()}><div className="android-library-menu-handle" /><strong>{menuSong.title}</strong><button className="danger" type="button" disabled={!menuSong.isLocal || deletingSongId === menuSong.id} onClick={() => { const song = menuSong; setMenuSong(null); onDelete(song) }}>{menuSong.isLocal ? '删除歌曲' : '此歌曲不可删除'}</button>{/* 封面编辑已移入“编辑歌曲信息”下的独立分区。 */}{/* 原菜单仅有删除与封面操作；本机歌曲现在可编辑完整资料。 */}<button type="button" disabled={!menuSong.isLocal||menuSong.cloudPending} onClick={() => { const song = menuSong; setMenuSong(null); onEdit(song) }}>{menuSong.cloudPending?'请先下载歌曲':menuSong.isLocal ? '编辑歌曲信息' : '此歌曲不可编辑'}</button><button type="button" onClick={() => setMenuSong(null)}>取消</button></div></div>}
   </section>
 }

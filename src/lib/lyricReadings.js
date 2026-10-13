@@ -133,7 +133,8 @@ function prepare(input, importedRomaji = '', corrections = {}, songId, lineId) {
     // 连续汉字无法可靠按词拆分时整组注音，不用错误词典读音决定分配边界。
     while(i+1<tokens.length){
       let next=i+1;while(next<tokens.length&&tokens[next].is_symbol)next++
-      if(next>=tokens.length||!hasKanji(lyricSurface(tokens[next]))||tokens[next].source_reading!=null)break
+      // 用户采用或自定义的边界不能被来源对齐自动合并回去。
+      if(next>=tokens.length||token.segmentation_locked||tokens[next].segmentation_locked||!hasKanji(lyricSurface(tokens[next]))||tokens[next].source_reading!=null)break
       if(/[\u3040-\u30ff]$/u.test(lyricSurface(members.at(-1))))break
       members.push(...tokens.slice(i+1,next+1));i=next
     }

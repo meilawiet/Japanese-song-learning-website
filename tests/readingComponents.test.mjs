@@ -94,7 +94,8 @@ test('跟唱与逐句同步人工注音并隐藏译文和校正变色标记', ()
     const sing = renderToStaticMarkup(createElement(AndroidSingAlong, { song, corrections, annotations: [{ id: 0, tokens }], readingStyle, audioReady: true }))
     const expected = readingStyle === 'romaji' ? 'asu' : 'あす'
     assert.match(lesson, new RegExp(`>${expected}</rt>`))
-    assert.match(sing, new RegExp(`>${expected}</rt>`))
+    // 原断言使用 rt；新版安卓按完整词组显示注音层。
+    assert.match(sing, new RegExp(`lang="${readingStyle==='romaji'?'ja-Latn':'ja'}">${expected}</span>`))
     assert.ok(!sing.includes('不应显示的译文'))
     assert.ok(!lesson.includes('corrected'))
   }
@@ -156,7 +157,8 @@ test('双注音在逐句与跟唱同步，跟唱提供更多入口', () => {
     assert.ok(!html.includes('あした') && !html.includes('corrected'))
   }
   assert.match(sing, /更多跟唱选项/)
-  assert.match(sing, /あす は\nasu wa/)
+  // 原整句行断言：/あす は\nasu wa/；现在逐词对齐显示助词 wa。
+  assert.match(sing, /lang="ja-Latn">wa<\/span>/)
   assert.ok(!sing.includes('不能显示'))
   const original = renderToStaticMarkup(createElement(AnnotatedLine, { tokens, corrections, songId:'s', lineId:0, readingStyle:'both', mode:'original', interactive:false }))
   assert.ok(!original.includes('<rt'))
@@ -178,8 +180,9 @@ test('跟唱自带罗马音优先用于 ruby 与整句行', () => {
   const tokens = [{index:0,surface:'夢',reading:'ゆめ'}]
   for (const readingStyle of ['romaji','both']) {
     const html = renderToStaticMarkup(createElement(AndroidSingAlong,{song,annotations:[{id:0,tokens}],corrections:{},readingStyle,audioReady:true}))
-    assert.ok(html.includes('yu me') && !html.includes('不要显示'))
-    if(readingStyle==='both')assert.match(html, /<span lang="ja">ゆめ/)
-    else assert.match(html, /<rt lang="ja-Latn">yume/)
+    // 来源音节拼写合并为词级罗马音，原有整句重复行取消。
+    assert.ok(html.includes('yume') && !html.includes('不要显示'))
+    if(readingStyle==='both')assert.match(html, /lang="ja">ゆめ/)
+    else assert.match(html, /lang="ja-Latn">yume/)
   }
 })

@@ -54,6 +54,8 @@ export function reconcileLearningState(songs, saved) {
   }
 
   for (const song of songs) {
+    // 云目录的占位歌词不能参与原文一致性判断，否则会错误清除未下载歌曲的学习记录。
+    if(song.cloudPending)continue
     // A browser-imported song has an immutable, randomly generated ID and its
     // own persisted lyrics. Legacy mastery without annotation evidence is safe
     // to bootstrap there, unlike the old positional folder IDs.

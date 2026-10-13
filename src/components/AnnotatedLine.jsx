@@ -25,7 +25,7 @@ export default function AnnotatedLine({
   if (!tokens?.length) return <span className="auto-lyric loading-lyric">正在生成自动读音…</span>
 
   // 安卓逐句取消旧选词/拖选入口，静态注音仍使用同一人工校正数据；整句点击由父层播放。
-  if (!interactive) return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>{mode === 'reading' ? <ReadingLyric tokens={tokens} corrections={corrections} songId={songId} lineId={lineId} readingStyle={readingStyle} importedRomaji={importedRomaji} /> : plainLyric(tokens.map(token => token.surface).join(''))}</span>
+  if (!interactive) return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>{mode === 'reading' ? <ReadingLyric stacked tokens={tokens} corrections={corrections} songId={songId} lineId={lineId} readingStyle={readingStyle} importedRomaji={importedRomaji} /> : plainLyric(tokens.map(token => token.surface).join(''))}</span>
 
   return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>
     {tokens.map((token) => {

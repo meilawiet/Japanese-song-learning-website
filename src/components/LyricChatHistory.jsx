@@ -6,6 +6,7 @@ import { loadAiSettings,setWebSearchEnabled } from '../lib/aiSettings'
 import { webSearchAvailable } from '../lib/mobileWebSearch'
 import { Browser } from '@capacitor/browser'
 import { postMobileAi } from '../lib/mobileAi'
+import useModalScrollLock from '../lib/useModalScrollLock'
 
 // 每次打开先选择对话；历史可跨歌曲查看，继续旧歌曲时使用其保存的歌词上下文。
 export default function LyricChatHistory({ song, lineId, annotations, corrections }) {
@@ -13,6 +14,8 @@ export default function LyricChatHistory({ song, lineId, annotations, correction
   const [aiConfig,setAiConfig]=useState(loadAiSettings)
   useEffect(()=>{const refresh=()=>setAiConfig(loadAiSettings());window.addEventListener('uta:ai-settings',refresh);return()=>window.removeEventListener('uta:ai-settings',refresh)},[])
   const [open,setOpen] = useState(false)
+  // 切换会话继续持锁，关闭对话才恢复底层歌词的滚动位置。
+  useModalScrollLock(open)
   const [sessions,setSessions] = useState([])
   const [selected,setSelected] = useState(null)
   const [question,setQuestion] = useState('')
@@ -34,10 +37,11 @@ export default function LyricChatHistory({ song, lineId, annotations, correction
   },[open])
   useEffect(() => {
     if (!open) return undefined
-    const overflow=document.body.style.overflow; document.body.style.overflow='hidden'
+    // 原 overflow 隐藏逻辑改由共享锁管理：const overflow=document.body.style.overflow; document.body.style.overflow='hidden'
     const back = event => { event.preventDefault(); if(selected) goList(); else close() }
     window.addEventListener('uta:navigate-back',back)
-    return () => { document.body.style.overflow=overflow;window.removeEventListener('uta:navigate-back',back) }
+    // 原清理还原 body overflow；现在只清理返回事件，滚动锁由 hook 释放。
+    return () => { window.removeEventListener('uta:navigate-back',back) }
   },[open,selected])
   useEffect(() => { bottom.current?.scrollIntoView({block:'nearest'}) },[session?.messages.length,busy,selected])
   function update(value) { setSessions(previous => [value,...previous.filter(item => item.id!==value.id)].sort((a,b)=>b.updatedAt-a.updatedAt)) }

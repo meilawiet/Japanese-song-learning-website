@@ -27,7 +27,13 @@ export async function restoreCloudData(inspection) {
     for(const [field,key] of [['learn','uta-recent-learn-v1'],['sing','uta-recent-sing-v1']]) {const value=extras.recent?.[field];if(typeof value==='string')localStorage.setItem(key,value);else localStorage.removeItem(key)}
   }
   try {
-    await replaceLocalSongs(songsFromLearningBackup(inspection))
+    // 目录恢复先建立待下载歌曲，封面和进度即时可见；音频由用户逐首选择下载。
+    // 同一附件已经完整下载时保留本机音频，更新云端目录不会逼用户重复下载同一首。
+    const catalogSongs=inspection.cloudCatalog?inspection.manifest.songs.map(song=>{
+      const local=previousSongs.find(item=>item.id===song.id&&!item.cloudPending&&item.audioBlob instanceof Blob&&item.cloudAsset?.sha256===song.cloudAsset.sha256)
+      return local?{...local,...song,lines:local.lines,audioBlob:local.audioBlob,cloudPending:false}:song
+    }):null
+    await replaceLocalSongs(catalogSongs||songsFromLearningBackup(inspection))
     for(const [field,key] of Object.entries(BACKUP_STORAGE_KEYS)) localStorage.setItem(key,JSON.stringify(inspection.manifest[field]||{}))
     await applyExtras(inspection.extras,inspection.avatar)
   } catch(failure) {

@@ -66,7 +66,7 @@ export function applyAppearance(value) {
   const build = rules => [...rules].map(rule => {
     if (rule.type === 4 || rule.type === 12) return `${rule.cssText.slice(0, rule.cssText.indexOf('{'))}{${build(rule.cssRules)}}`
     if (!rule.selectorText || !rule.style) return ''
-    const lyric = /\.japanese|\.android-sing-text|\.dual-line-reading|\.kana|\.lyric-token.*rt|\.line-reading|\.theme-preview/.test(rule.selectorText)
+    const lyric = /\.japanese|\.android-sing-text|\.dual-line-reading|\.kana|\.lyric-token.*rt|\.line-reading|\.theme-preview|\.word-aligned-(?:kana|romaji|unresolved)/.test(rule.selectorText)
     const scale = appearance.textSize / 100 * (lyric ? appearance.lyricSize / 100 : 1)
     const declarations = []
     // 原规则仅处理入口卡片：const semanticAccent = /android-mode-(?:card|icon|action)/.test(rule.selectorText)

@@ -11,6 +11,41 @@
 :root.uta-android-font button:active:not(:disabled),:root.uta-android-font a:active,:root.uta-android-font [role="button"]:active,:root.uta-android-font .lyric-row:active { opacity:.86; }
 /* 主题名称下标明角色对应关系，独立显示避免长名称挤占色卡。 */
 .theme-character { display:block; margin-top:5px; font-size:12px; opacity:.75; }
+/* 复核批量操作与历史采用同一主题色，长标题换行，手机底栏不挤出屏幕。 */
+.lyric-ai-history-toggle,.lyric-ai-bulk button,.lyric-ai-history-item > button { min-height:38px; padding:7px 12px; border:1px solid #cbdccb; border-radius:10px; color:#426550; background:#f8faf7; }
+.lyric-ai-history-toggle { margin:16px 0; }
+.lyric-ai-bulk { display:flex; flex-wrap:wrap; gap:9px; margin:14px 0; }
+.lyric-ai-history-item { display:flex; flex-wrap:wrap; align-items:center; gap:9px; padding:12px 0; border-bottom:1px solid #dce6d8; }
+.lyric-ai-history-open { flex:1; min-width:180px; text-align:left; }
+.lyric-ai-history-open span,.lyric-ai-decision { display:block; margin-top:7px; font-size:12px; color:#68866b; }
+.lyric-ai-history-note { padding:12px; border-radius:12px; background:#e8f0e6; }
+.lyric-ai-review footer { flex-wrap:wrap; }
+/* 云目录歌曲保留封面，只降低封面亮度；下载完成后移除状态即可恢复主题原色。 */
+.android-library-song.cloud-pending .android-library-cover { filter:brightness(.58) saturate(.65); }
+.cloud-song-download footer { flex-wrap:wrap; }
+/* 一个完整词组占一列，注音与原文中心对齐；换行时整组三层一起移动。 */
+.word-aligned-lyrics { display:inline-flex; max-width:100%; flex-wrap:wrap; align-items:flex-end; gap:10px 5px; vertical-align:baseline; }
+.word-aligned-token { display:inline-flex; flex-direction:column; align-items:center; justify-content:flex-end; max-width:100%; line-height:1.4; }
+.word-aligned-kana { min-height:1.4em; font-size:11px; white-space:pre; }
+.word-aligned-romaji { min-height:1.4em; font-size:12px; white-space:pre; }
+.word-aligned-original { font-size:1em; white-space:pre-wrap; }
+.word-aligned-unresolved { flex-basis:100%; font-size:12px; line-height:1.6; }
+.line-editor-segmentation { margin:16px 0; padding:12px; border:1px solid #d5e1cf; border-radius:12px; }
+.line-editor-segment-item { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0; }
+.line-editor-segment-item strong { min-width:70px; }
+.line-editor-segment-item button { border:1px solid #c5d5bc; border-radius:9px; padding:7px 10px; background:#f2f6ef; color:#426550; }
+.line-editor-segment-item input { width:100%; min-height:40px; border:1px solid #c5d5bc; border-radius:8px; padding:8px; }
+/* 旧逐词按钮样式保留；词界编辑只占一块区域，淡色/亮色均随主题调整。 */
+.lyric-boundary-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.lyric-boundary-heading button,.lyric-boundary-actions button { min-height:40px; padding:7px 12px; border:1px solid #c5d5bc; border-radius:10px; color:#426550; background:#f2f6ef; }
+.lyric-boundary-preview { font-size:20px; line-height:1.7; overflow-wrap:anywhere; }
+.lyric-boundary-preview b { margin:0 5px; color:#426550; font-weight:600; }
+.lyric-boundary-hint { font-size:12px; }
+.lyric-boundary-characters { display:flex; flex-wrap:wrap; align-items:center; padding:8px 0; }
+.lyric-boundary-unit { display:inline-flex; align-items:center; white-space:pre; font-size:22px; }
+.lyric-boundary-unit button { display:inline-grid; place-items:center; width:23px; min-height:44px; padding:0; border:0; border-radius:8px; color:#426550; background:transparent; font-size:24px; opacity:.25; }
+.lyric-boundary-unit button[aria-pressed="true"] { opacity:1; font-weight:700; background:#e2efe7; }
+.lyric-boundary-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:10px; }
 html { scroll-behavior:smooth; }
 body { margin:0; color:var(--ink); background:var(--paper); font-family:var(--sans); font-size:14px; }
 button,a { font:inherit; } button { cursor:pointer; } a { color:inherit; text-decoration:none; }
@@ -675,6 +710,8 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .uta-android-font .toast { z-index:25; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); max-width:calc(100vw - 32px); text-align:center; white-space:nowrap; }
 /* 长按歌词只显示简短操作菜单，单句编辑采用可滚动的底部面板。 */
 .lyric-edit-menu-backdrop,.line-editor-backdrop { position:fixed; inset:0; z-index:55; display:flex; align-items:flex-end; justify-content:center; padding:12px; background:#19271a70; }
+/* 弹窗滚到顶部/底部时不继续传递滚动，遮罩空白区域也不触发背景滚动。 */
+.line-editor-backdrop,.lyric-edit-menu-backdrop { overscroll-behavior:none; }
 /* AI复核沿用单句编辑弹窗与主题色，建议逐条选择，长结果可在弹窗内滚动。 */
 .lyric-ai-review { overflow-y:auto; max-height:90dvh; }
 .lyric-ai-review p { line-height:1.7; }
@@ -684,8 +721,10 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .lyric-ai-review li label { display:flex; align-items:center; gap:12px; }
 .lyric-ai-review li input[type=checkbox] { width:24px; height:24px; accent-color:var(--green); flex-shrink:0; }
 .lyric-ai-review li p { margin:8px 0; }
-/* 结果较多时，确认按钮仍留在底部；背景随现有主题转换规则变化。 */
+/* 原吸底按钮保留供对照：
 .lyric-ai-review footer { position:sticky; bottom:-24px; z-index:1; background:#fffdf7; padding:14px 0; }
+用户要求操作按钮随内容滚动，改为内容末尾的普通区域。 */
+.lyric-ai-review footer { position:static; background:#fffdf7; padding:14px 0; }
 /* 问题调整入口沿用主题绿，保持触摸面积与其他确认按钮一致。 */
 .lyric-ai-adjust { min-height:48px; padding:12px 18px; border:1px solid #3c6a51; border-radius:10px; background:#3c6a51; color:white; font-size:16px; }
 /* 试听停留在复核窗口，按钮与文字随应用主题变化，不挤压建议内容。 */
@@ -701,7 +740,8 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .lyric-edit-menu,.line-editor { width:min(100%,650px); padding:18px; border-radius:20px; background:#fffdf8; color:#294333; }
 .lyric-edit-menu button { display:flex; width:100%; align-items:center; justify-content:center; gap:10px; min-height:48px; border:0; background:transparent; color:#345c46; font-size:16px; }
 .lyric-edit-menu button + button { border-top:1px solid #e4e9e1; color:#89958c; }
-.line-editor { max-height:85dvh; overflow:auto; }
+/* 原规则：.line-editor { max-height:85dvh; overflow:auto; }；增加滚动边界隔离。 */
+.line-editor { max-height:85dvh; overflow:auto; overscroll-behavior:contain; }
 .line-editor header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }.line-editor h2 { margin:0; font-size:22px; }.line-editor header button { border:0; background:transparent; color:#57725e; }
 .line-editor-lyric { display:grid; gap:8px; font-size:13px; }.line-editor textarea { width:100%; min-height:84px; padding:12px; border:1px solid #cfd9ce; border-radius:10px; background:white; color:#294333; font:18px/1.6 var(--serif); resize:vertical; }
 /* 翻译置于原文下方，保持与现有输入框一致并留出间距。 */
@@ -712,6 +752,9 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 /* 逐词输入方式保持轻量，窄屏也不超出两列字段。 */
 .line-editor-readings select { width:100%; min-width:0; min-height:36px; padding:5px 4px; border:1px solid #d5dfd2; border-radius:8px; color:#52675a; background:#f5f8f2; font-size:12px; }
 .line-editor footer { display:flex; justify-content:flex-end; gap:10px; margin-top:22px; padding:12px 0 0; border-top:1px solid #e3e8de; background:transparent; }.line-editor footer button { padding:10px 20px; border:1px solid #cfd9ce; border-radius:9px; color:#345c46; background:white; }.line-editor footer button:last-child { background:#3c6a51; color:white; border-color:#3c6a51; }.line-editor button:disabled { opacity:.5; }
+/* 原通用 footer 透明会覆盖复核底栏纸面；多行按钮需完整留在视口内。 */
+/* 原 footer 的 bottom:0、z-index:2 随吸底布局一起停用；保持主题纸面与按钮换行。 */
+.line-editor.lyric-ai-review footer { position:static; inset:auto; z-index:auto; padding:14px 0; background:#fffdf8; }
 /* 采用已确认的安卓概念稿；上方旧网页布局规则保留供对照。 */
 .study-topbar-hidden { display:none; }
 .android-lesson-page { padding:0 20px 160px; background:#f7f8f2; }
@@ -731,8 +774,10 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .android-study-progress { margin:21px 0 23px; color:#829784; font-size:12px; }.android-study-progress > div { height:3px; margin-top:10px; border-radius:4px; background:#dfe8dc; }.android-study-progress i { display:block; height:100%; border-radius:4px; background:#729b7e; }
 .android-study-toolbar { display:flex; align-items:center; gap:12px; margin-bottom:20px; }.android-study-segment { display:flex; flex:1; gap:3px; padding:4px; border-radius:11px; background:#e9eee4; }.android-study-segment button { flex:1; min-height:36px; padding:5px; border:0; border-radius:8px; color:#8d9a89; background:transparent; font-size:14px; }.android-study-segment button.selected { background:#fffefa; color:#3b6348; box-shadow:0 2px 5px #263e2410; }.android-study-more { display:grid; width:42px; height:44px; place-items:center; border:0; color:#78917c; background:transparent; }
 .android-study-error { margin:10px 0; color:#a65542; font-size:12px; }
-.android-lesson-page .lyrics-list { margin:0; border:0; display:grid; gap:13px; }
-.android-lesson-page .lyric-row { display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:8px; row-gap:10px; margin:0; padding:16px 14px 14px; border:1px solid #e1e8db; border-radius:16px; background:#fffefa; }
+/* 原间距：列表 gap:13px；卡片 row-gap:10px、padding:16px 14px 14px。
+   新排版已取消重复读音行，缩小卡片留白；高度由歌词、译文和展开的解析自然撑开。 */
+.android-lesson-page .lyrics-list { margin:0; border:0; display:grid; gap:10px; }
+.android-lesson-page .lyric-row { display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:8px; row-gap:6px; margin:0; padding:12px 14px 10px; border:1px solid #e1e8db; border-radius:16px; background:#fffefa; }
 .android-lesson-page .lyric-row.active { background:#eaf3e7; border-color:#adc9a9; box-shadow:0 5px 14px #3b5f4510; }
 .android-lesson-page .line-number { position:static; grid-column:1; grid-row:1; padding:0; color:#a0ac9b; font:11px var(--mono); align-self:center; }
 .android-lesson-page .auto-line-wrap { grid-column:1 / -1; grid-row:2; }
@@ -859,6 +904,12 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 /* 双注音上下排列，整句读音保留换行并允许长罗马音换行，避免窄屏溢出。 */
 .reading-ruby-dual { display:inline-flex; flex-direction:column; align-items:center; line-height:1.25; font-size:10px; white-space:nowrap; }
 [data-reading-style="both"] .japanese, [data-reading-style="both"] .android-sing-text strong { line-height:2.2; }
+/* 上述 2.2 行高用于旧 ruby；词组已经自行排列注音，不再额外预留 ruby 空间。
+   保留完整 font 简写，让外观设置生成覆盖时同时保留紧凑行高与歌词字号缩放。 */
+.android-lesson-page .japanese:has(.word-aligned-lyrics) { font:500 24px/1.4 var(--serif); }
+.android-sing-text strong:has(.word-aligned-lyrics) { line-height:1.4; }
+/* 词组换行只缩小垂直间距，不拆散同一组注音、罗马音与原文。 */
+.android-lesson-page .word-aligned-lyrics,.android-sing-text .word-aligned-lyrics { row-gap:8px; vertical-align:top; }
 [data-reading-style="both"] .reading, .dual-line-reading { white-space:pre-line; overflow-wrap:anywhere; letter-spacing:.01em; }
 /* 第三种选项在小屏幕自动换行；跟唱更多入口靠右，保持原从头跟唱入口。 */
 .study-options fieldset { flex-wrap:wrap; row-gap:14px; }
