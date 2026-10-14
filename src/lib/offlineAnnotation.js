@@ -1,6 +1,7 @@
 import kuromoji from '@faanau/kuromoji'
 import { toHiragana } from 'wanakana'
 import { hasKanji, splitRuby } from './ruby'
+import { splitKanjiOkuriganaTokens } from './defaultSegmentation.js'
 
 let tokenizerPromise
 
@@ -50,6 +51,7 @@ export async function annotateLinesOffline(lines) {
     }
     if (cursor < text.length) tokens.push(tokenFor(text.slice(cursor), tokens.length))
     if (tokens.map((token) => token.surface).join('') !== text) throw new Error(`离线注音与歌词不匹配：第 ${id} 句。`)
-    return { id, tokens }
+    // 原返回 { id, tokens }；新导入/重新注音优先采用“抱｜きしめ”等汉字与送假名词界。
+    return { id, tokens: splitKanjiOkuriganaTokens(tokens) }
   })
 }

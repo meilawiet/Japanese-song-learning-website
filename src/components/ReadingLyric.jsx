@@ -3,6 +3,7 @@ import { correctionKey, hasKanji, splitRuby } from '../lib/ruby'
 import ReadingRuby from './ReadingRuby'
 import { lyricSurface, plainLyric, prepareLyricReadings, tokenReading } from '../lib/lyricReadings'
 import { displayReading } from '../lib/readingDisplay'
+import {kanjiReadingParts} from '../lib/readingPresentation'
 
 // 跟唱与逐句使用同一 annotations/corrections 数据，只输出文本，避免在歌词按钮里嵌套按钮。
 export default function ReadingLyric({ text, tokens, corrections, songId, lineId, readingStyle, importedRomaji = '', stacked=false }) {
@@ -18,6 +19,14 @@ export default function ReadingLyric({ text, tokens, corrections, songId, lineId
       const manual=corrections?.[correctionKey(songId,lineId,token.index)]!=null||token.manual_group_reading!=null
       const pronunciation=!manual&&token.source_reading!=null?(token.source_pronunciation??token.source_reading):reading
       const romaji=token.is_symbol?'':displayReading(pronunciation,'romaji',token,manual||token.source_reading!=null)
+      // 原先假名按整个含汉字词组居中；现在对最终读音做只读分配，罗马音仍横跨完整词组。
+      const parts=kanjiReadingParts(surface,reading),originalRow=readingStyle==='both'?3:2
+      if(readingStyle!=='romaji'&&parts.length>1)return <span className="word-aligned-token word-han-layout" key={token.index} style={{gridTemplateColumns:parts.map(()=>'max-content').join(' ')}} title={reading?`完整读音：${reading}`:undefined}>
+        <span className="word-aligned-kana word-han-kana" lang="ja">{parts.map((part,index)=><span key={index} style={{gridColumn:index+1,gridRow:1}}>{part.kana||'\u00a0'}</span>)}</span>
+        {readingStyle==='both'&&<span className="word-aligned-romaji" lang="ja-Latn" style={{gridColumn:'1 / -1',gridRow:2}}>{romaji||'\u00a0'}</span>}
+        <span className="word-aligned-original word-han-original" lang="ja">{parts.map((part,index)=><span key={index} style={{gridColumn:index+1,gridRow:originalRow}}>{part.surface}</span>)}</span>
+      </span>
+      // 罗马音模式、纯汉字及纯假名词沿用原显示；混合词的假名改用上方按汉字段排版。
       return <span className="word-aligned-token" key={token.index}>
         {readingStyle!=='romaji'&&<span className="word-aligned-kana" lang="ja">{hasKanji(surface)&&reading?reading:'\u00a0'}</span>}
         {readingStyle!=='hiragana'&&<span className="word-aligned-romaji" lang="ja-Latn">{romaji||'\u00a0'}</span>}

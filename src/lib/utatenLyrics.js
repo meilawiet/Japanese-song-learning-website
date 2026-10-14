@@ -28,10 +28,27 @@ function track(root,kind){
   }
   walk(root);finish();return lines
 }
+// 仅 UtaTen 使用站点日文短语间的空格拆句；不切英文词间空格，不切 ruby 内部，也不推测时间戳。
+export function splitUtatenPhrases(row){
+  const full=row.segments.map(segment=>segment.surface).join(''),ranges=[];let offset=0
+  for(const segment of row.segments){ranges.push({segment,start:offset,end:offset+segment.surface.length});offset+=segment.surface.length}
+  const cuts=[...full.matchAll(/(?<=[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}ー])[ \u3000]+(?=[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}ー])/gu)]
+    .filter(match=>!ranges.some(range=>(range.segment.kana||range.segment.romaji)&&range.start<match.index&&range.end>match.index))
+  if(!cuts.length)return [row]
+  const parts=[];let start=0
+  for(const cut of [...cuts,{index:full.length,0:''}]){
+    const end=cut.index,segments=ranges.filter(range=>range.end>start&&range.start<end).map(range=>({...range.segment,surface:full.slice(Math.max(start,range.start),Math.min(end,range.end))}))
+    if(segments.length)parts.push({text:segments.map(segment=>segment.surface).join('').trim(),segments})
+    start=end+cut[0].length
+  }
+  return parts.filter(part=>part.text)
+}
 export function parseUtatenLyrics(html,record){
   const document=page(html),body=document.querySelector('.lyricBody'),kana=body?.querySelector('.hiragana'),roman=body?.querySelector('.romaji')
   if(!kana)throw new Error('UtaTen 没有返回可读取的注音歌词，请检查所选版本。')
-  const lines=track(kana,'kana'),romaji=roman?track(roman,'romaji'):[],byText=new Map()
+  // 原来一条网站行就是一句；两轨按相同的站点短语边界拆分，再以原文匹配注音。
+  // const lines=track(kana,'kana'),romaji=roman?track(roman,'romaji'):[],byText=new Map()
+  const lines=track(kana,'kana').flatMap(splitUtatenPhrases),romaji=roman?track(roman,'romaji').flatMap(splitUtatenPhrases):[],byText=new Map()
   for(const row of romaji){const key=normalized(row.text);if(!byText.has(key))byText.set(key,[]);byText.get(key).push(row)}
   let annotated=0,romanized=0,unmatched=0
   lines.forEach((row,id)=>{

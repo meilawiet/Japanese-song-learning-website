@@ -1041,3 +1041,13 @@ body[style*="overflow: hidden"] .unified-study-page .practice-layout{overflow:vi
 .unified-study-page .auto-line-wrap{grid-column:1;grid-row:2;text-align:left}
 .unified-study-page .line-actions{grid-column:2;grid-row:1 / span 2}
 .unified-study-page .sentence-inline-analysis{grid-column:1 / -1}
+
+/* 更新忽略项使用当前主题，和取消/更新操作分开；保持手机点击面积。 */
+.app-update-ignore{display:flex;align-items:center;gap:9px;min-height:44px;margin:12px 0;color:inherit;font-size:14px}
+.app-update-ignore input{width:19px;height:19px;flex:none;accent-color:#426550}
+
+/* 最终假名排版按汉字段对齐，整词罗马音跨列；显示分段不改分词或来源注音。 */
+.word-aligned-token.word-han-layout{display:inline-grid;align-items:end;justify-items:center;column-gap:0;row-gap:0}
+.word-han-layout>.word-han-kana,.word-han-layout>.word-han-original{display:contents}
+.word-han-kana>span{min-height:1.4em;font-size:11px;line-height:1.4;white-space:pre;align-self:end}
+.word-han-original>span{font-size:1em;line-height:1.4;white-space:pre-wrap}

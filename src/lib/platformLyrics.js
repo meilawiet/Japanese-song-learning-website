@@ -77,7 +77,10 @@ export async function searchPlatformSongs(provider, query, signal, request = pla
     if (data.status !== 1) throw new Error('酷狗音乐搜索暂不可用。')
     result = (data.data?.info || []).filter(row => /^[0-9a-f]{32}$/i.test(row.hash || '')).map(row => song(provider, row.hash, row.songname, row.singername, row.album_name, row.duration))
   } else if (provider === 'kuwo') {
-    const data = await json(endpoint('https://search.kuwo.cn/r.s', { all: keyword, ft: 'music', itemset: 'web_2013', client: 'kt', pn: 0, rn: 20, rformat: 'json', encoding: 'utf8' }), provider, signal, request)
+    // 原请求未携带 vipver：{ all: keyword, ft: 'music', itemset: 'web_2013', client: 'kt', pn: 0, rn: 20, rformat: 'json', encoding: 'utf8' }
+    // 与酷我当前网页搜索保持一致；缺少此参数会返回不完整候选，原唱也可能缺失。
+    // 只补齐歌曲元信息检索参数，不改变音频获取、歌词选用或用户的来源配置。
+    const data = await json(endpoint('https://search.kuwo.cn/r.s', { all: keyword, ft: 'music', itemset: 'web_2013', client: 'kt', vipver: 1, pn: 0, rn: 20, rformat: 'json', encoding: 'utf8' }), provider, signal, request)
     if (!Array.isArray(data.abslist)) throw new Error('酷我音乐搜索返回格式异常。')
     result = data.abslist.filter(row => /^MUSIC_\d+$/.test(row.MUSICRID || '')).map(row => song(provider, row.MUSICRID.replace('MUSIC_', ''), row.NAME, row.ARTIST, row.ALBUM, row.DURATION))
   } else if (provider === 'qq') {

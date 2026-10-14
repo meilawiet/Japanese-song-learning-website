@@ -204,3 +204,25 @@ test('统一学习页的学习进度在歌曲封面下方独立成行',async()=>
   assert.match(html,/<\/button><\/div><div class="android-study-progress">/)
   assert.match(html,/0 \/ 1 句已掌握/)
 })
+
+// 来源、字典、括号及人工读音先确定优先级，再映射汉字显示；保存数据不可被显示层改写。
+test('所有来源最终只在汉字上显示假名，来源和人工读音仍优先',async()=>{
+  const Reading=(await server.ssrLoadModule('/src/components/ReadingLyric.jsx')).default
+  const cases=[
+    {surface:'伝え',reading:'つたえ',source:'tsutae',han:'つた'},
+    {surface:'抱きしめ',reading:'ほうきしめ',source:'dakishime',han:'だ'},
+    {surface:'抱（だ）きしめ',reading:'ほうきしめ',source:'',han:'だ'},
+    {surface:'抱きしめ',reading:'だきしめ',source:'',han:'だ'},
+  ]
+  for(const c of cases){
+    const tokens=[{index:0,surface:c.surface,reading:c.reading}],snapshot=JSON.stringify(tokens)
+    for(const readingStyle of ['hiragana','both']){
+      const html=renderToStaticMarkup(createElement(Reading,{tokens,corrections:{},songId:'test',lineId:0,readingStyle,stacked:true,importedRomaji:c.source}))
+      assert.ok(html.includes(`>${c.han}</span>`));assert.ok(!html.includes('>つたえ</span>')&&!html.includes('>だきしめ</span>'))
+      assert.equal(JSON.stringify(tokens),snapshot)
+    }
+  }
+  const corrections={'test:0:0':'かかえ'},tokens=[{index:0,surface:'抱え',reading:'ほうえ'}],snapshot=JSON.stringify(corrections)
+  const html=renderToStaticMarkup(createElement(Reading,{tokens,corrections,songId:'test',lineId:0,readingStyle:'both',stacked:true,importedRomaji:'houe'}))
+  assert.ok(html.includes('>かか</span>'));assert.equal(JSON.stringify(corrections),snapshot)
+})

@@ -49,8 +49,10 @@ android {
         // 1.2.0 新增词界编辑、复核历史和按首云下载，递增编号支持覆盖升级。
         // 旧正式版：versionCode 18 / versionName "1.2.0"。
         // 1.3.0 合并学习与跟唱，新增纯歌词导入、UtaTen 和分享链接识别。
-        versionCode 19
-        versionName "1.3.0"
+        // 旧正式版：versionCode 19 / versionName "1.3.0"。
+        // 1.3.1 修复酷我搜索与汉字注音显示，增加按版本忽略更新及 UtaTen 短语拆句。
+        versionCode 20
+        versionName "1.3.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

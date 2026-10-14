@@ -76,3 +76,18 @@ test('混排平台歌词的三轨数量与导入预览一致', async () => {
   assert.deepEqual(result.trackSummary,{original:2,translation:2,romaji:0,unmatched:0})
   assert.deepEqual(parsed.lines.map(line=>[line.text,line.translation]),[['空を見よう','看看天空'],['星光 夜空','星光和夜空']])
 })
+
+// 模拟酷我旧参数只返回一个翻奏版本，网页参数返回完整候选；同名不同 ID 不能误去重。
+test('酷我完整搜索参数保留原唱及同名不同版本的全部候选',async()=>{
+  const candidates=Array.from({length:8},(_,index)=>({MUSICRID:`MUSIC_${100+index}`,NAME:index<2?'原创测试歌':`原创测试歌 版本${index+1}`,ARTIST:index<2?'原创歌手':`测试演奏者${index}`,DURATION:'180'}))
+  const requests=[]
+  const found=await searchPlatformSongs('kuwo','原创测试歌',undefined,async url=>{
+    const params=new URL(url).searchParams;requests.push(params)
+    return {TOTAL:params.get('vipver')==='1'?'8':'1',abslist:params.get('vipver')==='1'?candidates:candidates.slice(3,4)}
+  })
+  assert.equal(found.length,8)
+  assert.equal(new Set(found.map(row=>row.id)).size,8)
+  assert.deepEqual(found.slice(0,2).map(row=>row.artist),['原创歌手','原创歌手'])
+  assert.equal(requests[0].get('all'),'原创测试歌')
+  assert.equal(requests[0].get('rn'),'20')
+})

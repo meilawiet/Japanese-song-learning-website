@@ -20,6 +20,8 @@ test('下载前、下载中和安装失败时更新弹窗都只保留取消与�
     const html=renderToStaticMarkup(createElement(AppUpdatePrompt,{updates:{prompt:true,release:{version:'1.0.3'},downloadState:state,error:'安装失败，请尝试手动安装。',dismiss:()=>{},download:()=>{}}}))
     assert.equal((html.match(/<button /g)||[]).length,2)
     assert.match(html,/>取消<\/button>/);assert.match(html,/>更新<\/button>/)
+    // 更新忽略项是复选框，不增加额外操作按钮。
+    assert.match(html,/type="checkbox"/);assert.match(html,/此版本不再提示更新/)
     assert.match(html,/role="alert"/);assert.match(html,/手动安装/)
     assert.doesNotMatch(html,/选择其他安装方式|保存安装包|选择已下载/)
   }

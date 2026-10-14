@@ -6,6 +6,7 @@ import {RefreshCw,ExternalLink,Users} from 'lucide-react'
 // 增加发布说明分段，避免把 Markdown 符号直接显示给手机用户。
 // import {UPDATE_API,selectAppRelease} from '../lib/appUpdate'
 import {UPDATE_API,selectAppRelease,parseUpdateNotes} from '../lib/appUpdate'
+import {shouldPromptUpdate,ignoreUpdateVersion} from '../lib/updatePreference'
 const installer=registerPlugin('UtaAppUpdate')
 const PROJECT_URL='https://github.com/meilawiet/Japanese-song-learning-website/releases'
 const MANUAL_INSTALL='请尝试手动安装：到“关于 → 项目地址”下载 APK，再用手机文件管理器打开安装。'
@@ -23,7 +24,7 @@ export function useAppUpdates(enabled) {
     installer.addListener('progress',value=>{if(alive)setDownloadState(old=>({...old,progress:value.progress}))}).then(value=>{if(alive)listener=value;else value.remove()})
     return()=>{alive=false;listener?.remove()}
   },[enabled])
-  const check=useCallback(async()=>{
+  const check=useCallback(async(manual=false)=>{
     if(!enabled||running.current)return
     running.current=true;setChecking(true);setError('')
     try{
@@ -33,7 +34,8 @@ export function useAppUpdates(enabled) {
       if(response.status===403||response.status===429)throw new Error('更新检查过于频繁，请稍后重试。')
       if(response.status!==200)throw new Error('检测更新失败，请检查网络后重试。')
       const result=selectAppRelease(typeof response.data==='string'?JSON.parse(response.data):response.data,info.version)
-      setRelease(result);if(result.newer)setPrompt(true)
+      // 原来所有新版本每次启动均弹窗；仅自动检查尊重当前待更新版本的忽略设置。
+      setRelease(result);if(result.newer&&shouldPromptUpdate(result.version,manual===true))setPrompt(true)
     }catch{setError('检测更新失败，请检查网络或稍后重试。')}
     finally{running.current=false;setChecking(false)}
   },[enabled])
@@ -62,7 +64,7 @@ export function useAppUpdates(enabled) {
     finally{updating.current=false;setInstalling(false);setDownloadState(old=>({...old,busy:false}))}
   }
   // 取消或返回时中止下载，避免关闭提示后又自动弹出安装器。
-  const dismiss=()=>{cancelled.current=true;setPrompt(false);if(updating.current&&!installing)void installer.cancel().catch(()=>{})}
+  const dismiss=(ignore=false)=>{if(ignore===true&&release?.version)ignoreUpdateVersion(release.version);cancelled.current=true;setPrompt(false);if(updating.current&&!installing)void installer.cancel().catch(()=>{})}
   return {version,checking,error,release,prompt,check,download,downloadState,installNotice,installing,dismiss}
 }
 
@@ -72,7 +74,7 @@ export function AboutPanel({updates}) {
   const copyGroup=async()=>{setLinkError('');try{await navigator.clipboard.writeText('1125131374');setNotice('已复制群号，请在 QQ 中搜索加入。')}catch{setNotice('请在 QQ 中搜索群号：1125131374。')}}
   // 关于页面只有三个入口；QQ群号可复制，更新操作集中在提示弹窗。
   return <section className="settings-content about-panel"><h3>UTA</h3><p>当前版本 {updates.version||'读取中…'}</p>
-    <button className="about-check-update" type="button" disabled={updates.checking} onClick={updates.check}><span><RefreshCw size={19}/>检查更新</span><span>{updates.checking?'检测中…':'›'}</span></button>
+    <button className="about-check-update" type="button" disabled={updates.checking} onClick={()=>updates.check(true)}><span><RefreshCw size={19}/>检查更新</span><span>{updates.checking?'检测中…':'›'}</span></button>
     <button className="about-check-update" type="button" onClick={openProject}><span><ExternalLink size={19}/>项目地址</span><span>›</span></button>
     <button className="about-check-update" type="button" onClick={copyGroup}><span><Users size={19}/>加群交流</span><span>QQ群 1125131374</span></button>
     {(updates.error||linkError)&&<p role="alert">{linkError||updates.error}</p>}
@@ -84,13 +86,18 @@ function ReleaseNotes({ notes }) {
   return <div className="app-update-notes">{parseUpdateNotes(notes).map((block,index)=>block.type==='heading'?<h4 key={index}>{block.text}</h4>:block.type==='list'?<ul key={index}>{block.items.map((text,item)=><li key={item}>{text}</li>)}</ul>:<p key={index}>{block.text}</p>)}</div>
 }
 export function AppUpdatePrompt({updates}) {
-  useEffect(()=>{if(!updates.prompt)return;const back=event=>{event.preventDefault();event.stopImmediatePropagation();updates.dismiss()};window.addEventListener('uta:navigate-back',back,true);return()=>window.removeEventListener('uta:navigate-back',back,true)},[updates.prompt,updates.dismiss])
+  // 勾选只是暂存选择，点击取消才记住；切换到另一个待更新版本时重置。
+  const [ignore,setIgnore]=useState(false)
+  useEffect(()=>{setIgnore(false)},[updates.release?.version,updates.prompt])
+  // 返回、点遮罩和取消按钮统一处理这次勾选。
+  useEffect(()=>{if(!updates.prompt)return;const back=event=>{event.preventDefault();event.stopImmediatePropagation();updates.dismiss(ignore)};window.addEventListener('uta:navigate-back',back,true);return()=>window.removeEventListener('uta:navigate-back',back,true)},[updates.prompt,updates.dismiss,ignore])
   if(!updates.prompt)return null
   // 弹窗只保留取消和更新；下载进度与失败说明使用文字显示。
-  return <div className="app-update-backdrop" role="presentation" onClick={updates.dismiss}><section className="app-update-dialog" role="dialog" aria-modal="true" aria-label="发现新版本" onClick={event=>event.stopPropagation()}>
+  return <div className="app-update-backdrop" role="presentation" onClick={()=>updates.dismiss(ignore)}><section className="app-update-dialog" role="dialog" aria-modal="true" aria-label="发现新版本" onClick={event=>event.stopPropagation()}>
     <header><h3>发现新版本 {updates.release.version}</h3></header>{/* 旧展示：<p className="app-update-notes">{updates.release.notes}</p>；现隐藏井号并使用圆点列表。 */}{updates.release.notes&&<ReleaseNotes notes={updates.release.notes}/>}
     {updates.downloadState.busy&&<p role="status">正在下载安装包… {updates.downloadState.progress}%</p>}{updates.installNotice&&<p role="status">{updates.installNotice}</p>}{updates.error&&<p role="alert">{updates.error}</p>}
-    <footer><button type="button" onClick={updates.dismiss}>取消</button><button type="button" disabled={updates.downloadState.busy||updates.installing} onClick={updates.download}>更新</button></footer>
+    <label className="app-update-ignore"><input type="checkbox" checked={ignore} onChange={event=>setIgnore(event.target.checked)} disabled={updates.downloadState.busy||updates.installing}/>此版本不再提示更新</label>
+    <footer><button type="button" onClick={()=>updates.dismiss(ignore)}>取消</button><button type="button" disabled={updates.downloadState.busy||updates.installing} onClick={updates.download}>更新</button></footer>
   </section></div>
 }
 
