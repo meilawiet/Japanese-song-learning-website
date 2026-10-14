@@ -1,7 +1,10 @@
 // 默认仅提供原有公共歌词检索与网页入口，三个平台需用户主动添加。
 export const RESOURCE_SOURCES_KEY = 'uta-resource-sources-v1'
+const UTATEN_MIGRATION='uta-utaten-source-added-v1'
 export const DEFAULT_RESOURCE_SOURCES = [
   { id: 'lrclib', name: 'LRCLIB', url: 'https://lrclib.net/' },
+  // UtaTen 为新增默认注音来源；音乐平台仍需用户自己添加网址。
+  { id: 'utaten', name: 'UtaTen', url: 'https://utaten.com/' },
   { id: 'musicenc', name: 'Toomic / MusicEnc', url: 'https://www.musicenc.com/' },
   { id: 'xiageba', name: '下歌吧', url: 'https://so.liumingye.cn/' },
   { id: 'gequbao', name: '歌曲宝', url: 'https://www.gequbao.com/s/{query}' },
@@ -18,7 +21,8 @@ export function validateResourceSource(value) {
   try { url = new URL(raw.replaceAll('{query}', 'uta')) } catch { throw new Error('请输入包含 https:// 或 http:// 的完整网址。') }
   if (!['https:', 'http:'].includes(url.protocol) || !url.hostname || url.username || url.password) throw new Error('仅支持不包含账号密码的 HTTP 或 HTTPS 网址。')
   const adapter = sourceAdapter({ url: raw })
-  const name = suppliedName || ({netease:'网易云音乐',kugou:'酷狗音乐',kuwo:'酷我音乐',lrclib:'LRCLIB'})[adapter] || url.hostname.slice(0,60)
+  // 原名称映射没有 UtaTen；QQ 仍可手动配置为网页查找入口。
+  const name = suppliedName || ({utaten:'UtaTen',netease:'网易云音乐',kugou:'酷狗音乐',kuwo:'酷我音乐',lrclib:'LRCLIB'})[adapter] || (['y.qq.com','music.qq.com'].includes(url.hostname)?'QQ音乐':url.hostname.slice(0,60))
   return { id: String(value.id || crypto.randomUUID()), name, url: raw }
 }
 export function sourceAdapter(source) {
@@ -29,6 +33,7 @@ export function sourceAdapter(source) {
   if (['kugou.com', 'www.kugou.com'].includes(host)) return 'kugou'
   if (['kuwo.cn', 'www.kuwo.cn'].includes(host)) return 'kuwo'
   if (host === 'lrclib.net' || host === 'www.lrclib.net') return 'lrclib'
+  if (host === 'utaten.com' || host === 'www.utaten.com') return 'utaten'
   return null
 }
 export function readResourceSources() {
@@ -38,6 +43,11 @@ export function readResourceSources() {
     const list = JSON.parse(raw)
     if (!Array.isArray(list)) throw new Error('Invalid sources')
     // 明确保存空列表时不自动恢复默认，删除来源后确实停止使用。
+    // 只迁移一次新增来源；明确空列表不恢复，之后删除 UtaTen 也不会再次自动出现。
+    if(!localStorage.getItem(UTATEN_MIGRATION)){
+      if(list.length&&list.length<50&&!list.some(item=>sourceAdapter(item)==='utaten'))list.push({...DEFAULT_RESOURCE_SOURCES[1]})
+      localStorage.setItem(UTATEN_MIGRATION,'1');localStorage.setItem(RESOURCE_SOURCES_KEY,JSON.stringify(list))
+    }
     return list.slice(0, 50).map(validateResourceSource)
   } catch { return DEFAULT_RESOURCE_SOURCES.map(source => ({ ...source })) }
 }
@@ -46,6 +56,7 @@ export function saveResourceSources(list) {
   const normalized = list.map(validateResourceSource)
   if (new Set(normalized.map(source => source.id)).size !== normalized.length) throw new Error('来源标识重复，请重新添加。')
   localStorage.setItem(RESOURCE_SOURCES_KEY, JSON.stringify(normalized))
+  localStorage.setItem(UTATEN_MIGRATION,'1')
   window.dispatchEvent(new Event('uta:resource-sources-changed'))
   return normalized
 }

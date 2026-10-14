@@ -6,6 +6,7 @@ import { plainLyric } from '../lib/lyricReadings'
 
 export default function AnnotatedLine({
   tokens,
+  text = '',
   corrections,
   songId,
   lineId,
@@ -22,7 +23,9 @@ export default function AnnotatedLine({
   onExplainSelection,
   interactive = true,
 }) {
-  if (!tokens?.length) return <span className="auto-lyric loading-lyric">正在生成自动读音…</span>
+  // 原等待逻辑保留：if (!tokens?.length) return <span>正在生成自动读音…</span>
+  // 字典尚未就绪时先显示原文，避免纯阅读界面空白。
+  if (!tokens?.length) return <span className="auto-lyric">{plainLyric(text) || '正在生成自动读音…'}</span>
 
   // 安卓逐句取消旧选词/拖选入口，静态注音仍使用同一人工校正数据；整句点击由父层播放。
   if (!interactive) return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>{mode === 'reading' ? <ReadingLyric stacked tokens={tokens} corrections={corrections} songId={songId} lineId={lineId} readingStyle={readingStyle} importedRomaji={importedRomaji} /> : plainLyric(tokens.map(token => token.surface).join(''))}</span>

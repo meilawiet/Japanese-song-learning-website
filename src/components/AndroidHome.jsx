@@ -31,9 +31,10 @@ export default function AndroidHome({ tab, onEnterLearn, onEnterSingAlong, onEnt
 
   const learning = tab === 'learn'
   const title = learning ? '今天开始学习' : '巩固已学内容'
-  const intro = learning ? '选择一个入口，开始你的日语歌曲练习。' : '从这里进入复习，熟悉每一句歌词。'
+  const intro = learning ? '从一首喜欢的歌开始，查看读音、逐句学习或连续跟唱。' : '从这里进入复习，熟悉每一句歌词。'
   // 旧学习入口文案：const entry = learning ? '学习模式' : '复习模式'
-  const entry = learning ? '逐句学习' : '复习模式'
+  // 原入口名称：const entry = learning ? '逐句学习' : '复习模式'
+  const entry = learning ? '学习' : '复习模式'
   return <section className="android-home" aria-labelledby="android-home-title">
     <p className="android-home-eyebrow">{learning ? 'LEARN / 学习' : 'REVIEW / 复习'}</p>
     <h1 id="android-home-title">{title}</h1>
@@ -41,23 +42,26 @@ export default function AndroidHome({ tab, onEnterLearn, onEnterSingAlong, onEnt
     <button className={`android-mode-card ${learning ? 'learning' : 'reviewing'}`} type="button" onClick={learning ? onEnterLearn : onEnterReview}>
       <span className="android-mode-icon">{learning ? <BookOpen size={26} /> : <History size={26} />}</span>
       <strong>{entry}</strong>
-      <span className="android-mode-description">{learning ? '听一句，学一句，查看读音与解析。' : '回看待复习的歌词。'}</span>
+      <span className="android-mode-description">{learning ? '查看读音与解析，逐句学习或连续跟唱。' : '回看待复习的歌词。'}</span>
       {learning && recentLearn && <RecentSong song={recentLearn.song} artwork={recentLearn.artwork} />}
       {/* 学习卡片不再重复显示进入文案；复习入口保留。 */}{!learning && <span className="android-mode-action">进入{learning ? '逐句学习' : '复习'} <ChevronRight size={20} aria-hidden="true" /></span>}
     </button>
+    {/* 原独立跟唱卡片合并到学习页底部模式选择，保留供对照：
     {learning && <button className="android-mode-card singing" type="button" onClick={onEnterSingAlong}>
       <span className="android-mode-icon"><Mic2 size={26} /></span>
       <strong>跟唱练习</strong>
       <span className="android-mode-description">从头播放，或点一句从这里连续跟唱。</span>
       {recentSing && <RecentSong song={recentSing.song} artwork={recentSing.artwork} label="最近跟唱" />}
-      {/* 按用户要求移除：<span className="android-mode-action">进入跟唱 <ChevronRight size={20} aria-hidden="true" /></span> */}
+      原已移除进入跟唱文案。
     </button>}
+    */}
   </section>
 }
 
 // 最近歌曲只占入口右侧的留白，封面失效时仍可用歌名占位。
 function RecentSong({ song, artwork, label = '最近学习' }) {
-  return <span className="android-mode-recent"><span className="android-mode-recent-cover">{artwork?.artworkUrl ? <img src={artwork.artworkUrl} alt="" referrerPolicy="no-referrer" /> : song.title.slice(0, 2)}</span><span className="android-mode-recent-label">{label}</span><span className="android-mode-recent-title">{song.title}</span><span className="android-mode-recent-artist">{song.artist}</span></span>
+  // 按用户要求移除“最近学习”提示，封面下仅展示歌名、歌手；旧标签保留为注释。
+  return <span className="android-mode-recent"><span className="android-mode-recent-cover">{artwork?.artworkUrl ? <img src={artwork.artworkUrl} alt="" referrerPolicy="no-referrer" /> : song.title.slice(0, 2)}</span>{/* <span className="android-mode-recent-label">{label}</span> */}<span className="android-mode-recent-title">{song.title}</span><span className="android-mode-recent-artist">{song.artist}</span></span>
 }
 
 // 原网页端顶部导航继续由 App.jsx 负责，安卓首页不复用其布局。

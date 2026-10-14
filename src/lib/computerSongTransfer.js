@@ -81,6 +81,8 @@ function decodeBase64(value) {
 
 // 分片下载可避免一次把整首大音频通过 Android 原生桥传入网页内存。
 export async function downloadComputerSong(origin, code, song, onProgress = () => {}) {
+  // 纯歌词清单已含歌词正文，不访问不存在的音频分片接口。
+  if(song.lyricsOnly===true&&song.audio===null){const {audio,...metadata}=song;return {...metadata,isLocal:true,audioName:'',audioBlob:null}}
   const size = song.audio?.size
   if (!Number.isSafeInteger(size) || size <= 0) throw new Error(`《${song.title}》缺少有效音频。`)
   const parts = []

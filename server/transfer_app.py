@@ -178,7 +178,8 @@ def inspect_backup(source) -> tuple[dict[str, Any], int]:
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError("无法读取网页歌曲资料。") from exc
     songs = manifest.get("songs") if isinstance(manifest, dict) else None
-    if not isinstance(manifest, dict) or manifest.get("version") != 1 \
+    # 原来仅接受 version=1；v2 明确支持纯歌词与空时间戳。
+    if not isinstance(manifest, dict) or manifest.get("version") not in (1, 2) \
         or not isinstance(songs, list) or not 0 < len(songs) <= 1000:
         raise ValueError("网页歌曲资料格式无效，或没有可传送的歌曲。")
     expected_offset = 0
@@ -186,14 +187,17 @@ def inspect_backup(source) -> tuple[dict[str, Any], int]:
     for song in songs:
         audio = song.get("audio") if isinstance(song, dict) else None
         song_id = song.get("id") if isinstance(song, dict) else None
+        no_audio = isinstance(song, dict) and song.get("lyricsOnly") is True and audio is None and manifest["version"] == 2
         if not isinstance(song_id, str) or not song_id.startswith("local-") or song_id in seen_ids \
             or not isinstance(song.get("title"), str) or not isinstance(song.get("artist"), str) \
-            or not isinstance(song.get("lines"), list) or not isinstance(audio, dict) \
-            or not isinstance(audio.get("size"), int) or audio["size"] <= 0 \
-            or audio.get("offset") != expected_offset:
+            or not isinstance(song.get("lines"), list) \
+            or (not no_audio and (not isinstance(audio, dict) \
+                or not isinstance(audio.get("size"), int) or audio["size"] <= 0 \
+                or audio.get("offset") != expected_offset)):
             raise ValueError("网页歌曲或音频资料格式无效。")
         seen_ids.add(song_id)
-        expected_offset += audio["size"]
+        # 原 expected_offset += audio["size"]；纯歌词不占音频字节。
+        expected_offset += audio["size"] if audio else 0
     audio_start = len(SIGNATURE) + 4 + metadata_size
     if audio_start + expected_offset != size:
         raise ValueError("网页音频数据不完整。")
@@ -260,7 +264,8 @@ def list_songs(code: str, request: Request) -> dict[str, Any]:
 def song_audio(code: str, song_id: str, request: Request, offset: int = Query(0, ge=0), length: int = Query(CHUNK_BYTES, ge=1, le=CHUNK_BYTES)) -> StreamingResponse:
     session = require_session(code, request)
     song = next((item for item in session["manifest"]["songs"] if item["id"] == song_id), None)
-    if song is None or offset >= song["audio"]["size"]:
+    # 无音频的歌曲只能取得歌词资料，音频接口明确返回不存在。
+    if song is None or song.get("audio") is None or offset >= song["audio"]["size"]:
         raise HTTPException(404, "歌曲或音频片段不存在。")
     count = min(length, song["audio"]["size"] - offset)
     position = session["audio_start"] + song["audio"]["offset"] + offset

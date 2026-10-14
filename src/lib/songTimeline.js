@@ -1,6 +1,11 @@
 // 按用户选择的位置插入；稳定的独立编号避免新增句子覆盖原有句子。
 export function insertLyricLine(lines, position, parseTime, formatTime) {
   if (!Number.isInteger(position) || position < 0 || position > lines.length) throw new Error('请选择有效的添加位置。')
+  // 无时间轴文档可以插入原文，新增句的时间继续留空，不伪造一秒间隔。
+  if(lines.some(line=>!String(line.time||'').trim())){
+    const result=[...lines],id=lines.reduce((largest,line)=>Math.max(largest,Number(line.id)||0),-1)+1
+    result.splice(position,0,{id,time:'',text:'',translation:''});return result
+  }
   const before = position > 0 ? parseTime(lines[position - 1].time) : null
   const after = position < lines.length ? parseTime(lines[position].time) : null
   if ((position > 0 && before == null) || (position < lines.length && after == null)) throw new Error('请先修正相邻句子的时间。')

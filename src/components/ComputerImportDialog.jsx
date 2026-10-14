@@ -104,7 +104,7 @@ export default function ComputerImportDialog({ onClose, onImport, existingSongId
       <p>已选择 {selectedIds.length} 首。已有歌曲会保留在手机中，不会重复导入或覆盖。</p>
       <ul>{listing.songs.map((song) => {
         const alreadyHere = existingSongIds.includes(song.id)
-        return <li key={song.id}><label><input type="checkbox" disabled={Boolean(busy) || alreadyHere} checked={selectedIds.includes(song.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, song.id] : current.filter((id) => id !== song.id))} /><span><strong>{song.title}</strong><small>{song.artist} · {song.lines.length} 句 · {(song.audio.size / 1048576).toFixed(1)} MB{alreadyHere ? ' · 手机中已有' : ''}</small></span></label></li>
+        return <li key={song.id}><label><input type="checkbox" disabled={Boolean(busy) || alreadyHere} checked={selectedIds.includes(song.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, song.id] : current.filter((id) => id !== song.id))} /><span><strong>{song.title}</strong><small>{song.artist} · {song.lines.length} 句 · {((song.audio?.size||0) / 1048576).toFixed(1)} MB{alreadyHere ? ' · 手机中已有' : ''}</small></span></label></li>
       })}</ul>
       <button type="button" className="song-import-submit" disabled={Boolean(busy) || !selectedIds.length} onClick={importSelected}>{busy === 'import' ? <LoaderCircle className="spin" size={15} /> : <Download size={15} />} 导入选中的 {selectedIds.length} 首</button>
     </section>}

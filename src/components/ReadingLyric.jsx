@@ -6,6 +6,8 @@ import { displayReading } from '../lib/readingDisplay'
 
 // 跟唱与逐句使用同一 annotations/corrections 数据，只输出文本，避免在歌词按钮里嵌套按钮。
 export default function ReadingLyric({ text, tokens, corrections, songId, lineId, readingStyle, importedRomaji = '', stacked=false }) {
+  // 不注音仅切换显示，不删除来源读音或人工校正；括号注音也不混入原文。
+  if (readingStyle === 'none') return plainLyric(text || tokens?.map(token => token.surface).join('') || '')
   if (!tokens?.length) return plainLyric(text)
   // 原来直接渲染本地 tokens；现在先解析括号注音并对齐来源读音。
   const prepared=prepareLyricReadings(tokens,importedRomaji,corrections,songId,lineId)

@@ -62,7 +62,9 @@ test('歌词来源仅在安卓开放且平台必须由用户配置',async()=>{
     for(const name of ['网易云音乐','酷狗音乐','酷我音乐']) assert.ok(!mobile.includes(name))
     globalThis.localStorage={getItem:()=>JSON.stringify([{id:'user-net',name:'网易云音乐',url:'https://music.163.com/'}])}
     const configured=renderToStaticMarkup(createElement(OnlineSongSearch,{onChooseLyrics:()=>{}}))
-    assert.match(configured,/<option value="user-net" selected="">网易云音乐<\/option>/)
+    // 原默认选中 user-net；新增混合搜索默认选中，音乐平台仍须手动配置。
+    assert.match(configured,/<option value="mixed" selected="">混合搜索（已配置来源）<\/option>/)
+    assert.match(configured,/<option value="user-net">网易云音乐<\/option>/)
   } finally {Capacitor.isNativePlatform=original;globalThis.localStorage=oldStorage}
 })
 

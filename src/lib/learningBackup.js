@@ -56,7 +56,9 @@ function checkState(manifest) {
     || (progress.playbackRate != null && ![1, 0.75, 0.5, 0.25].includes(progress.playbackRate))
     // 原验证：|| (progress.readingStyle != null && !['hiragana', 'romaji'].includes(progress.readingStyle))
     // 双注音设置也可备份与恢复。
-    || (progress.readingStyle != null && !['hiragana', 'romaji', 'both'].includes(progress.readingStyle))
+    // 原验证仅含三项；不注音显示偏好也应能随学习记录正常备份恢复。
+    // || (progress.readingStyle != null && !['hiragana', 'romaji', 'both'].includes(progress.readingStyle))
+    || (progress.readingStyle != null && !['hiragana', 'romaji', 'both', 'none'].includes(progress.readingStyle))
     || (progress.lyricSnapshots != null && (!isRecord(progress.lyricSnapshots)
       || Object.values(progress.lyricSnapshots).some((snapshot) => !isRecord(snapshot) || !Array.isArray(snapshot.lines)
         || snapshot.lines.some((line) => !isRecord(line) || !Number.isSafeInteger(line.id) || typeof line.text !== 'string'))))
@@ -82,19 +84,23 @@ function checkState(manifest) {
 }
 
 function checkSong(song) {
+  // 纯歌词备份显式 audio:null/lyricsOnly:true；与损坏或遗失音频的旧记录区分。
+  const noAudio=song?.lyricsOnly===true&&song.audio===null
   if (!isRecord(song) || typeof song.id !== 'string' || !song.id.startsWith('local-')
     || typeof song.title !== 'string' || !song.title.trim()
     || typeof song.artist !== 'string' || !Array.isArray(song.lines) || !song.lines.length
-    || !isRecord(song.audio) || typeof song.audio.name !== 'string'
+    // 原音频条件无条件执行；纯歌词允许无音频，其余继续严格校验。
+    || !noAudio && (!isRecord(song.audio) || typeof song.audio.name !== 'string'
     || typeof song.audio.type !== 'string' || !Number.isSafeInteger(song.audio.size)
-    || song.audio.size <= 0 || !Number.isSafeInteger(song.audio.offset) || song.audio.offset < 0) {
+    || song.audio.size <= 0 || !Number.isSafeInteger(song.audio.offset) || song.audio.offset < 0)) {
     throw new Error('备份中有无效的歌曲或音频资料。')
   }
   if (song.lines.length > 2000 || song.lines.some((line) => !isRecord(line)
     || !Number.isSafeInteger(line.id) || typeof line.text !== 'string' || !line.text.trim() || line.text.length > 500
     // 可选罗马音随歌曲备份，兼容不含此字段的旧备份。
     || (line.romaji != null && (typeof line.romaji !== 'string' || line.romaji.length > 1000))
-    || !Number.isFinite(line.start) || line.start < 0 || typeof line.translation !== 'string' || line.translation.length > 1000)
+    // 原来必须有限 start；null 明确表示未设置，其他非法时间仍拒绝。
+    || line.start!==null&&(!Number.isFinite(line.start)||line.start<0) || typeof line.translation !== 'string' || line.translation.length > 1000)
     || new Set(song.lines.map((line) => line.id)).size !== song.lines.length) {
     throw new Error('备份中的歌词格式不正确。')
   }
@@ -111,6 +117,9 @@ export function createLearningBackup(songs, state, options = {}) {
   const audioParts = []
   let offset = 0
   const songEntries = songs.map(({ audioBlob, ...song }) => {
+    // 云端占位歌曲不是完整纯歌词，禁止误备份占位文字；真正纯歌词可完整备份。
+    if(song.cloudPending)throw new Error(`《${song.title}》尚未下载，无法导出完整本地备份。`)
+    if(song.lyricsOnly===true&&audioBlob==null)return {...song,audio:null}
     if (!(audioBlob instanceof Blob) || !audioBlob.size) throw new Error(`《${song.title || '未命名歌曲'}》缺少音频，无法完整备份。`)
     const audio = { name: song.audioName || 'audio', type: audioBlob.type || '', size: audioBlob.size, offset }
     offset += audioBlob.size
@@ -118,7 +127,8 @@ export function createLearningBackup(songs, state, options = {}) {
     return { ...song, audio }
   })
   const manifest = {
-    version: VERSION,
+    // 旧 v1 仍用于传统歌曲；含无音频/无时间轴时使用 v2，旧版会明确拒绝。
+    version: songEntries.some(song=>song.audio===null||song.lines.some(line=>line.start===null))?2:VERSION,
     // 原 createdAt: new Date().toISOString()；普通导出仍沿用当前时间。
     createdAt: options.createdAt || new Date().toISOString(),
     progress: state.progress,
@@ -153,7 +163,8 @@ export async function inspectLearningBackup(file) {
   } catch {
     throw new Error('无法读取备份资料，文件可能已损坏。')
   }
-  if (!isRecord(manifest) || manifest.version !== VERSION || !Array.isArray(manifest.songs)
+  // 原来仅接受 VERSION=1；兼容旧备份及明确的纯歌词 v2。
+  if (!isRecord(manifest) || ![VERSION,2].includes(manifest.version) || !Array.isArray(manifest.songs)
     || typeof manifest.createdAt !== 'string' || Number.isNaN(Date.parse(manifest.createdAt))) {
     throw new Error('不支持此备份版本。')
   }
@@ -166,9 +177,11 @@ export async function inspectLearningBackup(file) {
   let audioBytes = 0
   for (const song of manifest.songs) {
     checkSong(song)
-    if (ids.has(song.id) || song.audio.offset !== audioBytes) throw new Error('备份中的歌曲或音频顺序不正确。')
+    if(manifest.version===1&&(song.audio===null||song.lines.some(line=>line.start===null)))throw new Error('旧版备份不能包含纯歌词资料。')
+    // 原来直接读取 audio.offset/size；无音频条目不占用附件字节。
+    if (ids.has(song.id) || song.audio!==null&&song.audio.offset !== audioBytes) throw new Error('备份中的歌曲或音频顺序不正确。')
     ids.add(song.id)
-    audioBytes += song.audio.size
+    audioBytes += song.audio?.size||0
   }
   const audioStart = prefixSize + metadataLength
   if (audioStart + audioBytes !== file.size) throw new Error('备份音频不完整，文件可能已损坏。')
@@ -180,7 +193,8 @@ export function songsFromLearningBackup(inspection) {
   return manifest.songs.map(({ audio, ...song }) => ({
     ...song,
     isLocal: true,
-    audioName: audio.name,
-    audioBlob: file.slice(audioStart + audio.offset, audioStart + audio.offset + audio.size, audio.type),
+    // 原 audio.name / file.slice(...) 对纯歌词不适用，保留 null 而非空音频 Blob。
+    audioName: audio?.name||'',
+    audioBlob: audio?file.slice(audioStart + audio.offset, audioStart + audio.offset + audio.size, audio.type):null,
   }))
 }

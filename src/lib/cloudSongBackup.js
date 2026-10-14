@@ -10,7 +10,8 @@ export function createCloudSongAsset(record){
 }
 export function cloudSongDescriptor(record,asset){
   const descriptor={}
-  for(const field of ['id','title','artist','album','duration','sourceFile','createdAt','audioName','artworkUrl','artworkSourceUrl','artworkProvider','artworkChoice'])if(record[field]!=null)descriptor[field]=record[field]
+  // 目录保留纯歌词标记，下载后仍不要求本来就没有的音频。
+  for(const field of ['id','title','artist','album','duration','sourceFile','createdAt','audioName','lyricsOnly','artworkUrl','artworkSourceUrl','artworkProvider','artworkChoice'])if(record[field]!=null)descriptor[field]=record[field]
   return {...descriptor,lines:record.lines.map(({id,start})=>({id,start})),asset}
 }
 // 云目录只含歌曲资料和句子编号，不含歌曲音频及原歌词；学习记录可提前恢复。

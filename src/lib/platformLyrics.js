@@ -1,16 +1,19 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core'
 import { parseTimedLyrics } from './timedLyrics.js'
+import {parseUtatenSearch,parseUtatenLyrics} from './utatenLyrics.js'
 
 // QQ 当前实际探测未返回有效搜索结果，保留适配器供后续排查，不开放伪可用入口。
 export const LYRIC_SOURCES = [
   { id: 'lrclib', name: 'LRCLIB' },
+  { id: 'utaten', name: 'UtaTen' },
   { id: 'netease', name: '网易云音乐' },
   { id: 'kugou', name: '酷狗音乐' },
   { id: 'kuwo', name: '酷我音乐' },
   { id: 'qq', name: 'QQ 音乐（暂不可用）', disabled: true },
 ]
 const names = Object.fromEntries(LYRIC_SOURCES.map(source => [source.id, source.name]))
-const referers = { netease: 'https://music.163.com/', qq: 'https://y.qq.com/', kugou: 'https://www.kugou.com/', kuwo: 'https://www.kuwo.cn/' }
+// 原 referers 仅含音乐平台；UtaTen 使用普通 HTML 页面。
+const referers = { utaten:'https://utaten.com/', netease: 'https://music.163.com/', qq: 'https://y.qq.com/', kugou: 'https://www.kugou.com/', kuwo: 'https://www.kuwo.cn/' }
 const abort = signal => { if (signal?.aborted) throw new DOMException('请求已取消', 'AbortError') }
 const endpoint = (url, params) => `${url}?${new URLSearchParams(params)}`
 
@@ -18,7 +21,8 @@ const endpoint = (url, params) => `${url}?${new URLSearchParams(params)}`
 async function platformRequest(url, provider, signal) {
   abort(signal)
   if (!Capacitor.isNativePlatform()) throw new Error('音乐平台歌词搜索目前仅接入安卓端。')
-  const response = await CapacitorHttp.get({ url, headers: { Accept: 'application/json', Referer: referers[provider] }, responseType: 'text', connectTimeout: 8000, readTimeout: 12000 })
+  // 原 Accept 固定 JSON；HTML 来源仍用固定平台地址和受限超时。
+  const response = await CapacitorHttp.get({ url, headers: { Accept: provider==='utaten'?'text/html':'application/json', Referer: referers[provider] }, responseType: 'text', connectTimeout: 12000, readTimeout: 20000 })
   abort(signal)
   if (response.status !== 200) throw new Error(`${names[provider]}暂时无法访问，请换一个来源。`)
   return typeof response.data === 'string' ? response.data : JSON.stringify(response.data)
@@ -58,6 +62,11 @@ export async function searchPlatformSongs(provider, query, signal, request = pla
   const keyword = String(query || '').trim().slice(0, 160)
   if (!keyword) throw new Error('请先输入歌曲名称。')
   abort(signal)
+  if(provider==='utaten'){
+    // 手动可用“歌名 / 歌手”精确组合，不把站点外链接当成歌词地址。
+    const [title,artist='']=keyword.split(/\s+\/\s+/)
+    return parseUtatenSearch(await request(endpoint('https://utaten.com/lyric/search',{title,artist_name:artist,sort:'popular_sort_asc'}),provider,signal))
+  }
   let result
   if (provider === 'netease') {
     const data = await json(endpoint('https://music.163.com/api/search/get/web', { s: keyword, type: 1, offset: 0, limit: 20 }), provider, signal, request)
@@ -116,6 +125,7 @@ const decodeBase64 = value => new TextDecoder().decode(Uint8Array.from(atob(valu
 export async function fetchPlatformLyrics(record, signal, request = platformRequest) {
   const provider = record.provider, id = record.platformId
   abort(signal)
+  if(provider==='utaten'&&/^[a-z0-9]+$/i.test(id))return parseUtatenLyrics(await request(`https://utaten.com/lyric/${id}/`,provider,signal),record)
   let original = '', translation = '', romaji = ''
   if (provider === 'netease' && /^\d+$/.test(id)) {
     const data = await json(endpoint('https://music.163.com/api/song/lyric', { id, lv: -1, tv: -1, rv: -1 }), provider, signal, request)

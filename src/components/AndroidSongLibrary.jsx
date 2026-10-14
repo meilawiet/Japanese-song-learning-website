@@ -71,7 +71,7 @@ export default function AndroidSongLibrary({ songs, total, search, onSearch, onI
           <button className="android-library-song-main" type="button" onClick={() => openSong(song)} aria-label={`学习 ${song.title}，${song.artist}`}>
             {/* 仅封面承接长按；轻点卡片其他区域仍直接进入歌曲。 */}
             <span className="android-library-cover" onPointerDown={view === 'grid' && !selectionMode ? () => beginPress(song) : undefined} onPointerUp={endPress} onPointerCancel={endPress} onPointerLeave={endPress} onContextMenu={(event) => { event.preventDefault(); if (!selectionMode) { endPress(); longPressed.current = true; setMenuSong(song) } }}><span aria-hidden="true">{song.title.slice(0, 2)}</span>{artwork?.artworkUrl && <img src={artwork.artworkUrl} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true }} />}</span>
-            <span className="android-library-song-copy"><strong>{song.title}</strong><small>{song.artist || '未知歌手'}{song.cloudPending?' · 待下载':''}</small><span className="android-library-progress"><BookOpenCheck size={14} /> {learned} / {song.lines.length} 句已掌握</span></span>
+            <span className="android-library-song-copy"><strong>{song.title}</strong><small>{song.artist || '未知歌手'}{song.cloudPending?' · 待下载':song.lyricsOnly?' · 仅歌词':''}</small><span className="android-library-progress"><BookOpenCheck size={14} /> {learned} / {song.lines.length} 句已掌握</span></span>
           </button>
           {view === 'list' && !selectionMode && <button className="android-library-more" type="button" onClick={() => setMenuSong(song)} aria-label={`更多操作：${song.title}`} aria-haspopup="dialog"><MoreVertical size={20} /></button>}
         </article>

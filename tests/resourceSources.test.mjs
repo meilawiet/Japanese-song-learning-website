@@ -4,7 +4,8 @@ import { DEFAULT_RESOURCE_SOURCES, RESOURCE_SOURCES_KEY, readResourceSources, re
 
 // 只用来源网址与自创测试信息，不访问网络、不保存账号密钥。
 test('默认来源不含三个音乐平台，只有手动配置才能匹配适配器',()=>{
-  assert.deepEqual(DEFAULT_RESOURCE_SOURCES.map(sourceAdapter).filter(Boolean),['lrclib'])
+  // 原默认只有 lrclib；新增 UtaTen，音乐平台仍不预配置。
+  assert.deepEqual(DEFAULT_RESOURCE_SOURCES.map(sourceAdapter).filter(Boolean),['lrclib','utaten'])
   for(const [url,adapter] of [['https://music.163.com/','netease'],['https://www.kugou.com/','kugou'],['https://www.kuwo.cn/','kuwo']])assert.equal(sourceAdapter({url}),adapter)
   assert.equal(sourceAdapter({url:'https://music.163.com.example.com/'}),null)
   assert.equal(sourceAdapter({url:'https://example.com/'}),null)
@@ -29,4 +30,19 @@ test('新增修改删除持久化，空列表不恢复已删除默认项',()=>{
     saveResourceSources([]);assert.deepEqual(readResourceSources(),[])
     assert.ok(values.has(RESOURCE_SOURCES_KEY));assert.equal(events.length,3)
   }finally{globalThis.localStorage=oldStorage;globalThis.window=oldWindow}
+})
+
+// 新默认来源只迁移一次，既有平台配置保留，用户之后删除不能被自动加回。
+test('旧设备加入一次UtaTen，删除后不复活且不默认加入音乐平台',()=>{
+  const previousStorage=globalThis.localStorage,previousWindow=globalThis.window,values=new Map()
+  try{
+    globalThis.localStorage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)}
+    globalThis.window={dispatchEvent:()=>{}}
+    values.set(RESOURCE_SOURCES_KEY,JSON.stringify([{id:'old',name:'LRCLIB',url:'https://lrclib.net/'}]))
+    const migrated=readResourceSources()
+    assert.deepEqual(migrated.map(sourceAdapter),['lrclib','utaten'])
+    saveResourceSources(migrated.filter(item=>sourceAdapter(item)!=='utaten'))
+    assert.deepEqual(readResourceSources().map(sourceAdapter),['lrclib'])
+    saveResourceSources([]);assert.deepEqual(readResourceSources(),[])
+  }finally{globalThis.localStorage=previousStorage;globalThis.window=previousWindow}
 })

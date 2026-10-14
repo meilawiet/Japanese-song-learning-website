@@ -166,6 +166,13 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .song-file-field strong { overflow:hidden; margin:8px 0 5px; color:#2b4039; font:600 15px var(--serif); text-overflow:ellipsis; white-space:nowrap; }
 .song-file-field small { color:#718078; font-size:10px; }
 .song-file-field input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+/* 手机文件选择区按内容撑高，保留上方网页默认样式，去掉 109px 最小高度造成的空白。 */
+.uta-android-font .song-file-field { min-height:0; margin-top:8px; padding:10px 12px; border-radius:12px; }
+/* 标题与说明仍保留三层信息，缩小间距和标题字号；大字体设置下高度可自然增长。 */
+.uta-android-font .song-file-field strong { margin:4px 0 2px; font:600 13px/1.4 var(--serif); }
+.uta-android-font .song-file-field > span { line-height:1.4; }
+.uta-android-font .song-file-field small { line-height:1.5; }
+.uta-android-font .song-import-intro { margin-bottom:16px; }
 .song-import-error { display:flex; align-items:flex-start; gap:6px; margin:14px 0 0; color:#bd4d34; font-size:11px; line-height:1.5; }
 .song-import-error svg { flex:0 0 auto; margin-top:1px; }
 .song-import-actions { display:flex; justify-content:flex-end; gap:12px; margin-top:24px; }
@@ -674,6 +681,9 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .online-song-search h3 { margin:0 0 5px; color:#304c3e; font:600 18px var(--serif); }
 .online-song-search > p { margin:0; color:#718177; font-size:11px; line-height:1.65; }
 .online-song-search-row { display:flex; gap:8px; margin-top:12px; }
+/* 分享识别结果与歌词来源分开呈现，长歌名换行并适配现有主题颜色转换。 */
+.online-song-search .share-song-info { display:grid; gap:3px; margin-top:12px; padding:10px 12px; border:1px solid #d7e4d7; border-radius:12px; background:#e7efe5; color:#304c3e; overflow-wrap:anywhere; }
+.share-song-info strong { font-size:11px; }.share-song-info span { font-size:14px; }.share-song-info small { color:#718177; font-size:11px; }
 /* 平台选择与原搜索框保持同一浅色风格，窄屏不超出导入弹层。 */
 .online-lyrics-source { display:flex; align-items:center; gap:10px; margin-top:12px; color:#52675a; font-size:12px; }
 .online-lyrics-source select { min-width:0; flex:1; min-height:42px; padding:8px; border:1px solid #c9d8ca; border-radius:8px; color:#24392e; background:#fff; }
@@ -949,3 +959,85 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .resource-source-form > div { display:flex; gap:8px; margin-top:14px; }
 .resource-source-form button { display:flex; align-items:center; gap:6px; min-height:44px; padding:10px 14px; border:1px solid #dbe2d3; border-radius:10px; background:#e6ede3; color:#426550; font-size:15px; }
 .android-review-pending { margin:32px 0; padding:24px 18px; border:1px solid #c8d5c2; border-radius:16px; color:#426550; background:#f3f6ef; font-size:18px; line-height:1.8; }
+
+/* 统一学习播放器：等宽两侧确保播放键始终位于屏幕中央，旧布局样式保留供对照。 */
+.android-main.unified-study-page{display:flex;flex-direction:column;height:100dvh;min-height:0;overflow:hidden;padding:0 16px calc(var(--study-player-height,130px) + 6px)}
+.unified-study-page .anime-hero{display:none}
+.unified-study-page .unified-study-header{flex:none;width:100%;padding:18px 0 14px}
+.unified-study-header .android-study-song{gap:14px}
+.unified-study-header .android-study-cover{width:108px;height:108px}
+.unified-study-header .android-study-song h1{margin:0 0 6px;font:600 25px/1.35 var(--serif)}
+.unified-study-header .android-study-song p{font-size:13px;margin:0}
+.unified-study-header .android-study-progress{margin-top:12px;font-size:11px}
+.unified-study-page .practice-layout{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:none;padding:0 0 18px}
+.unified-study-page .lyrics-list{gap:8px;padding-bottom:18px}
+.unified-study-page .lyric-row{padding:12px;border-radius:18px}
+.unified-study-player{position:fixed;inset:auto 0 0;z-index:25;margin:0;padding:5px 14px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid #d7e2d3;background:#fffefa;color:#426550}
+.study-timeline-note{min-height:15px;margin:0;color:#758c71;font-size:10px;line-height:1.5}
+.study-seek{display:grid;grid-template-columns:36px minmax(0,1fr) 36px;align-items:center;gap:7px;min-height:28px;font-size:11px}
+.study-seek span:last-child{text-align:right}
+.study-seek input{width:100%;margin:0;height:25px;accent-color:#426550}
+.study-player-controls{display:grid;grid-template-columns:minmax(0,1fr) 52px minmax(0,1fr);column-gap:8px;align-items:center;min-height:62px}
+.study-player-left{display:flex;min-width:0;align-items:center;justify-content:flex-start}
+.study-player-right{display:grid;grid-template-columns:minmax(30px,1fr) minmax(44px,1.2fr) minmax(28px,.9fr);gap:3px;align-items:center;min-width:0}
+.study-player-left>button,.study-player-right>button{min-height:44px;border:1px solid #d7e2d3;border-radius:14px;color:#426550;background:#fffefa;font-size:12px;padding:4px 5px;white-space:nowrap}
+.study-player-left .study-mode-trigger{display:flex;gap:3px;align-items:center;max-width:100%;padding:7px 9px}
+.study-central-play{display:grid;place-items:center;justify-self:center;width:52px;height:52px;padding:0;border:0;border-radius:50%;color:white;background:#426550}
+.study-central-play:disabled{opacity:.45}
+.study-player-right>.study-floating-chat{position:static;z-index:auto;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2px;width:auto;min-height:44px;padding:3px 2px;box-shadow:none;font-size:11px}
+.study-player-right>.study-floating-chat svg{width:13px;height:13px;flex:none}
+.unified-options-backdrop{padding:12px 12px calc(var(--study-player-height,130px) + 8px)}
+.unified-study-options{max-height:calc(100dvh - var(--study-player-height,130px) - 32px);padding:18px}
+.unified-study-options header{margin-bottom:14px}
+.unified-study-options fieldset{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:12px}
+.unified-study-options fieldset label{border:1px solid #d7e2d3;border-radius:12px;min-height:42px;padding:8px;font-size:14px}
+.unified-study-options fieldset label:has(input:checked){background:#e6ede3}
+.study-translation-toggle{display:flex;align-items:center;justify-content:space-between;min-height:50px;border-top:1px solid #d7e2d3;padding:10px}
+.study-translation-toggle input{width:21px;height:21px;accent-color:#426550}
+.study-mode-options,.study-rate-options{display:grid;gap:8px}
+.study-mode-options button,.study-rate-options button{display:grid;gap:5px;text-align:left;border:1px solid #d7e2d3;border-radius:12px;min-height:46px;padding:12px;color:#426550;background:#fffefa}
+.study-mode-options small{font-size:12px;color:#758c71}
+.study-mode-options [aria-pressed=true],.study-rate-options [aria-pressed=true]{background:#e6ede3}
+/* 模态窗口打开时也锁住新增的内部歌词滚动区，关闭后保留原滚动位置。 */
+body[style*="overflow: hidden"] .unified-study-page .practice-layout{overflow:hidden}
+@media(max-height:560px){.unified-study-header .android-study-cover{width:70px;height:70px}.unified-study-page .unified-study-header{padding:8px 0}.unified-study-header .android-study-song h1{font-size:20px}}
+
+/* 原统一页固定页头、仅歌词滚动的规则保留在上方；改为页头和歌词共同滚动。 */
+.android-main.unified-study-page{display:block;height:calc(100dvh - var(--study-player-height,130px));overflow:auto;overscroll-behavior:contain;scrollbar-width:none;padding:0 16px 18px}
+.unified-study-page .practice-layout{display:block;overflow:visible;min-height:0;padding:0;margin:0 auto}
+/* 底部预留按整个播放器实际高度计算，提示文字也完全包含在不透明底板内。 */
+.unified-study-player{box-sizing:border-box;isolation:isolate}
+.unified-study-player .study-timeline-note{position:static;display:block;width:auto;max-width:100%;height:auto;overflow-wrap:anywhere;white-space:normal;margin:0;padding:3px 0 5px;line-height:1.6}
+body[style*="overflow: hidden"] .android-main.unified-study-page{overflow:hidden}
+body[style*="overflow: hidden"] .unified-study-page .practice-layout{overflow:visible}
+
+/* 按确认的跟唱列表排版：旧卡片样式留在上方供对照，句号/歌词/操作分为三列。 */
+.unified-study-page .lyrics-list{display:block;padding:0}
+.unified-study-page .lyric-row,.unified-study-page .lyric-row.active{display:grid;grid-template-columns:22px minmax(0,1fr) 60px;gap:8px;margin:0;padding:14px 0;border:0;border-bottom:1px solid #e1e8db;border-radius:0;background:transparent;box-shadow:none}
+.unified-study-page .lyric-row.active{background:#3b5f4508}
+.unified-study-page .line-number{grid-column:1;grid-row:1;align-self:center;font-size:10px}
+.unified-study-page .auto-line-wrap{grid-column:2;grid-row:1;min-width:0}
+.unified-study-page .line-actions{display:flex;grid-column:3;grid-row:1;flex-direction:column;align-self:center;align-items:stretch;gap:6px;width:60px;min-width:0}
+.unified-study-page .line-actions .line-mastery,.unified-study-page .line-actions .sentence-explain-link{display:flex;align-items:center;justify-content:center;gap:2px;width:60px;min-width:0;min-height:36px;margin:0;padding:3px 0;font-size:10px;white-space:nowrap;border-radius:9px}
+.unified-study-page .line-actions .line-play,.unified-study-page .android-line-state{display:none}
+.unified-study-page .sentence-inline-analysis{grid-column:2 / -1}
+
+/* 用户选择图标操作，右栏缩窄，保留足够的点击面积，把宽度让给歌词。 */
+.unified-study-page .lyric-row,.unified-study-page .lyric-row.active{grid-template-columns:22px minmax(0,1fr) 40px}
+.unified-study-page .line-actions{width:40px;gap:2px}
+.unified-study-page .line-actions .line-mastery,.unified-study-page .line-actions .sentence-explain-link{width:40px;min-height:40px;padding:0}
+.unified-study-page .line-actions svg{width:17px;height:17px;flex:none}
+
+/* 还原旧版封面比例和整行学习进度，以留白和主题细线分隔歌曲信息与歌词。 */
+.unified-study-page .unified-study-header{padding:24px 0 22px;margin:0 auto 18px;border-bottom:1px solid #e1e8db}
+.unified-study-header .android-study-cover{width:clamp(128px,38vw,160px);height:clamp(128px,38vw,160px)}
+.unified-study-header .android-study-song{gap:18px}
+.unified-study-header .android-study-song h1{margin:0 0 10px;font:600 clamp(23px,6vw,31px)/1.5 var(--serif)}
+.unified-study-header .android-study-progress{margin:21px 0 0;font-size:12px}
+
+/* 句号放到左上角独立小行，取消占宽的编号列，歌词从区域左边缘对齐。 */
+.unified-study-page .lyric-row,.unified-study-page .lyric-row.active{grid-template-columns:minmax(0,1fr) 40px;column-gap:8px;row-gap:3px;padding:10px 0 12px}
+.unified-study-page .line-number{grid-column:1;grid-row:1;align-self:start;justify-self:start;padding:0;font-size:10px;line-height:1.2}
+.unified-study-page .auto-line-wrap{grid-column:1;grid-row:2;text-align:left}
+.unified-study-page .line-actions{grid-column:2;grid-row:1 / span 2}
+.unified-study-page .sentence-inline-analysis{grid-column:1 / -1}

@@ -1,6 +1,8 @@
 import { isCreditLine, isSongHeadingLine } from './songMetadata.js'
 import { decodeLrcBytes } from './lrcEncoding.js'
 import { parseTimedLyrics } from './timedLyrics.js'
+// 原来仅允许时间轴歌词；改为统一读取有/无时间轴的文本及来源注音 JSON。
+import {parseLyricDocument,lyricDuration} from './lyricDocument.js'
 
 const DATABASE_NAME = 'uta-local-song-library'
 const DATABASE_VERSION = 1
@@ -77,14 +79,17 @@ export async function parseLrcFile(file) {
   //   lyricEntries.sort((left, right) => left.start - right.start)
   //   const lines = lyricEntries.map((line, id) => ({ id, ...line, translation: line.translation || '' }))
   // 按时间戳与行顺序识别三轨歌词，不能单凭汉字推断语言。
-  const lines = parseTimedLyrics(content, title, artist)
-  if (!lines.length) throw new Error('未在 LRC 中找到带时间轴的日语歌词。请确认文件是 .lrc 格式。')
+  // const lines = parseTimedLyrics(content, title, artist)
+  // if (!lines.length) throw new Error('未在 LRC 中找到带时间轴的日语歌词。请确认文件是 .lrc 格式。')
+  const document=parseLyricDocument(content,title,artist),lines=document.lines
+  if (!lines.length) throw new Error('这份文件没有可读取的歌词正文。')
   return {
-    title,
-    artist,
+    title:document.title,
+    artist:document.artist,
     album: '',
     sourceFile: file.name,
-    duration: lines.at(-1)?.start || 0,
+    // 原来取最后一句 start；无时间轴时不假造时长。
+    duration: lyricDuration(lines),
     lines,
   }
 }
@@ -100,8 +105,10 @@ export async function createAndStoreLocalSong(parsed, audioFile, metadata = {}) 
     ...metadata,
     id: createSongId(),
     isLocal: true,
-    audioName: audioFile.name,
-    audioBlob: audioFile,
+    // 原 audioFile.name/audioFile 强制要求音频；纯歌词记录明确标记，后续可补充。
+    audioName: audioFile?.name || '',
+    audioBlob: audioFile || null,
+    lyricsOnly: !audioFile,
     createdAt: Date.now(),
   }
   await runTransaction('readwrite', (store) => store.put(record))
@@ -110,7 +117,8 @@ export async function createAndStoreLocalSong(parsed, audioFile, metadata = {}) 
 
 // 电脑网页传来的歌曲已经有固定 ID；逐首保存，保持电脑与手机的学习记录对应。
 export async function storeTransferredSong(record) {
-  if (!record?.id?.startsWith('local-') || !(record.audioBlob instanceof Blob)) {
+  // 原判断必须 audioBlob instanceof Blob；只允许明确标记的纯歌词缺少音频。
+  if (!record?.id?.startsWith('local-') || !(record.audioBlob instanceof Blob) && !(record.lyricsOnly===true&&record.audioBlob==null)) {
     throw new Error('电脑歌曲资料无效，无法保存到手机。')
   }
   await runTransaction('readwrite', (store) => store.put(record))
@@ -129,6 +137,8 @@ export async function updateLocalSongMetadata(songId, metadata) {
     request.onsuccess = () => {
       if (!request.result) return
       updatedRecord = { ...request.result, ...metadata }
+      // 补入真实音频后解除纯歌词标记，不误判成云端尚未下载。
+      if(metadata.audioBlob instanceof Blob)updatedRecord.lyricsOnly=false
       // 替换音频或歌词后旧云附件哈希失效，不能在下一次目录恢复时误复用旧内容。
       if(metadata.audioBlob||metadata.lines)delete updatedRecord.cloudAsset
       store.put(updatedRecord)

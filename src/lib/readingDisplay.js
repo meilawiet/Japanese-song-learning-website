@@ -6,7 +6,8 @@ import { isLatinLyric, prepareLyricReadings, tokenReading } from './lyricReading
 export function normalizeReadingStyle(style) {
   // 原二选一：return style === 'romaji' ? 'romaji' : 'hiragana'
   // 同时显示作为独立设置持久保存，旧设置仍然兼容。
-  return ['romaji', 'both'].includes(style) ? style : 'hiragana'
+  // 原三项兼容：return ['romaji', 'both'].includes(style) ? style : 'hiragana'
+  return ['romaji', 'both', 'none'].includes(style) ? style : 'hiragana'
 }
 
 // Prefer readable loanword spellings over keyboard-input spellings (e.g. ti,

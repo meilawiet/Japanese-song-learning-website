@@ -118,3 +118,10 @@ test('导入的罗马音可完整备份恢复', async () => {
   assert.equal(songsFromLearningBackup(inspection)[0].lines[0].romaji,'yu me na ra ba')
   assert.throws(()=>createLearningBackup([{...withRomaji,lines:[{...withRomaji.lines[0],romaji:42}]}],state),/歌词格式/)
 })
+
+// 新菜单的不注音设置也必须通过备份校验。
+test('不注音设置可备份恢复且不丢人工校正',async()=>{
+  const inspection=await inspectLearningBackup(createLearningBackup([],{...state,progress:{...state.progress,readingStyle:'none'}}))
+  assert.equal(inspection.manifest.progress.readingStyle,'none')
+  assert.deepEqual(inspection.manifest.progress.corrections,state.progress.corrections)
+})

@@ -32,6 +32,31 @@ test('半角全角括号假名合并为汉字读音，原文缓存与后续索�
   const other=tokens([['永遠','えいえん'],['(','',true],['えいえん','えいえん'],[')','',true]])
   assert.equal(prepareLyricReadings(other,'to wa').tokens[0].source_reading,'とわ')
 })
+
+// 用户提供的《冬の花》片段：相邻汉字“時/指”不能仅靠未约束的罗马音切分。
+test('括号假名作为锚点消除相邻汉字歧义，整句罗马音匹配失败也不清空已有注音',()=>{
+  const input=tokens([['帰','かえ'],['（','',true],['かえ','かえ'],['）','',true],['ら','ら'],['ぬ','ぬ'],['時','とき'],['（','',true],['とき','とき'],['）','',true],[' ','',true],['指','ゆび'],['（','',true],['ゆび','ゆび'],['）','',true],['おり','おり'],['数','かず'],['（','',true],['かぞ','かぞ'],['）','',true],['えて','えて'],['も','も']])
+  const source='kaeranutoki yubiorikazoetemo',before=JSON.stringify(input)
+  const result=prepareLyricReadings(input,source,{},'s',0)
+  assert.equal(result.aligned,true)
+  for(const [surface,reading] of [['帰','かえ'],['時','とき'],['指','ゆび'],['数','かぞ']])assert.equal(tokenReading(result.tokens.find(token=>lyricSurface(token)===surface),{},'s',0),reading)
+  const fallback=prepareLyricReadings(input,'broken source',{},'s',0)
+  assert.equal(fallback.aligned,false)
+  for(const token of fallback.tokens.filter(token=>token.reading_source==='inline'))assert.ok(token.source_reading)
+  assert.equal(tokenReading(prepareLyricReadings(input,source,{'s:0:0':''},'s',0).tokens[0],{'s:0:0':''},'s',0),'')
+  assert.equal(JSON.stringify(input),before)
+})
+
+test('汉字与括号之间的空格、同一个旧词中的多处括号不丢来源假名',()=>{
+  const spaced=tokens([['帰','かえ'],[' ','',true],['(','',true],['かえ','かえ'],[')','',true],['らぬ','らぬ'],['時','とき'],['　','',true],['（','',true],['とき','とき'],['）','',true]])
+  const result=prepareLyricReadings(spaced,'kaeranutoki')
+  assert.equal(result.aligned,true)
+  assert.equal(result.tokens[0].source_reading,'かえ')
+  assert.equal(result.tokens.find(token=>lyricSurface(token)==='時').source_reading,'とき')
+  assert.equal(plainLyric('帰 （かえ）らぬ時　（とき）'),'帰らぬ時')
+  const merged=tokens([['涙（なみだ）と笑（わら）い','']])
+  assert.equal(prepareLyricReadings(merged,'bad source').tokens[0].source_reading,'なみだとわらい')
+})
 test('来源罗马音覆盖词典读音，假名罗马音双注音均使用同一数据',()=>{
   const input=tokens([['愛','あい'],['よ','よ'],['目覚め','めざめ'],['よ','よ'],['永遠','えいえん'],['に','に']]),source='a i yo me za me yo to wa ni'
   const result=prepareLyricReadings(input,source,{},'s',0)
@@ -99,4 +124,16 @@ test('只修改翻译不把预填的来源注音变成人工校正，明确留�
   const annotation={id:0,text:'永遠',tokens:prepareLyricReadings(tokens([['永遠','えいえん']]),'to wa').tokens}
   assert.deepEqual(commitEditedLine([song],state,'s',0,annotation,{0:'とわ'},'修改译文',[]).state.progress.corrections,{})
   assert.equal(commitEditedLine([song],state,'s',0,annotation,{0:''},'修改译文',[0]).state.progress.corrections['s:0:0'],'')
+})
+
+// 日式引号/顿号不发音，不能使整行罗马音绕过转换；原文标点与人工校正保持不变。
+test('日式引号与顿号中的罗马音正确转换并按词对齐',()=>{
+  const input=tokens([['「','',true],['ねえ','ねえ'],['、','',true],['教え','おしえ'],['て','て'],['」','',true]])
+  for(const source of ['「nee、oshiete」','『nee、 oshiete』','nee, oshiete']){
+    assert.equal(sourceRomajiKana(source,'「ねえ、教えて」'),'ねえおしえて')
+    const result=prepareLyricReadings(input,source,{},'test',0)
+    assert.equal(result.aligned,true)
+    assert.equal(result.tokens.map(lyricSurface).join(''),'「ねえ、教えて」')
+    assert.equal(result.tokens.find(t=>t.surface==='教え').source_reading,'おしえ')
+  }
 })

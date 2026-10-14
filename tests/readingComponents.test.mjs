@@ -186,3 +186,21 @@ test('跟唱自带罗马音优先用于 ruby 与整句行', () => {
     else assert.match(html, /lang="ja-Latn">yume/)
   }
 })
+
+// 显示偏好不能删除人工读音，重新切换时仍使用原有校正。
+test('不注音保留纯原文与人工校正，字典未就绪时也可阅读',async()=>{
+  const Reading=(await server.ssrLoadModule('/src/components/ReadingLyric.jsx')).default
+  const tokens=[{index:0,surface:'庭',reading:'にわ'}],corrections={'test:0:0':'その'}
+  const plain=renderToStaticMarkup(createElement(Reading,{tokens,corrections,songId:'test',lineId:0,readingStyle:'none',stacked:true}))
+  assert.ok(plain.includes('庭')&&!plain.includes('にわ')&&!plain.includes('その')&&!plain.includes('<ruby'))
+  assert.equal(corrections['test:0:0'],'その')
+  const fallback=renderToStaticMarkup(createElement(AnnotatedLine,{text:'庭（にわ）で',interactive:false,mode:'original',readingStyle:'none'}))
+  assert.ok(fallback.includes('庭で')&&!fallback.includes('にわ'))
+})
+
+test('统一学习页的学习进度在歌曲封面下方独立成行',async()=>{
+  const {AndroidStudyHeader}=await server.ssrLoadModule('/src/components/AndroidStudyPlayer.jsx')
+  const html=renderToStaticMarkup(createElement(AndroidStudyHeader,{song:{title:'原创测试',artist:'UTA',lines:[{id:0}]},learned:0}))
+  assert.match(html,/<\/button><\/div><div class="android-study-progress">/)
+  assert.match(html,/0 \/ 1 句已掌握/)
+})

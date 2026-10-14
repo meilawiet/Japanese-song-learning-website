@@ -1,7 +1,9 @@
 import { toHiragana, toRomaji } from 'wanakana'
 import { correctionKey, hasKanji } from './ruby.js'
 
-const inlinePattern = () => /([\u3400-\u9fff々]+)[（(]([\u3041-\u3096\u30a1-\u30faー\s]+)[）)]/gu
+// 原规则要求汉字紧贴括号；兼容文件或网页复制时夹入的半角/全角空格。
+// const inlinePattern = () => /([\u3400-\u9fff々]+)[（(]([\u3041-\u3096\u30a1-\u30faー\s]+)[）)]/gu
+const inlinePattern = () => /([\u3400-\u9fff々]+)[ \t\u3000]*[（(]([\u3041-\u3096\u30a1-\u30faー\s]+)[）)]/gu
 export const lyricSurface = token => token.display_surface ?? token.surface
 export const plainLyric = text => String(text || '').replace(inlinePattern(), '$1')
 // 拉丁文字歌词默认按原文显示，不能把英语当作日语罗马音输入转换。
@@ -27,6 +29,8 @@ export function sourceRomajiKana(romaji, text = '') {
   for (const word of [...new Set(String(text).match(/[a-zA-Z]+/g) || [])].sort((a,b)=>b.length-a.length)) {
     source = source.replace(new RegExp(`\\b${word}\\b`, 'gi'), match => {const id=protectedWords.push(match)-1;return `\uE000${id}\uE001`})
   }
+  // 日式引号和顿号会使转换器保留整段拉丁字母；匹配读音前去掉这些无声标点，原歌词不变。
+  source = source.replace(/[「」『』【】、。！？・…“”]/gu, '')
   // 原 /\bn\b/ 会为已有 n' 再加撇号；只补独立、尚未标记的 n。
   source = source.replace(/\bn\b(?!')/g, "n'").replace(/[āīūēō]/g, char=>({ā:'aa',ī:'ii',ū:'uu',ē:'ee',ō:'ou'})[char]).replace(/\s+/g,'')
   // 保护标记会影响转换器后续字符，按标记切段转换再还原英语。
@@ -141,10 +145,15 @@ function prepare(input, importedRomaji = '', corrections = {}, songId, lineId) {
     const visible=members.map(lyricSurface).join('')
     units.push({members,prefix:phonetic(visible.match(/^[\u3040-\u30ff]+/u)?.[0]||''),suffix:phonetic(visible.match(/[\u3040-\u30ff]+$/u)?.[0]||'')})
   }
-  const spans=sourceKana?align(units,sourceKana):null
+  // 原来直接 align(units,sourceKana)，忽略已提取的括号假名；相邻汉字会产生多种分配。
+  // 先用明确的括号读音作为锚点尝试完整匹配；若来源唱法不同，再按原逻辑匹配罗马音。
+  const anchored=units.map(unit=>unit.members.length===1&&unit.members[0].reading_source==='inline'
+    ?{...unit,fixed:[phonetic(unit.members[0].source_reading)]}:unit)
+  const spans=sourceKana?(align(anchored,sourceKana)||align(units,sourceKana)):null
   if(!spans){
-    // 无法确定词级对应时保留整句自带注音，未匹配汉字不显示可能错误的词典 ruby。
-    return {tokens:tokens.map(token=>hasKanji(lyricSurface(token))?{...token,source_reading:'',reading_source:'unmatched'}:token),sourceKana,aligned:false,hasSource:true}
+    // 原来把所有汉字的 source_reading 清空，连已明确的括号假名也被抹掉。
+    // 仅隐藏没有可靠来源的猜测；括号假名保留，人工校正/主动留空仍由 tokenReading 优先处理。
+    return {tokens:tokens.map(token=>hasKanji(lyricSurface(token))&&token.reading_source!=='inline'?{...token,source_reading:'',reading_source:'unmatched'}:token),sourceKana,aligned:false,hasSource:true}
   }
   const resolved=units.map((unit,index)=>{
     const members=unit.members,first=members[0],surface=members.map(token=>token.surface).join(''),visible=members.map(lyricSurface).join('')
