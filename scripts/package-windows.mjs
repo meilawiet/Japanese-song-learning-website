@@ -7,7 +7,16 @@ const manifest = JSON.parse(await fs.readFile(path.join(root, 'package.json'), '
 const runtime = path.join(root, 'node_modules', 'electron', 'dist')
 const version = (await fs.readFile(path.join(runtime, 'version'), 'utf8')).trim()
 if (version !== manifest.devDependencies.electron) throw new Error('Electron runtime does not match package-lock.json')
-const destination = path.join(root, 'release', 'UTA-Windows-x64')
+const destination = process.env.UTA_PACKAGE_DESTINATION
+  ? path.resolve(process.env.UTA_PACKAGE_DESTINATION)
+  : path.join(root, 'release', 'UTA-Windows-x64')
+if (![path.join(root, 'release'), path.join(root, 'work')].includes(path.dirname(destination))) {
+  throw new Error('Package destination must be a direct child of release or work')
+}
+// Verify every build input before replacing any part of the installed app.
+for (const input of ['dist-desktop/index.html', 'work/backend/uta-backend/uta-backend.exe', 'server/data/tomoshi-dict-open.db', 'desktop/main.cjs']) {
+  await fs.access(path.join(root, input))
+}
 // Rebuilding keeps uta-data, which belongs to the user, even in the release folder.
 await fs.mkdir(destination, { recursive: true })
 await fs.cp(runtime, destination, { recursive: true })

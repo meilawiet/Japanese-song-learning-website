@@ -256,11 +256,25 @@ class AnnotatedLine(BaseModel):
     tokens: list[AnnotationToken]
 
 
+class ReviewToken(BaseModel):
+    index: int
+    surface: str = Field(min_length=1, max_length=500)
+    reading: str = Field(default="", max_length=100)
+    is_symbol: bool = False
+    segmentation_locked: bool = False
+    dictionary_form: str = Field(default="", max_length=100)
+    part_of_speech: str = Field(default="", max_length=100)
+
+
+class ReviewLyricLine(LyricLine):
+    tokens: list[ReviewToken] | None = Field(default=None, max_length=500)
+
+
 class SongReviewRequest(BaseModel):
     song_id: str = Field(min_length=1, max_length=120)
     title: str = Field(min_length=1, max_length=160)
     artist: str = Field(default="", max_length=160)
-    lines: list[LyricLine] = Field(min_length=1, max_length=300)
+    lines: list[ReviewLyricLine] = Field(min_length=1, max_length=300)
 
 
 class TokenContext(BaseModel):
@@ -636,32 +650,47 @@ def annotate_batch(request: AnnotationRequest) -> list[AnnotatedLine]:
 
 @app.post("/api/ai/review-song")
 def review_song_with_ai(payload: SongReviewRequest, request: Request) -> dict[str, Any]:
-    """Ask AI to flag only questionable readings; it never updates lyric data itself."""
+    """Review the displayed tokens; AI proposals never modify lyrics themselves."""
     lyric_lines = [line for line in payload.lines if not is_song_heading_line(line.text, payload.title, payload.artist)]
-    annotated_lines = [AnnotatedLine(id=line.id, tokens=annotate_text(line.text)) for line in lyric_lines]
-    lookup = {(line.id, token.index): token for line in annotated_lines for token in line.tokens
+    reviewed_lines: list[tuple[ReviewLyricLine, list[ReviewToken | AnnotationToken]]] = []
+    for line in lyric_lines:
+        if line.tokens is not None:
+            if ("".join(token.surface for token in line.tokens) != line.text
+                    or len({token.index for token in line.tokens}) != len(line.tokens)):
+                raise HTTPException(status_code=422, detail="复核词组与当前歌词不一致，请重新注音后重试。")
+            tokens = line.tokens
+        else:
+            tokens = annotate_text(line.text)
+        reviewed_lines.append((line, tokens))
+    lookup = {(line.id, token.index): token for line, tokens in reviewed_lines for token in tokens
               if token.reading and token.surface.strip() and not token.is_symbol}
     review_lines = [
         {"id": source_line.id, "text": source_line.text, "tokens": [
-            {"index": token.index, "surface": token.surface, "reading": token.reading, "dictionary_form": token.dictionary_form, "part_of_speech": token.part_of_speech}
-            for token in annotated.tokens if token.reading and token.surface.strip() and not token.is_symbol
+            {"index": token.index, "surface": token.surface, "reading": token.reading,
+             "dictionary_form": token.dictionary_form, "part_of_speech": token.part_of_speech,
+             "segmentation_locked": token.segmentation_locked if isinstance(token, ReviewToken) else False}
+            for token in tokens if token.reading and token.surface.strip() and not token.is_symbol
         ]}
-        for source_line, annotated in zip(lyric_lines, annotated_lines)
+        for source_line, tokens in reviewed_lines
     ]
     if not lookup:
-        return {"suggestions": [], "reviewed_token_count": 0,
+        return {"suggestions": [], "segmentation_suggestions": [], "reviewed_token_count": 0,
                 "notice": "没有可复核的歌词读音；歌名和歌手资料行已跳过。"}
     ai_input = {"lines": review_lines}
     prompt = (
-        "Review the proposed Japanese readings for song lyrics. Flag ONLY a reading that is likely wrong, "
-        "non-standard in this lyric context, a proper noun, or a deliberate lyric reading needing a human check. "
-        "Do not invent stylistic readings and do not repeat correct tokens. Return this JSON schema: "
-        '{"suggestions":[{"line_id":number,"token_index":number,"suggested_reading":"hiragana","confidence":number,"reason":"concise Chinese reason"}]}. '
-        "Use confidence from 0 to 1, include only confidence >= 0.55, and return at most 20 suggestions."
+        "Review Japanese song lyric readings AND dictionary word boundaries using the supplied CURRENT tokens and neighboring lyric context. "
+        "Flag only likely wrong or context-dependent readings, and word boundaries that would substantially mislead a learner. "
+        "Never propose a segmentation change across punctuation/whitespace or for tokens marked segmentation_locked=true (user choice). "
+        "Do not invent stylistic changes or repeat correct tokens. Return JSON: "
+        '{"suggestions":[{"line_id":number,"token_index":number,"suggested_reading":"hiragana","confidence":number,"reason":"concise Chinese reason"}],'
+        '"segmentation_suggestions":[{"line_id":number,"start_token_index":number,"end_token_index":number,'
+        '"suggested_segments":["word", "word"],"confidence":number,"reason":"concise Chinese reason"}]}. '
+        "For segmentation use an inclusive contiguous range of existing token indices; suggested_segments must concatenate EXACTLY to that range's original surface text. "
+        "Use confidence 0..1 and only >=0.55; at most 20 reading and 12 segmentation suggestions."
     )
     result = call_deepseek_json(
         "review-song", prompt, ai_input, client_host=client_host(request), config=provider_from_request(request),
-        max_tokens=1800, thinking="disabled",
+        max_tokens=4200, thinking="disabled",
     )
     suggestions: list[dict[str, Any]] = []
     seen: set[tuple[int, int]] = set()
@@ -689,8 +718,49 @@ def review_song_with_ai(payload: SongReviewRequest, request: Request) -> dict[st
         seen.add((line_id, token_index))
         if len(suggestions) == 20:
             break
-    return {"suggestions": suggestions, "reviewed_token_count": len(lookup),
-            "notice": "AI 只提供复核建议；请确认后再应用到你的读音版本。"}
+    segmentation_suggestions: list[dict[str, Any]] = []
+    seen_ranges: set[tuple[int, int, int]] = set()
+    token_lines = {line.id: tokens for line, tokens in reviewed_lines}
+    raw_segments = result.get("segmentation_suggestions", [])
+    for raw in raw_segments if isinstance(raw_segments, list) else []:
+        if not isinstance(raw, dict):
+            continue
+        line_id = raw.get("line_id")
+        first_index, last_index = raw.get("start_token_index"), raw.get("end_token_index")
+        if (not isinstance(line_id, int) or not isinstance(first_index, int) or not isinstance(last_index, int)
+                or (line_id, first_index, last_index) in seen_ranges):
+            continue
+        tokens = token_lines.get(line_id, [])
+        first = next((i for i, token in enumerate(tokens) if token.index == first_index), -1)
+        last = next((i for i, token in enumerate(tokens) if token.index == last_index), -1)
+        if first < 0 or last < first or last - first > 7:
+            continue
+        group = tokens[first:last + 1]
+        if any(token.is_symbol or getattr(token, "segmentation_locked", False) for token in group):
+            continue
+        original = [token.surface for token in group]
+        proposed = raw.get("suggested_segments")
+        if (not isinstance(proposed, list) or not 1 <= len(proposed) <= 8
+                or any(not isinstance(piece, str) or not piece or len(piece) > 50
+                       or any(not (char.isalnum() or char in "々ー") for char in piece) for piece in proposed)
+                or "".join(proposed) != "".join(original) or proposed == original):
+            continue
+        try:
+            confidence = max(0.0, min(float(raw.get("confidence", 0)), 1.0))
+        except (TypeError, ValueError):
+            continue
+        if confidence < 0.55:
+            continue
+        segmentation_suggestions.append({"line_id": line_id, "start_token_index": first_index,
+                                         "end_token_index": last_index, "original_segments": original,
+                                         "suggested_segments": proposed, "confidence": round(confidence, 2),
+                                         "reason": text_field(raw.get("reason"), limit=220) or "建议结合语义与原唱确认词界。"})
+        seen_ranges.add((line_id, first_index, last_index))
+        if len(segmentation_suggestions) == 12:
+            break
+    return {"suggestions": suggestions, "segmentation_suggestions": segmentation_suggestions,
+            "reviewed_token_count": len(lookup),
+            "notice": "AI 只提供读音与分词建议；请检查后再应用。"}
 
 
 @app.post("/api/ai/explain-sentences")

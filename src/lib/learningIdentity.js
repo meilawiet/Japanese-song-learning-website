@@ -22,6 +22,7 @@ export function reconcileLearningState(songs, saved) {
     reviewItems: [...(saved.progress?.reviewItems || [])],
     favoriteSongIds: [...(saved.progress?.favoriteSongIds || [])],
     corrections: { ...saved.progress?.corrections },
+    hiddenReadings: { ...saved.progress?.hiddenReadings },
     lyricSnapshots: { ...saved.progress?.lyricSnapshots },
   }
   const annotations = { ...saved.annotations }
@@ -49,6 +50,12 @@ export function reconcileLearningState(songs, saved) {
         delete progress.corrections[key]
       }
     }
+    for (const key of Object.keys(progress.hiddenReadings)) {
+      if (key.startsWith(`${oldId}:`)) {
+        progress.hiddenReadings[`${song.id}${key.slice(oldId.length)}`] = true
+        delete progress.hiddenReadings[key]
+      }
+    }
     progress.reviewItems = progress.reviewItems.map((item) => item.songId === oldId ? { ...item, songId: song.id } : item)
     progress.favoriteSongIds = progress.favoriteSongIds.map((id) => id === oldId ? song.id : id)
   }
@@ -65,6 +72,11 @@ export function reconcileLearningState(songs, saved) {
       if (!key.startsWith(`${song.id}:`)) continue
       const [lineId, tokenIndex] = key.slice(song.id.length + 1).split(':').map(Number)
       if (!cached.some((line) => line.id === lineId && line.tokens.some((token) => token.index === tokenIndex))) delete progress.corrections[key]
+    }
+    for (const key of Object.keys(progress.hiddenReadings)) {
+      if (!key.startsWith(`${song.id}:`)) continue
+      const [lineId, tokenIndex] = key.slice(song.id.length + 1).split(':').map(Number)
+      if (!cached.some((line) => line.id === lineId && line.tokens.some((token) => token.index === tokenIndex))) delete progress.hiddenReadings[key]
     }
     if (progress.learnedBySong[song.id]) progress.learnedBySong[song.id] = progress.learnedBySong[song.id].filter((id) => validIds.has(id))
     progress.reviewItems = progress.reviewItems.filter((item) => item.songId !== song.id

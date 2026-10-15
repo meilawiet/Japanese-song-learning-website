@@ -7,6 +7,9 @@ import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { randomBytes } from 'node:crypto'
 import { inspectLearningBackup } from '../src/lib/learningBackup.js'
+import { runDataProtectionChecks } from './dataProtection.desktop.mjs'
+import { assertRomanAlignment } from './readingAlignment.desktop.mjs'
+import { runRangePracticeChecks } from './rangePractice.desktop.mjs'
 
 const root = process.cwd()
 const source = process.env.UTA_DESKTOP_TEST_SOURCE ? path.resolve(process.env.UTA_DESKTOP_TEST_SOURCE) : path.join(root, 'release', 'UTA-Windows-x64')
@@ -24,11 +27,18 @@ await fs.mkdir(environment.TEMP, { recursive: true })
 const evidence = path.join(root, 'work', 'verification')
 await fs.mkdir(evidence, { recursive: true })
 let client
+let dataProtectionChecks = []
+let rangePracticeChecks = []
 const failures = []
 const mock = createServer(async (request, response) => {
-  for await (const _ of request) { /* Consume request. */ }
+  const chunks = []
+  for await (const chunk of request) chunks.push(chunk)
+  const isSegmentationReview = Buffer.concat(chunks).toString('utf8').includes('segmentation_suggestions')
   response.writeHead(200, { 'content-type': 'application/json' })
-  response.end(JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }] }))
+  response.end(JSON.stringify({ choices: [{ message: { content: isSegmentationReview
+    ? JSON.stringify({ suggestions: [], segmentation_suggestions: [{ line_id: 0, start_token_index: 0,
+      end_token_index: 0, suggested_segments: ['学', '校'], confidence: 0.9, reason: '测试分词建议' }] })
+    : '{"ok":true}' } }] }))
 })
 mock.listen(0, '127.0.0.1'); await once(mock, 'listening')
 const mockOrigin = `http://127.0.0.1:${mock.address().port}/v1`
@@ -68,6 +78,15 @@ try {
     return { status: response.status, body: await response.json() }
   }, mockOrigin)
   assert.equal(ai.status, 200); assert.equal(ai.body.ok, true)
+  const reviewed = await page.evaluate(async ({ origin, tokens }) => {
+    const config = { name:'Smoke test', protocol:'openai-compatible', base_url:origin, model:'test', api_key:'mock-only', json_mode:true }
+    const response = await fetch('/api/ai/review-song', { method:'POST', headers:{'Content-Type':'application/json', 'X-UTA-AI-Config':encodeURIComponent(JSON.stringify(config))},
+      body:JSON.stringify({song_id:'local-smoke',title:'测试歌曲',artist:'UTA',lines:[{id:0,text:'学校へ帰る。',tokens:tokens.map(token=>({index:token.index,surface:token.surface,reading:token.reading,is_symbol:token.is_symbol}))}]}) })
+    return {status:response.status, body:await response.json()}
+  }, {origin:mockOrigin,tokens:annotated[0].tokens})
+  assert.equal(reviewed.status,200)
+  assert.deepEqual(reviewed.body.segmentation_suggestions[0].original_segments,['学校'])
+  assert.deepEqual(reviewed.body.segmentation_suggestions[0].suggested_segments,['学','校'])
 
   assert.equal(await page.locator('.desktop-titlebar').count(), 1)
   assert.equal(await client.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isMenuBarVisible()), false)
@@ -91,7 +110,7 @@ try {
   wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8); wav.writeUInt32LE(16, 16)
   wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22); wav.writeUInt32LE(8000, 24); wav.writeUInt32LE(16000, 28)
   wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(samples * 2, 40)
-  const lyrics = '[ti:Windows便携测试]\n[ar:UTA原创]\n[00:00.50]学校へ帰る。\n[00:01.00]夢を見よう。\n[00:02.00]雨が降る。\n[00:04.00]風を感じよう。\n'
+  const lyrics = '[ti:Windows便携测试]\n[ar:UTA原创]\n[00:00.50]学校へ帰る。\n[00:00.50]放学回家。\n[00:01.00]夢を見よう。\n[00:01.00]一起做梦。\n[00:02.00]雨が降る。\n[00:02.00]雨在下。\n[00:04.00]風を感じよう。\n[00:04.00]感受风。\n'
   await page.getByRole('button', { name: '歌曲库', exact: true }).click()
   await shortcut('O')
   const form = page.locator('.song-import-dialog')
@@ -176,6 +195,31 @@ try {
   await page.getByRole('button',{name:'暂停第 1 句',exact:true}).click()
   await page.getByLabel('歌曲播放速度').selectOption('0.5')
   await page.evaluate(()=>{HTMLMediaElement.prototype.play=window.__originalPlay;delete window.__originalPlay})
+  rangePracticeChecks = await runRangePracticeChecks({ page, client, evidence })
+  // Right-click editing stays on the current song and persists a per-word ruby choice.
+  await lyricRows.first().locator('.line-number').click({ button:'right' })
+  await page.getByRole('menuitem', { name: /编辑歌词/ }).click()
+  const inlineEditor = page.locator('.line-editor')
+  await inlineEditor.waitFor()
+  await inlineEditor.getByLabel('中文译文').fill('放学回家。')
+  await inlineEditor.getByLabel('隐藏此词注音').first().check()
+  await inlineEditor.getByRole('button',{name:'自定义分词'}).click()
+  const segmentation = page.locator('.segmentation-dialog')
+  await segmentation.getByRole('button',{name:'学和校之间拆分'}).click()
+  await segmentation.getByRole('button',{name:'确认分词'}).click()
+  await segmentation.waitFor({state:'detached'})
+  await inlineEditor.getByLabel('学的读音').fill('がく')
+  await inlineEditor.getByLabel('校的读音').fill('こう')
+  assert.equal(await inlineEditor.locator('.line-editor-word').filter({has:page.getByLabel('学的读音')}).locator('.line-editor-romaji').textContent(),'gaku')
+  assert.equal(await inlineEditor.locator('.line-editor-word').filter({has:page.getByLabel('校的读音')}).locator('.line-editor-romaji').textContent(),'kou')
+  await page.screenshot({path:path.join(evidence,'word-segmentation.png')})
+  await inlineEditor.getByRole('button',{name:'保存修改'}).click()
+  await inlineEditor.waitFor({state:'detached'})
+  await page.getByRole('button',{name:'撤销本次歌曲编辑',exact:true}).waitFor()
+  await page.waitForFunction(()=>document.querySelector('.lyrics-list .lyric-row .translation')?.textContent === '放学回家。')
+  assert.equal(await lyricRows.first().locator('.lyric-token').first().locator('rt').count(),0)
+  assert.deepEqual(await lyricRows.first().locator('.lyric-token').allTextContents().then(items=>items.slice(0,2)),['学','校'])
+  assert.ok(Object.values(await page.evaluate(()=>JSON.parse(localStorage.getItem('uta-pronunciation-progress-v2')).hiddenReadings)).includes(true))
   for (const [width,height] of [[1024,768], [1440,960]]) {
     await client.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setSize(...size), [width,height])
     await page.waitForTimeout(250)
@@ -189,10 +233,85 @@ try {
   assert.ok(!/未能开始播放|未能继续播放/.test(await page.locator('.desktop-statusbar').innerText()))
   await page.getByRole('button', { name: '加入今日复习', exact: false }).click()
   await shortcut('3')
-  await page.locator('.desktop-review li').first().getByRole('button', { name:'开始练习' }).click()
-  await page.getByRole('button', { name:'揭晓读音与译文' }).click()
-  await page.getByRole('button', { name:'我会了 · 下一句' }).click()
-  await page.getByRole('button', { name:'退出练习', exact:false }).click()
+  await page.locator('.desktop-review li').first().getByRole('button', { name:'前往跟唱' }).click()
+  await page.locator('.desktop-sing').waitFor()
+  assert.equal(await page.locator('.desktop-shell-singalong').count(), 1)
+  for (const [width, height] of [[1024, 768], [1440, 960]]) {
+    await client.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setSize(...size), [width, height])
+    const immersive = await page.evaluate(() => {
+      const shell = document.querySelector('.desktop-shell-singalong')
+      const main = shell.querySelector('main#top').getBoundingClientRect()
+      const title = shell.querySelector('.desktop-titlebar').getBoundingClientRect()
+      const player = shell.querySelector('.desktop-player').getBoundingClientRect()
+      return { width: innerWidth, height: innerHeight, scrollWidth: document.documentElement.scrollWidth,
+        sidebar: getComputedStyle(shell.querySelector('.desktop-sidebar')).display,
+        status: getComputedStyle(shell.querySelector('.desktop-statusbar')).display,
+        titleBackground: getComputedStyle(shell.querySelector('.desktop-titlebar')).backgroundColor,
+        playerBackground: getComputedStyle(shell.querySelector('.desktop-player')).backgroundColor,
+        main: main.toJSON(), title: title.toJSON(), player: player.toJSON() }
+    })
+    assert.equal(immersive.sidebar, 'none')
+    assert.equal(immersive.status, 'none')
+    assert.equal(immersive.main.left, 0)
+    assert.equal(immersive.title.left, 0)
+    assert.equal(immersive.title.top, 0)
+    assert.equal(immersive.player.left, 0)
+    assert.equal(immersive.main.width, immersive.width)
+    assert.equal(immersive.player.width, immersive.width)
+    assert.equal(immersive.player.bottom, immersive.height)
+    assert.ok(immersive.scrollWidth <= immersive.width)
+    assert.ok(immersive.player.bottom <= immersive.height + 1)
+    assert.notEqual(immersive.titleBackground, 'rgba(0, 0, 0, 0)')
+    assert.notEqual(immersive.playerBackground, 'rgba(0, 0, 0, 0)')
+  }
+  assert.equal(await page.getByRole('heading', { name: '逐句练习' }).count(), 0)
+  assert.equal(await page.locator('.desktop-sing-list li').count(), 4)
+  await page.getByRole('button', { name: '从第 4 句开始跟唱' }).click()
+  await page.waitForFunction(() => { const audio = document.querySelector('audio'); return !audio.paused && audio.currentTime >= 4 && audio.currentTime < 4.7 })
+  await page.getByRole('button', { name: '从第 4 句开始跟唱' }).click()
+  assert.equal(await page.locator('audio').evaluate(audio => audio.paused), false)
+  await page.getByRole('button', { name: '自定义背景' }).click()
+  await page.getByLabel('选择跟唱背景图片').setInputFiles(path.join(root, 'src', 'assets', 'uta-twilight-station.png'))
+  await page.getByRole('button', { name: '应用背景' }).click()
+  await page.waitForFunction(() => document.querySelector('.desktop-sing-wallpaper')?.style.backgroundImage.startsWith('url("blob:'))
+  await page.waitForFunction(() => document.querySelector('.desktop-shell-singalong')?.style.getPropertyValue('--sing-background-image').startsWith('url("blob:'))
+  await page.waitForFunction(async () => {
+    const wallpaper = document.querySelector('.desktop-sing-wallpaper')
+    const value = getComputedStyle(wallpaper).backgroundImage
+    const source = value.slice(5, -2)
+    const image = new Image()
+    image.src = source
+    try { await image.decode(); return image.naturalWidth > 0 } catch { return false }
+  })
+  const singLayout = await page.evaluate(() => ({
+    stage: document.querySelector('.desktop-sing').getBoundingClientRect().toJSON(),
+    header: document.querySelector('.desktop-sing-player-header').getBoundingClientRect().toJSON(),
+    scrollX: document.querySelector('.desktop-sing').scrollLeft,
+    scrollY: document.querySelector('.desktop-sing').scrollTop,
+  }))
+  if (singLayout.header.left < singLayout.stage.left || singLayout.header.top < singLayout.stage.top) console.error('Sing-along layout:', singLayout)
+  assert.ok(singLayout.header.left >= singLayout.stage.left && singLayout.header.top >= singLayout.stage.top)
+  assert.equal(singLayout.scrollX, 0)
+  assert.equal(singLayout.scrollY, 0)
+  const singWindow = await page.evaluate(() => {
+    const shell = document.querySelector('.desktop-shell-singalong')
+    return { scrollY, htmlScroll: document.documentElement.scrollTop, bodyScroll: document.body.scrollTop, shellScroll: shell.scrollTop, height: innerHeight,
+      shellPosition: getComputedStyle(shell).position, shell: shell.getBoundingClientRect().toJSON(),
+      title: shell.querySelector('.desktop-titlebar').getBoundingClientRect().toJSON(), player: shell.querySelector('.desktop-player').getBoundingClientRect().toJSON() }
+  })
+  assert.equal(singWindow.shell.top, 0, JSON.stringify(singWindow))
+  assert.equal(singWindow.shellScroll, 0, JSON.stringify(singWindow))
+  assert.equal(singWindow.title.top, 0)
+  assert.equal(singWindow.player.bottom, singWindow.height)
+  await page.screenshot({ path:path.join(evidence, 'singalong-player-background.png') })
+  await page.getByRole('button', { name:'返回学习' }).click()
+  await page.getByRole('heading', { name:'逐句读音' }).waitFor()
+  assert.equal(await page.locator('.desktop-shell-singalong').count(), 0)
+  assert.equal(await page.locator('.desktop-sidebar').evaluate(node => getComputedStyle(node).display), 'flex')
+  await page.locator('.desktop-sidebar nav').getByRole('button', { name:'跟唱练习' }).click()
+  await page.waitForFunction(() => document.querySelector('.desktop-sing-wallpaper')?.style.backgroundImage.startsWith('url("blob:'))
+  await page.waitForFunction(() => document.querySelector('.desktop-shell-singalong')?.style.getPropertyValue('--sing-background-image').startsWith('url("blob:'))
+  await page.getByRole('button', { name:'返回学习' }).click()
   assert.equal(await page.evaluate(() => typeof require), 'undefined')
   await page.evaluate(async () => { localStorage.setItem('desktop-persistence-test', 'persisted'); await window.utaDesktop.saveCredential('desktop-encrypted-test-key'); })
   const credentialBytes = await fs.readFile(path.join(testDir, 'uta-data', 'ai-credential.bin'))
@@ -200,7 +319,13 @@ try {
   assert.equal(await page.evaluate(() => window.utaDesktop.loadCredential()), 'desktop-encrypted-test-key')
 
   const backup = path.join(testDir, 'uta-data', 'backups', 'smoke.uta-backup')
-  await client.evaluate(({ dialog }, filename) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: filename }) }, backup)
+  await client.evaluate(({ dialog, BrowserWindow }, filename) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath: filename })
+    BrowserWindow.getAllWindows()[0].webContents.session.on('will-download', (_event, item) => {
+      globalThis.__utaSmokeDownloadState = item.getState()
+      item.on('done', (_event, state) => { globalThis.__utaSmokeDownloadState = state })
+    })
+  }, backup)
   await shortcut(',')
   await page.locator('.settings-dialog').waitFor()
   await page.screenshot({ path:path.join(evidence, 'desktop-settings.png') })
@@ -232,9 +357,57 @@ try {
   assert.equal(await lineSizeSlider.inputValue(),'11')
   await lineSizeSlider.fill('20')
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('uta-pronunciation-progress-v2')).lineReadingFontSize === 20)
-  await page.getByRole('radio', { name:/罗马音/ }).check()
+  const translationSize = page.getByRole('slider', { name:'翻译字体大小', exact:true })
+  assert.equal(await translationSize.inputValue(), '12')
+  for (const value of ['10', '24']) {
+    await translationSize.fill(value)
+    await page.waitForFunction(size => getComputedStyle(document.querySelector('.lyric-translation')).fontSize === size + 'px', value)
+    assert.equal(await page.locator('.reading-preview-translation').evaluate(element => getComputedStyle(element).fontSize), value + 'px')
+    assert.equal(await page.locator('.japanese').first().evaluate(element => getComputedStyle(element).fontSize), lyricFont)
+    assert.equal(await page.locator('#top rt').first().evaluate(element => getComputedStyle(element).fontSize), '16px')
+  }
+  await page.getByRole('button', { name:'恢复翻译默认字号', exact:true }).click()
+  assert.equal(await translationSize.inputValue(), '12')
+  await translationSize.fill('18')
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('uta-pronunciation-progress-v2')).translationFontSize === 18)
+  await page.locator('input[name="reading-style"][value="romaji"]').check()
   assert.equal(await page.locator('.reading-font-preview rt').first().textContent(),'gakkou')
   assert.equal(await page.locator('.line-reading-font-preview').textContent(),'gakkou e kaeru')
+  await page.locator('input[name="reading-style"][value="both"]').check()
+  await page.locator('.lyrics-list .word-aligned').first().waitFor()
+  assert.ok((await page.locator('.lyrics-list .token-reading-kana').filter({hasText:/\S/}).first().textContent()).length>0)
+  assert.ok((await page.locator('.lyrics-list .token-reading-romaji').filter({hasText:/\S/}).first().textContent()).length>0)
+  assert.equal(await page.locator('.lyrics-list .reading').count(),0)
+  assert.equal(await lyricRows.first().locator('.lyric-token').first().locator('.token-reading-romaji').textContent(),'')
+  assert.equal(await page.getByRole('slider',{name:'词语下方罗马音字体大小',exact:true}).inputValue(),'20')
+  await page.getByRole('button', { name:'关闭设置', exact:true }).click()
+  const alignedBounds = await page.evaluate(() => [...document.querySelectorAll('.lyrics-list .lyric-token')].map(token => {
+    const base=token.querySelector('.token-reading-surface').getBoundingClientRect()
+    const roman=token.querySelector('.token-reading-romaji').getBoundingClientRect()
+    const box=token.getBoundingClientRect()
+    return { base:base.toJSON(), roman:roman.toJSON(), box:box.toJSON() }
+  }))
+  for (const { base, roman, box } of alignedBounds) {
+    assert.ok(roman.top >= base.bottom - 1)
+    assert.ok(roman.left >= box.left - 1 && roman.right <= box.right + 1)
+  }
+  await assertRomanAlignment(page)
+  assert.equal(await page.locator('.lyric-translation').first().evaluate(element=>getComputedStyle(element).textAlign),'left')
+  await lyricRows.nth(1).locator('.token-reading-romaji').first().click()
+  assert.equal(await page.locator('.word-main h3').innerText(), await lyricRows.nth(1).locator('.token-reading-surface').first().textContent())
+  await lyricRows.first().locator('.line-number').click()
+  await lyricRows.nth(1).locator('.token-reading-romaji').first().click({modifiers:['Control']})
+  assert.equal(await page.locator('.desktop-range-selected').count(),2)
+  await page.getByRole('button',{name:'取消歌词多选',exact:true}).click()
+  await page.locator('.view-toggle').getByRole('button',{name:'原文',exact:true}).click()
+  assert.equal(await page.locator('.lyrics-list .token-reading').count(),0)
+  await page.locator('.view-toggle').getByRole('button',{name:'遮住练习',exact:true}).click()
+  assert.equal(await page.locator('.lyrics-list .token-reading').count(),0)
+  await page.locator('.view-toggle').getByRole('button',{name:'假名＋罗马音',exact:true}).click()
+  await page.screenshot({path:path.join(evidence,'combined-kana-romaji.png')})
+  await shortcut(',')
+  await page.locator('.settings-dialog').waitFor()
+  await page.getByRole('button', { name:'注音显示', exact:true }).click()
   await page.getByRole('radio', { name:/平假名/ }).check()
   await page.screenshot({path:path.join(evidence,'reading-font-size.png')})
   await page.getByRole('button', { name:'关闭设置', exact:true }).click()
@@ -351,21 +524,32 @@ try {
 
   await page.getByRole('button', { name: '导出备份', exact: false }).click()
   for (let i = 0; i < 150; i++) {
-    try { if ((await fs.stat(backup)).size > wav.length) break } catch { /* Native save dialog completes asynchronously. */ }
-    await new Promise((resolve) => setTimeout(resolve, 200))
+    if (await client.evaluate(() => globalThis.__utaSmokeDownloadState === 'completed')) break
+    await new Promise(resolve => setTimeout(resolve, 200))
   }
+  assert.equal(await client.evaluate(() => globalThis.__utaSmokeDownloadState), 'completed')
   assert.ok((await fs.stat(backup)).size > wav.length)
   const inspectedBackup=await inspectLearningBackup(new Blob([await fs.readFile(backup)]))
   assert.equal(inspectedBackup.manifest.progress.readingFontSize,16)
   assert.equal(inspectedBackup.manifest.progress.lineReadingFontSize,20)
+  assert.equal(inspectedBackup.manifest.progress.translationFontSize,18)
+  assert.deepEqual(inspectedBackup.manifest.progress.rangePracticeSettings, { mode:'repeat', repeatCount:3, gapSeconds:2 })
   assert.ok(inspectedBackup.manifest.songs.some(song=>song.title==='批量手動テスト' && song.audioName==='手動.wav'))
   assert.equal(inspectedBackup.manifest.songs.length,4)
+  const restoreFixture = path.join(root, 'work', 'restore-smoke-fixture.uta-backup')
+  await fs.copyFile(backup, restoreFixture)
   await client.close(); client = null
   page = await launch()
   assert.equal(await page.evaluate(() => localStorage.getItem('desktop-persistence-test')), 'persisted')
+  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('uta-pronunciation-progress-v2')).rangePracticeSettings), { mode:'repeat', repeatCount:3, gapSeconds:2 })
+  assert.equal(await page.locator('audio').evaluate(audio=>audio.paused),true)
   await page.waitForSelector('#top rt')
   assert.equal(await page.locator('#top rt').first().evaluate(element=>getComputedStyle(element).fontSize),'16px')
   assert.equal(await page.locator('.lyrics-list .reading').first().evaluate(element=>getComputedStyle(element).fontSize),'20px')
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('uta-pronunciation-progress-v2')).translationFontSize),18)
+  await page.locator('.desktop-recent button').filter({hasText:'Windows便携测试'}).click()
+  assert.deepEqual(await page.locator('.lyrics-list .lyric-row').first().locator('.lyric-token').allTextContents().then(items=>items.slice(0,2)),['学','校'])
+  assert.equal(await page.locator('.lyric-translation').first().evaluate(element=>getComputedStyle(element).fontSize),'18px')
   const songs = await page.evaluate(() => new Promise((resolve, reject) => {
     const request = indexedDB.open('uta-local-song-library'); request.onerror = () => reject(request.error)
     request.onsuccess = () => { const database = request.result, all = database.transaction('songs').objectStore('songs').getAll();
@@ -375,6 +559,7 @@ try {
   assert.equal(songs.length,4)
   assert.ok(songs.some(song=>song.title==='批量手動テスト' && song.size===wav.length))
   assert.equal(await page.evaluate(() => window.utaDesktop.loadCredential()), 'desktop-encrypted-test-key')
+  dataProtectionChecks = await runDataProtectionChecks({ page, client, testDir, evidence, backup: restoreFixture })
   await client.close(); client = null
 
   // Verify private API authentication and automatic child exit when stdin closes.
@@ -396,7 +581,7 @@ try {
   } finally { child.kill() }
   assert.deepEqual(failures, [])
   const report = { passed: true, runtime, checks: ['packaged-exe', 'relocated-chinese-space-path', 'no-system-node-python', 'bundled-sudachi-tomoshi', 'ai-proxy-mock',
-    'ui-import-wav-lrc', 'backup-export', 'indexeddb-localstorage-restart', 'windows-encrypted-key', 'renderer-isolation', 'api-authentication', 'parent-exit-cleanup', 'native-titlebar-shortcuts', 'library-filter-sort-search', 'desktop-player-seek-volume-speed', 'independent-panes-1024-1440', 'dedicated-review-practice', 'ai-settings-visible-footer-small-window-and-zoom', 'ai-settings-test-and-save-through-ui', 'ctrl-contiguous-lines-token-and-reverse-selection', 'selected-range-exact-start-stop-and-tail', 'selected-range-slow-pause-resume-replay', 'single-line-lead-in-preserved', 'batch-import-matching-manual-and-selection', 'batch-import-atomic-failure-retry', 'batch-import-restart-and-backup', 'independent-line-and-ruby-reading-sizes', 'reading-size-live-preview-reset', 'reading-size-restart-and-backup'] }
+    'ui-import-wav-lrc', 'backup-export', 'indexeddb-localstorage-restart', 'windows-encrypted-key', 'renderer-isolation', 'api-authentication', 'parent-exit-cleanup', 'native-titlebar-shortcuts', 'library-filter-sort-search', 'desktop-player-seek-volume-speed', 'independent-panes-1024-1440', 'review-opens-singalong', 'ai-settings-visible-footer-small-window-and-zoom', 'ai-settings-test-and-save-through-ui', 'ctrl-contiguous-lines-token-and-reverse-selection', 'selected-range-exact-start-stop-and-tail', 'selected-range-slow-pause-resume-replay', 'single-line-lead-in-preserved', 'right-click-line-edit-and-hidden-word', 'combined-kana-romaji', 'batch-import-matching-manual-and-selection', 'batch-import-atomic-failure-retry', 'batch-import-restart-and-backup', 'independent-line-and-ruby-reading-sizes', 'reading-size-live-preview-reset', 'reading-size-restart-and-backup', ...rangePracticeChecks, ...dataProtectionChecks] }
   await fs.writeFile(path.join(evidence, 'desktop-smoke.json'), JSON.stringify(report, null, 2))
   console.log(JSON.stringify(report, null, 2))
 } catch (error) {

@@ -36,3 +36,4 @@ dist-desktop/
 *.log
 server/data/*.partial.db
 verification/
+previews/

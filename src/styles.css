@@ -1,5 +1,5 @@
 :root { --ink:#1f2827; --muted:#707874; --paper:#f5f2eb; --orange:#e25c38; --yellow:#f0bd48; --teal:#c5ded6; --line:rgba(31,40,39,.15); --serif:"Noto Serif JP", Georgia, serif; --sans:"Noto Sans JP", Arial, sans-serif; --mono:"DM Mono", monospace; }
-/* 原网页字体变量保留；安卓端加载用户提供的颜真卿多宝塔碑字体。字体的 vhea 版本已修正为 WebView 可识别值，缺字仍回退到原字体。 */
+/* Windows 与安卓使用包内的颜真卿多宝塔碑字体，无需系统安装。仅修正 vhea 兼容性并重排字体表，字形、字符映射和度量与用户提供的 TTF 一致；缺字仍使用各平台的备用字体。 */
 @font-face { font-family:"UTA YanZhenQing"; src:url('./assets/fonts/YanZhenQingDuoBaoTaBei.ttf') format('truetype'); font-style:normal; font-weight:400; font-display:swap; }
 :root.uta-android-font { --serif:"UTA YanZhenQing", "Noto Serif JP", Georgia, serif; --sans:"UTA YanZhenQing", "Noto Sans JP", Arial, sans-serif; --mono:"UTA YanZhenQing", "DM Mono", monospace; }
 /* 表单控件有浏览器自带字体，需要单独继承安卓界面的字体。 */
@@ -161,6 +161,15 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .ai-review-summary button { margin-left:3px; padding:0; border:0; color:#b34d32; background:transparent; font-size:10px; text-decoration:underline; text-underline-offset:3px; }.ai-review-queue { margin-top:19px; padding:14px 0 12px; border-top:1px solid rgba(31,40,39,.17); border-bottom:1px solid rgba(31,40,39,.17); }.ai-review-queue > div { display:flex; align-items:baseline; justify-content:space-between; }.ai-review-queue h3 { margin:4px 0 0; font:600 16px var(--serif); }.ai-review-queue h3 b { margin-left:4px; color:#c45133; font:11px var(--mono); }.ai-review-queue ol { max-height:196px; margin:10px 0 0; padding:0; overflow:auto; list-style:none; }.ai-review-queue li { border-top:1px solid rgba(31,40,39,.1); }.ai-review-queue li:last-child { border-bottom:1px solid rgba(31,40,39,.1); }.ai-review-queue button { display:flex; width:100%; align-items:center; justify-content:space-between; gap:7px; padding:8px 5px; border:0; color:#506058; background:transparent; text-align:left; }.ai-review-queue button:hover,.ai-review-queue li.current button { color:#a9422b; background:rgba(226,92,56,.08); }.ai-review-queue button span { font-size:11px; }.ai-review-queue button small { display:flex; flex:0 0 auto; align-items:center; color:#74817a; font:9px var(--mono); }.ai-review-queue li.current button small { color:#a9422b; }
 @media (max-width:650px) { .hero-cta { flex-wrap:wrap; gap:12px; }.ai-privacy-note { max-width:330px; }.selection-ai-bar { margin-top:10px; }.detail-ai-action { align-items:flex-start; flex-direction:column; }.detail-ai-action button { align-self:flex-end; } }
 @media (min-width:651px) and (max-width:950px) { .ai-review-queue { grid-column:2; } }
+.ai-review-queue li { display:flex; align-items:center; gap:6px; }
+.ai-review-queue .ai-review-select { flex:1; min-width:0; width:auto; }
+.ai-review-queue .ai-review-select span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ai-review-queue .ai-review-select small { flex:0 1 auto; min-width:0; flex-wrap:wrap; gap:2px; }
+.ai-review-queue .ai-review-skip { width:auto; flex:0 0 auto; padding:5px 8px; border:1px solid #d7e1df; border-radius:4px; color:#667970; background:#f7faf8; font-size:10px; }
+.ai-suggestion-actions { display:flex; gap:14px; flex-wrap:wrap; }
+.ai-review-summary { flex-wrap:wrap; }
+.ai-segmentation-queue .ai-review-select { display:grid; justify-content:stretch; gap:3px; }
+.ai-segmentation-queue .ai-review-select small { font:10px/1.4 var(--sans); overflow-wrap:anywhere; }
 
 /* Guided line practice and the saved review queue */
 .practice-layout.guided-practice-layout { grid-template-columns:190px minmax(0,1fr); }
@@ -612,7 +621,7 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .song-editor-lines li > span { padding-top:10px; color:#9ca99d; font:10px var(--mono); }
 .song-editor-lines li > div { display:grid; grid-template-columns:90px 1fr; gap:7px; min-width:0; }
 .song-editor-lines li label { display:grid; gap:3px; color:#839185; font-size:10px; }
-.song-editor-lines li label:last-child { grid-column:1 / -1; }
+.song-editor-lines li label:nth-child(n+3) { grid-column:1 / -1; }
 .song-editor-lines li > button { padding-top:10px; }
 .song-editor-note { margin:10px 0; }
 .song-editor-error { margin:0 0 8px; color:#ad4234; font-size:12px; }
@@ -659,6 +668,20 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .line-editor header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }.line-editor h2 { margin:0; font-size:22px; }.line-editor header button { border:0; background:transparent; color:#57725e; }
 .line-editor-lyric { display:grid; gap:8px; font-size:13px; }.line-editor textarea { width:100%; min-height:84px; padding:12px; border:1px solid #cfd9ce; border-radius:10px; background:white; color:#294333; font:18px/1.6 var(--serif); resize:vertical; }
 .line-editor-reading-head { display:flex; align-items:center; justify-content:space-between; margin-top:22px; }.line-editor-reading-head button { display:flex; align-items:center; gap:5px; padding:8px; border:0; background:#e8f0e8; color:#345c46; border-radius:8px; }
+.line-editor-reading-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.line-editor-romaji { display:block; min-height:1.2em; color:#638777; font:12px/1.3 var(--sans); overflow-wrap:anywhere; }
+.line-editor .line-editor-segmentation-notice { color:#356b54; }
+.segmentation-backdrop { position:fixed; inset:0; z-index:80; display:flex; align-items:center; justify-content:center; padding:16px; background:#19271a90; }
+.segmentation-dialog { width:min(100%,560px); max-height:min(80dvh,700px); overflow:auto; padding:20px; border:1px solid #d2e0d7; border-radius:15px; background:#fffefa; color:#285d48; box-shadow:0 18px 65px #152b4d35; }
+.segmentation-dialog h3 { margin:0 0 8px; font-size:18px; }.segmentation-dialog p { margin:0; font-size:12px; line-height:1.6; color:#6c877a; }
+.segmentation-ai-proposal { display:grid; gap:4px; margin:12px 0 4px; padding:10px 12px; border:1px solid #c9ded3; border-radius:9px; background:#edf6f0; font-size:12px; }
+.segmentation-ai-proposal strong { color:#28684e; }.segmentation-ai-proposal small { color:#607b6d; line-height:1.5; }
+.segmentation-characters { display:flex; flex-wrap:wrap; align-content:flex-start; gap:8px 0; margin:22px 0; padding:15px 5px; min-height:88px; border-block:1px solid #dce9e3; font:24px/1.6 var(--serif); }
+.segmentation-character { display:inline-flex; align-items:center; white-space:pre; }.segmentation-glyph { padding:0 2px; }
+.segmentation-boundary { display:inline-flex; align-items:center; justify-content:center; width:15px; min-width:15px; height:38px; padding:0; border:0; background:none; color:#cbd9d3; font:22px/1 var(--sans); cursor:pointer; }
+.segmentation-boundary.active { color:#328166; }.segmentation-boundary.fixed { color:#dce4df; cursor:default; }.segmentation-boundary:not(.fixed):hover,.segmentation-boundary:focus-visible { background:#e1f2e9; outline:2px solid #328166; border-radius:4px; }
+.segmentation-dialog .segmentation-error { color:#ae5843; }.segmentation-dialog footer { display:flex; justify-content:flex-end; gap:10px; margin-top:14px; }
+.segmentation-dialog footer button { padding:9px 16px; border:1px solid #bed7cd; border-radius:9px; background:#fff; color:#285d48; cursor:pointer; }.segmentation-dialog footer button:last-child { background:#2d6b50; color:white; border-color:#2d6b50; }.segmentation-dialog button:disabled { opacity:.5; cursor:default; }
 .line-editor p { font-size:12px; line-height:1.65; color:#829080; }.line-editor .line-editor-warning,.line-editor .line-editor-error { color:#ae5843; }
 .line-editor-readings { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }.line-editor-readings label { display:grid; gap:6px; min-width:0; }.line-editor-readings input { width:100%; padding:10px; border:1px solid #d5dfd2; border-radius:8px; color:#294333; background:#fff; font-size:15px; }
 .line-editor footer { display:flex; justify-content:flex-end; gap:10px; margin-top:22px; padding:12px 0 0; border-top:1px solid #e3e8de; background:transparent; }.line-editor footer button { padding:10px 20px; border:1px solid #cfd9ce; border-radius:9px; color:#345c46; background:white; }.line-editor footer button:last-child { background:#3c6a51; color:white; border-color:#3c6a51; }.line-editor button:disabled { opacity:.5; }

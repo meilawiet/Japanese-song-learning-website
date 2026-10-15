@@ -1,15 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
-import { Database, Download, Eye, EyeOff, KeyRound, Languages, UserRound, LoaderCircle, Save, Upload, X } from 'lucide-react'
+import { Check, Database, Download, Eye, EyeOff, KeyRound, Languages, Palette, UserRound, LoaderCircle, Save, Upload, X } from 'lucide-react'
 import { clearAiSettings, DEFAULT_AI_SETTINGS, loadAiSettings, loadAiSettingsFromDevice, saveAiSettings } from '../lib/aiSettings'
 import { getAiStatus, testAiConnection } from '../lib/annotationApi'
 import ProfilePanel from './ProfilePanel'
 import { webSearchAvailable } from '../lib/mobileWebSearch'
 import WebDavPanel from './WebDavPanel'
 import {AboutPanel} from './AppUpdates'
-import { DEFAULT_READING_FONT_SIZE, DEFAULT_LINE_READING_FONT_SIZE } from '../lib/readingDisplay'
+import { DEFAULT_LYRIC_FONT_SIZE, DEFAULT_READING_FONT_SIZE, DEFAULT_LINE_READING_FONT_SIZE, DEFAULT_TRANSLATION_FONT_SIZE } from '../lib/readingDisplay'
+import { DEFAULT_DESKTOP_THEME, DESKTOP_THEMES } from '../lib/desktopThemes'
+import WordReading from './WordReading'
 
-export default function SettingsDialog({ onClose, onExport, onRestore, onCloudExport, updates, backupBusy, backupError, readingStyle = 'hiragana', onReadingStyleChange, readingFontSize = DEFAULT_READING_FONT_SIZE, onReadingFontSizeChange, lineReadingFontSize = DEFAULT_LINE_READING_FONT_SIZE, onLineReadingFontSizeChange, initialTab = 'data' }) {
+const previewTokens = [
+  { index: 0, surface: '学校', reading: 'がっこう' },
+  { index: 1, surface: 'へ', reading: 'へ', part_of_speech: '助詞' },
+  { index: 2, surface: '帰る', reading: 'かえる' },
+  { index: 3, surface: '。', reading: '', is_symbol: true },
+]
+
+export default function SettingsDialog({ onClose, onExport, onRestore, onCloudExport, updates, backupBusy, backupError, readingStyle = 'hiragana', onReadingStyleChange, lyricFontSize = DEFAULT_LYRIC_FONT_SIZE, onLyricFontSizeChange, readingFontSize = DEFAULT_READING_FONT_SIZE, onReadingFontSizeChange, lineReadingFontSize = DEFAULT_LINE_READING_FONT_SIZE, onLineReadingFontSizeChange, translationFontSize = DEFAULT_TRANSLATION_FONT_SIZE, onTranslationFontSizeChange, desktopTheme = DEFAULT_DESKTOP_THEME, onDesktopThemeChange, initialTab = 'data' }) {
   const isDesktop = Boolean(globalThis.window?.utaDesktop)
   const [tab, setTab] = useState(Capacitor.isNativePlatform() && initialTab === 'reading' ? 'data' : initialTab)
   const [draft, setDraft] = useState(loadAiSettings)
@@ -88,9 +97,9 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
 
   return <div className="settings-backdrop" onClick={onClose}>
     <section className="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabIndex={-1} ref={dialogRef} onClick={(event) => event.stopPropagation()}>
-      <header className="settings-heading"><div><p className="eyebrow">MAKE IT YOURS</p><h2 id="settings-title">设置</h2><p>管理学习数据，连接你的 AI 服务。</p></div><button type="button" className="settings-close" onClick={onClose} aria-label="关闭设置"><X size={21} /></button></header>
+      <header className="settings-heading"><div><p className="eyebrow">MAKE IT YOURS</p><h2 id="settings-title">设置</h2><p>{isDesktop ? '调整阅读与主题，管理学习数据和 AI 服务。' : '管理学习数据，连接你的 AI 服务。'}</p></div><button type="button" className="settings-close" onClick={onClose} aria-label="关闭设置"><X size={21} /></button></header>
       {/* 旧注音设置入口保留供电脑端使用；安卓将个人资料与其他分类放在同一行。 */}
-      <div className="settings-tabs" aria-label="设置分类">{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}><UserRound size={17} /> 个人资料</button> : <button type="button" aria-pressed={tab === 'reading'} onClick={() => setTab('reading')}><Languages size={17} /> 注音显示</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => setTab('data')}><Database size={17} /> 数据管理</button><button type="button" aria-pressed={tab === 'ai'} onClick={() => setTab('ai')}><KeyRound size={17} /> AI 服务</button>{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>setTab('about')}>关于</button>}</div>
+      <div className="settings-tabs" aria-label="设置分类">{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}><UserRound size={17} /> 个人资料</button> : <button type="button" aria-pressed={tab === 'reading'} onClick={() => setTab('reading')}><Languages size={17} /> 注音显示</button>}{isDesktop && <button type="button" aria-pressed={tab === 'theme'} onClick={() => setTab('theme')}><Palette size={17} /> 主题设置</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => setTab('data')}><Database size={17} /> 数据管理</button><button type="button" aria-pressed={tab === 'ai'} onClick={() => setTab('ai')}><KeyRound size={17} /> AI 服务</button>{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>setTab('about')}>关于</button>}</div>
       {/* 个人资料编辑集中在安卓设置页，主页头像只用于查看。 */}
       {/* 原独立个人资料按钮已移入上方分类栏。 */}
       {/* 安卓新增关于页，其他设置分类保持同一行。 */}
@@ -99,16 +108,31 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
         <fieldset className="reading-style-options"><legend>注音方式</legend>
           <label><input type="radio" name="reading-style" value="hiragana" checked={readingStyle === 'hiragana'} onChange={() => onReadingStyleChange('hiragana')} /><span><b>平假名</b><small>夢 → ゆめ　·　学校 → がっこう</small></span></label>
           <label><input type="radio" name="reading-style" value="romaji" checked={readingStyle === 'romaji'} onChange={() => onReadingStyleChange('romaji')} /><span><b>罗马音</b><small>夢 → yume　·　学校 → gakkou</small></span></label>
+          {isDesktop && <label><input type="radio" name="reading-style" value="both" checked={readingStyle === 'both'} onChange={() => onReadingStyleChange('both')} /><span><b>假名＋罗马音</b><small>上方假名 · 词下罗马音</small></span></label>}
         </fieldset>
-        {isDesktop && <section className="reading-font-settings" aria-label="注音字号">
+        {isDesktop && <section className="reading-font-settings" aria-label="歌词与注音字号">
+          <div className="reading-font-heading"><label id="lyric-font-size-label" htmlFor="lyric-font-size">歌词字体大小</label><output htmlFor="lyric-font-size">{lyricFontSize} px</output></div>
+          <div className="reading-font-control"><span>小</span><input id="lyric-font-size" type="range" min="14" max="40" step="1" value={lyricFontSize} onChange={event => onLyricFontSizeChange(Number(event.target.value))}/><span>大</span><button type="button" disabled={lyricFontSize === DEFAULT_LYRIC_FONT_SIZE} onClick={() => onLyricFontSizeChange(DEFAULT_LYRIC_FONT_SIZE)}>恢复歌词默认字号</button></div>
           <div className="reading-font-heading"><label id="reading-font-size-label" htmlFor="reading-font-size">歌词上方假名字体大小</label><output htmlFor="reading-font-size">{readingFontSize} px</output></div>
           <div className="reading-font-control"><span>小</span><input id="reading-font-size" type="range" min="8" max="24" step="1" value={readingFontSize} onChange={event => onReadingFontSizeChange(Number(event.target.value))}/><span>大</span><button type="button" disabled={readingFontSize === DEFAULT_READING_FONT_SIZE} onClick={() => onReadingFontSizeChange(DEFAULT_READING_FONT_SIZE)}>恢复默认字号</button></div>
-          <div className="reading-font-heading"><label id="line-reading-font-size-label" htmlFor="line-reading-font-size">下方整句注音字体大小</label><output htmlFor="line-reading-font-size">{lineReadingFontSize} px</output></div>
-          <div className="reading-font-control"><span>小</span><input id="line-reading-font-size" type="range" min="8" max="24" step="1" value={lineReadingFontSize} onChange={event => onLineReadingFontSizeChange(Number(event.target.value))}/><span>大</span><button type="button" disabled={lineReadingFontSize === DEFAULT_LINE_READING_FONT_SIZE} onClick={() => onLineReadingFontSizeChange(DEFAULT_LINE_READING_FONT_SIZE)}>恢复整句默认字号</button></div>
-          <div className="reading-font-preview" aria-label="注音字号预览" style={{ '--reading-font-size': `${readingFontSize}px`, '--line-reading-font-size': `${lineReadingFontSize}px` }}><p lang="ja"><ruby>学校<rt>{readingStyle === 'romaji' ? 'gakkou' : 'がっこう'}</rt></ruby>へ<ruby>帰<rt>{readingStyle === 'romaji' ? 'kae' : 'かえ'}</rt></ruby>る。</p><div className="line-reading-font-preview" lang={readingStyle === 'romaji' ? 'ja-Latn' : 'ja'}>{readingStyle === 'romaji' ? 'gakkou e kaeru' : 'がっこう へ かえる'}</div><small>预览 · 立即生效，自动保存</small></div>
-          <p className="settings-description reading-font-help">上方假名与下方整句注音独立调整，歌词原文大小不变。切换罗马音后同样适用。</p>
+          <div className="reading-font-heading"><label id="line-reading-font-size-label" htmlFor="line-reading-font-size">{readingStyle === 'both' ? '词语下方罗马音字体大小' : '下方整句注音字体大小'}</label><output htmlFor="line-reading-font-size">{lineReadingFontSize} px</output></div>
+          <div className="reading-font-control"><span>小</span><input id="line-reading-font-size" type="range" min="8" max="24" step="1" value={lineReadingFontSize} onChange={event => onLineReadingFontSizeChange(Number(event.target.value))}/><span>大</span><button type="button" disabled={lineReadingFontSize === DEFAULT_LINE_READING_FONT_SIZE} onClick={() => onLineReadingFontSizeChange(DEFAULT_LINE_READING_FONT_SIZE)}>{readingStyle === 'both' ? '恢复罗马音默认字号' : '恢复整句默认字号'}</button></div>
+          <div className="reading-font-heading"><label htmlFor="translation-font-size">翻译字体大小</label><output htmlFor="translation-font-size">{translationFontSize} px</output></div>
+          <div className="reading-font-control"><span>小</span><input id="translation-font-size" type="range" min="10" max="24" step="1" value={translationFontSize} onChange={event => onTranslationFontSizeChange(Number(event.target.value))}/><span>大</span><button type="button" disabled={translationFontSize === DEFAULT_TRANSLATION_FONT_SIZE} onClick={() => onTranslationFontSizeChange(DEFAULT_TRANSLATION_FONT_SIZE)}>恢复翻译默认字号</button></div>
+          <div className="reading-font-preview" aria-label="歌词与注音字号预览" style={{ '--lyric-font-size': `${lyricFontSize}px`, '--reading-font-size': `${readingFontSize}px`, '--line-reading-font-size': `${lineReadingFontSize}px`, '--translation-font-size': `${translationFontSize}px` }}>
+            {readingStyle === 'both' ? <div className="auto-lyric word-aligned">{previewTokens.map(token => <WordReading key={token.index} token={token}/>)}</div> : <><p lang="ja"><ruby>学校<rt>{readingStyle === 'romaji' ? 'gakkou' : 'がっこう'}</rt></ruby>へ<ruby>帰<rt>{readingStyle === 'romaji' ? 'kae' : 'かえ'}</rt></ruby>る。</p><div className="line-reading-font-preview" lang={readingStyle === 'romaji' ? 'ja-Latn' : 'ja'}>{readingStyle === 'romaji' ? 'gakkou e kaeru' : 'がっこう へ かえる'}</div></>}
+            <div className="reading-preview-translation">回学校。</div><small>预览 · 立即生效，自动保存</small>
+          </div>
+          <p className="settings-description reading-font-help">歌词、上方假名、下方注音和翻译分别调节。假名＋罗马音模式按词对齐，长读音会适当撑开字间距。</p>
         </section>}
         <p className="settings-note">歌词上方注音、下方读音行、逐句练习及词语读音会随之切换。罗马音根据现有读音在本地转换，不额外调用 AI；长音使用连续元音表示。校对时仍输入假名，旁边会显示罗马音预览，已有修正不会被改写。</p>
+      </div> : tab === 'theme' && isDesktop ? <div className="settings-content desktop-theme-settings">
+        <h3>应用主题色</h3><p className="settings-description">选择一套配色，让学习界面更合你的心意。</p>
+        <div className="desktop-theme-grid" aria-label="应用主题色">{DESKTOP_THEMES.map(theme => <button key={theme.id} type="button" className="desktop-theme-card" data-theme-card={theme.id} aria-pressed={desktopTheme === theme.id} onClick={() => onDesktopThemeChange(theme.id)} style={{ '--swatch-bg': theme.colors.surface, '--swatch-accent': theme.colors.accent, '--swatch-soft': theme.colors.soft }}>
+          <span className="desktop-theme-swatches" aria-hidden="true"><i/><i/><i/></span><b>{theme.name}</b><small>{theme.description}</small>{desktopTheme === theme.id && <Check className="desktop-theme-check" size={16} aria-hidden="true"/>}
+        </button>)}</div>
+        <div className="desktop-theme-sample" aria-label="主题阅读预览"><span>READING PREVIEW</span><p lang="ja"><ruby>風<rt>かぜ</rt></ruby>を<ruby>待<rt>ま</rt></ruby>っている</p><small>等候一阵风，也等候下一句。</small><div><span>已掌握 3 / 12 句</span><button type="button" onClick={onClose}>继续学习</button></div></div>
+        <p className="settings-note">切换后立即生效，自动保存。主题不改变歌词内容、读音修正或学习进度。</p>
       </div> : tab === 'data' ? <div className="settings-content">
         {/* 安卓端按用户要求暂时移除网站导入导出入口；网页端保留原数据管理。 */}
         {!isAndroid && <>
@@ -117,6 +141,7 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
         <div className="settings-data-card"><div><h4>恢复学习数据</h4><p>先预览备份内容，确认后恢复学习数据。</p></div><button type="button" onClick={() => fileRef.current?.click()} disabled={Boolean(backupBusy)}>{backupBusy === 'inspect' ? <LoaderCircle size={16} className="spin" /> : <Upload size={16} />} 导入备份</button><input ref={fileRef} type="file" accept=".uta-backup,application/octet-stream" hidden onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onRestore(file) }} /></div>
         {backupError && <p className="settings-message error" role="alert">{backupError}</p>}
         <p className="settings-note">API Key 不会包含在备份中。项目文件夹中的歌曲与音频需另行保留。导入新歌曲请前往歌曲库。</p>
+        {isDesktop && <div className="settings-data-card"><div><h4>恢复前自动快照</h4><p>每次恢复前自动保存歌曲、音频和学习记录。保留最近 3 次，可从此文件夹选择快照再恢复。</p></div><button type="button" disabled={Boolean(backupBusy)} onClick={() => window.utaDesktop.openRestoreSnapshots().catch(() => {})}>打开快照文件夹</button></div>}
         </>}
         {/* 安卓数据管理只保留完整的本机云备份。 */}
         {isAndroid && <WebDavPanel onCreateBackup={onCloudExport} onRestore={onRestore}/>}

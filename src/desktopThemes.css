@@ -1,0 +1,47 @@
+.uta-desktop {
+  accent-color:var(--desktop-accent);
+  --orange:var(--desktop-accent);
+  --yellow:var(--desktop-soft);
+  --teal:var(--desktop-soft);
+}
+.uta-desktop .reading-style-options label { border-color:var(--desktop-border); background:var(--desktop-surface); border-radius:6px; }
+.uta-desktop .reading-style-options label:has(input:checked) { border-color:var(--desktop-accent); background:var(--desktop-soft); }
+.uta-desktop .reading-style-options input { accent-color:var(--desktop-accent); }
+.uta-desktop .reading-style-options legend,.uta-desktop .reading-style-options small { color:var(--desktop-muted); }
+.uta-desktop .view-toggle button { color:var(--desktop-muted); }
+.uta-desktop .active .japanese { color:var(--desktop-ink); }
+.uta-desktop .japanese,.uta-desktop .reading-font-preview p,.uta-desktop .line-reading-font-preview { font-family:var(--sans); }
+.uta-desktop main#top .japanese { font-size:var(--lyric-font-size,21px); overflow-wrap:anywhere; }
+.uta-desktop .reading-font-preview p { font-size:var(--lyric-font-size,21px); overflow-wrap:anywhere; }
+.uta-desktop main#top .guided-card:not(.guided-finished) h3 { font-size:var(--lyric-font-size,21px); }
+.uta-desktop .settings-content input:focus,.uta-desktop .reading-editor input:focus { border-color:var(--desktop-accent); box-shadow:0 0 0 2px var(--desktop-soft); }
+.uta-desktop .settings-form-actions .settings-primary { color:#fff; background:var(--desktop-accent); border-color:var(--desktop-accent); }
+.uta-desktop .guided-card { background:var(--desktop-bg); border-color:var(--desktop-border); box-shadow:none; }
+.uta-desktop .guided-card-top,.uta-desktop .guided-counter,.uta-desktop .guided-prompt,.uta-desktop .guided-answer>span { color:var(--desktop-muted); }
+.uta-desktop .guided-card h3,.uta-desktop .guided-answer>p { color:var(--desktop-ink); }
+.uta-desktop .guided-answer { background:var(--desktop-soft); border-color:var(--desktop-accent); }
+.uta-desktop .guided-listen button,.uta-desktop .guided-grade button { color:var(--desktop-accent); border-color:var(--desktop-border); background:var(--desktop-surface); }
+.uta-desktop .guided-listen button:not(:disabled):hover,.uta-desktop .guided-grade button:last-child,.uta-desktop .guided-reveal:not(:disabled):hover { color:#fff; background:var(--desktop-strong); border-color:var(--desktop-strong); }
+.uta-desktop .guided-navigation button,.uta-desktop .sentence-explain-link,.uta-desktop .guided-sentence-explain { color:var(--desktop-accent); }
+.uta-desktop .desktop-theme-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:22px 0; }
+.uta-desktop .desktop-theme-card { position:relative; min-width:0; padding:20px 10px 17px; display:flex; flex-direction:column; align-items:center; gap:9px; border:1px solid var(--desktop-border); border-radius:12px; background:var(--swatch-bg); color:var(--swatch-accent); cursor:pointer; }
+.uta-desktop .desktop-theme-card[aria-pressed=true] { border-color:var(--swatch-accent); background:var(--swatch-soft); box-shadow:inset 0 0 0 1px var(--swatch-accent); }
+.uta-desktop .desktop-theme-card:hover { border-color:var(--swatch-accent); }
+.uta-desktop .desktop-theme-card b { font-size:15px; font-weight:600; }
+.uta-desktop .desktop-theme-card small { color:var(--swatch-accent); opacity:.85; font-size:10px; }
+.uta-desktop .desktop-theme-swatches { display:flex; gap:7px; margin-bottom:3px; }
+.uta-desktop .desktop-theme-swatches i { width:23px; height:23px; border-radius:50%; background:var(--swatch-bg); border:1px solid #00000012; }
+.uta-desktop .desktop-theme-swatches i:nth-child(2) { background:var(--swatch-accent); border-color:var(--swatch-accent); }
+.uta-desktop .desktop-theme-swatches i:nth-child(3) { background:var(--swatch-soft); }
+.uta-desktop .desktop-theme-check { position:absolute; right:11px; top:11px; }
+.uta-desktop .desktop-theme-sample { border:1px solid var(--desktop-border); border-radius:9px; background:var(--desktop-surface); padding:18px 20px; }
+.uta-desktop .desktop-theme-sample>span { font-size:9px; color:var(--desktop-muted); letter-spacing:.12em; }
+.uta-desktop .desktop-theme-sample>p { font-size:24px; color:var(--desktop-ink); margin:15px 0 5px; line-height:1.8; }
+.uta-desktop .desktop-theme-sample rt { font-size:11px; color:var(--desktop-accent); }
+.uta-desktop .desktop-theme-sample>small { color:var(--desktop-muted); font-size:12px; }
+.uta-desktop .desktop-theme-sample>div { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:17px; padding-top:13px; border-top:1px solid var(--desktop-border); }
+.uta-desktop .desktop-theme-sample>div>span { font-size:10px; color:var(--desktop-muted); }
+.uta-desktop .desktop-theme-sample button { padding:7px 13px; border:0; border-radius:5px; background:var(--desktop-accent); color:#fff; font-size:11px; }
+@media (max-width:680px) {
+  .uta-desktop .desktop-theme-grid { grid-template-columns:1fr; }
+}

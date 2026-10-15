@@ -5,6 +5,8 @@ const { pathToFileURL } = require('node:url');
 const { spawn } = require('node:child_process');
 const { randomBytes } = require('node:crypto');
 const { APP_ORIGIN, resolveAssetPath, isExternalUrl } = require('./runtime.cjs');
+const { RestoreSnapshotStore } = require('./restoreSnapshots.cjs');
+const { lyricRequest, fetchLyrics } = require('./lyricNetwork.cjs');
 
 const appRoot = path.resolve(__dirname, '..');
 const home = app.isPackaged ? path.dirname(process.execPath) : appRoot;
@@ -23,6 +25,32 @@ process.env.TMP = tempDir;
 protocol.registerSchemesAsPrivileged([{ scheme: 'uta', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
 const token = randomBytes(32).toString('hex');
 let backend, backendOrigin, mainWindow, stopping = false;
+const unsavedDrafts = new Set();
+const snapshots = new RestoreSnapshotStore(dataDir);
+const trustedSnapshotCaller = event => {
+  if (event.sender !== mainWindow?.webContents || !event.senderFrame?.url.startsWith(APP_ORIGIN + '/')) throw new Error('Forbidden');
+};
+ipcMain.handle('uta:lyrics:request', async (event, payload) => {
+  trustedSnapshotCaller(event);
+  const request = lyricRequest(payload?.source, payload?.action, payload?.value);
+  return fetchLyrics(request, fetch);
+});
+ipcMain.handle('uta:theme:apply', (event, colors) => {
+  if (event.sender !== mainWindow?.webContents || !event.senderFrame?.url.startsWith(APP_ORIGIN + '/')) throw new Error('Forbidden');
+  if (!colors || [colors.chrome, colors.ink, colors.bg].some(color => typeof color !== 'string' || !/^#[0-9a-f]{6}$/i.test(color))) throw new Error('Invalid theme colors');
+  if (process.platform === 'win32') mainWindow.setTitleBarOverlay({ color: colors.chrome, symbolColor: colors.ink, height: 42 });
+  mainWindow.setBackgroundColor(colors.bg);
+  return true;
+});
+ipcMain.handle('uta:snapshot:begin', event => { trustedSnapshotCaller(event); return snapshots.begin(); });
+ipcMain.handle('uta:snapshot:append', (event, id, bytes) => { trustedSnapshotCaller(event); return snapshots.append(id, bytes); });
+ipcMain.handle('uta:snapshot:finish', (event, id) => { trustedSnapshotCaller(event); return snapshots.finish(id); });
+ipcMain.handle('uta:snapshot:abort', (event, id) => { trustedSnapshotCaller(event); return snapshots.abort(id); });
+ipcMain.handle('uta:snapshot:folder', async event => {
+  trustedSnapshotCaller(event);
+  await fs.promises.mkdir(snapshots.directory, { recursive: true });
+  return shell.openPath(snapshots.directory);
+});
 const logPath = path.join(logDir, 'desktop.log');
 if (fs.existsSync(logPath) && fs.statSync(logPath).size > 2 * 1024 * 1024) fs.renameSync(logPath, logPath + '.previous');
 const log = (message) => fs.appendFileSync(logPath, `${new Date().toISOString()} ${message}\n`);
@@ -125,6 +153,11 @@ ipcMain.handle('uta:data-folder', event => {
   if (event.sender !== mainWindow?.webContents || !event.senderFrame?.url.startsWith(APP_ORIGIN + '/')) throw new Error('Forbidden');
   return shell.openPath(dataDir);
 });
+ipcMain.handle('uta:unsaved-draft', (event, id, dirty) => {
+  if (event.sender !== mainWindow?.webContents || !event.senderFrame?.url.startsWith(APP_ORIGIN + '/')) throw new Error('Forbidden');
+  if (typeof id !== 'string' || !/^[a-z-]{1,48}$/.test(id) || typeof dirty !== 'boolean') throw new Error('Invalid draft state');
+  if (dirty) unsavedDrafts.add(id); else unsavedDrafts.delete(id);
+});
 
 function openExternal(url) { if (isExternalUrl(url)) shell.openExternal(url).catch(() => {}); }
 
@@ -149,6 +182,14 @@ function createWindow() {
     if (choice.canceled || !choice.filePath) item.cancel(); else item.setSavePath(choice.filePath);
   });
   mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.webContents.on('did-start-loading', () => unsavedDrafts.clear());
+  mainWindow.on('close', event => {
+    if (!unsavedDrafts.size) return;
+    const choice = dialog.showMessageBoxSync(mainWindow, { type: 'warning', title: '还有未保存的修改',
+      message: '还有未保存的歌词或歌曲修改。', detail: '现在退出会丢失尚未保存的输入。',
+      buttons: ['继续编辑', '放弃修改并退出'], defaultId: 0, cancelId: 0, noLink: true });
+    if (choice !== 1) event.preventDefault(); else unsavedDrafts.clear();
+  });
   mainWindow.on('closed', () => { mainWindow = null; });
   mainWindow.webContents.on('render-process-gone', (_event, details) => log(`Renderer stopped: ${details.reason}`));
   mainWindow.loadURL(APP_ORIGIN + '/').catch((error) => { dialog.showErrorBox('UTA 页面加载失败', error.message); app.quit(); });
@@ -168,7 +209,7 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
 }
 
-app.on('before-quit', () => { stopping = true; if (backend) { backend.stdin.end(); backend.kill(); } });
+app.on('will-quit', () => { stopping = true; if (backend) { backend.stdin.end(); backend.kill(); } });
 app.on('window-all-closed', () => app.quit());
 if (!app.requestSingleInstanceLock()) app.quit();
 else {

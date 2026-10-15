@@ -10,9 +10,13 @@ const state = {
     corrections: { 'local-test:0:0': 'ゆめ' },
     meaningOverrides: {},
     playbackRate: 0.75,
+    rangePracticeSettings: { mode:'repeat', repeatCount:3, gapSeconds:2 },
     readingStyle: 'romaji',
+    lyricFontSize: 28,
+    desktopTheme: 'crimson-blade',
     readingFontSize: 16,
     lineReadingFontSize: 20,
+    translationFontSize: 18,
     lyricSnapshots: { 'local-test': { sourceFile: 'test.lrc', lines: [{ id: 0, text: '夢ならば' }] } },
   },
   annotations: {},
@@ -27,7 +31,7 @@ const state = {
 const song = {
   id: 'local-test', isLocal: true, title: 'テスト', artist: '歌手',
   sourceFile: 'test.lrc', audioName: 'test.mp3',
-  lines: [{ id: 0, start: 1.5, text: '夢ならば', translation: '如果是梦' }],
+  lines: [{ id: 0, start: 1.5, text: '夢ならば', translation: '如果是梦', romaji: 'yume naraba' }],
   audioBlob: new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'audio/mpeg' }),
 }
 
@@ -38,19 +42,39 @@ test('backed-up songs, audio and learning state round-trip', async () => {
   assert.equal(inspection.manifest.progress.corrections['local-test:0:0'], 'ゆめ')
   assert.deepEqual(inspection.manifest.progress.lyricSnapshots, state.progress.lyricSnapshots)
   assert.equal(inspection.manifest.progress.readingStyle, 'romaji')
+  assert.equal(inspection.manifest.progress.lyricFontSize,28)
+  assert.equal(inspection.manifest.progress.desktopTheme,'crimson-blade')
   assert.equal(inspection.manifest.progress.readingFontSize,16)
   assert.equal(inspection.manifest.progress.lineReadingFontSize,20)
+  assert.equal(inspection.manifest.progress.translationFontSize,18)
+  assert.deepEqual(inspection.manifest.progress.rangePracticeSettings,state.progress.rangePracticeSettings)
   assert.equal(inspection.manifest.sentenceExplanations['local-test'][0].explanation.meaning, '如果是梦')
   assert.equal(restored.lines[0].translation, '如果是梦')
+  assert.equal(restored.lines[0].romaji, 'yume naraba')
   assert.equal(restored.audioName, 'test.mp3')
   assert.equal(restored.audioBlob.type, 'audio/mpeg')
   assert.deepEqual([...new Uint8Array(await restored.audioBlob.arrayBuffer())], [1, 2, 3, 4])
+})
+
+test('imported source kana survives backup while malformed spans are rejected', async () => {
+  const annotated = { ...song, lines: [{ ...song.lines[0], sourceReadings: [{ start: 0, end: 1, reading: 'ゆめ' }] }] }
+  const restored = songsFromLearningBackup(await inspectLearningBackup(createLearningBackup([annotated], state)))
+  assert.deepEqual(restored[0].lines[0].sourceReadings, annotated.lines[0].sourceReadings)
+  const invalid = { ...annotated, lines: [{ ...annotated.lines[0], sourceReadings: [{ start: 0, end: 1000, reading: 'ゆめ' }] }] }
+  assert.throws(() => createLearningBackup([invalid], state), /歌词格式/)
 })
 
 test('empty song library still backs up learning data', async () => {
   const inspection = await inspectLearningBackup(createLearningBackup([], state))
   assert.deepEqual(inspection.manifest.songs, [])
   assert.deepEqual(songsFromLearningBackup(inspection), [])
+})
+test('combined readings and hidden words survive a backup without changing old backups', async () => {
+  const next = { ...state, progress: { ...state.progress, readingStyle: 'both', hiddenReadings: { 'local-test:0:0': true }, lyricEditsBySong: { demo: { 0: { text: '明日', translation: '明天', start: 1.25 } } } } }
+  const inspected = await inspectLearningBackup(createLearningBackup([song], next))
+  assert.equal(inspected.manifest.progress.readingStyle, 'both')
+  assert.equal(inspected.manifest.progress.hiddenReadings['local-test:0:0'], true)
+  assert.equal(inspected.manifest.progress.lyricEditsBySong.demo[0].start, 1.25)
 })
 
 test('uploaded covers and built-in song choices survive backup and restore', async () => {
@@ -80,6 +104,10 @@ test('backups created before whole-line analysis remain restorable', async () =>
   delete manifest.progress.lyricSnapshots
   delete manifest.progress.readingFontSize
   delete manifest.progress.lineReadingFontSize
+  delete manifest.progress.translationFontSize
+  delete manifest.progress.rangePracticeSettings
+  delete manifest.progress.lyricFontSize
+  delete manifest.progress.desktopTheme
   delete manifest.progress.readingStyle
   const metadata = new TextEncoder().encode(JSON.stringify(manifest))
   const nextLength = new Uint8Array(4)
@@ -91,9 +119,13 @@ test('backups created before whole-line analysis remain restorable', async () =>
   const inspected = await inspectLearningBackup(legacy)
   assert.deepEqual(inspected.manifest.sentenceExplanations, {})
   assert.equal(inspected.manifest.progress.lyricSnapshots, undefined)
+  assert.equal(inspected.manifest.progress.lyricFontSize, undefined)
+  assert.equal(inspected.manifest.progress.desktopTheme, undefined)
   assert.equal(inspected.manifest.progress.readingStyle, undefined)
   assert.equal(inspected.manifest.progress.readingFontSize, undefined)
   assert.equal(inspected.manifest.progress.lineReadingFontSize, undefined)
+  assert.equal(inspected.manifest.progress.translationFontSize, undefined)
+  assert.equal(inspected.manifest.progress.rangePracticeSettings, undefined)
 })
 
 test('invalid lyric snapshots cannot be saved in backups', () => {
@@ -103,4 +135,33 @@ test('invalid lyric snapshots cannot be saved in backups', () => {
 
 test('unsupported reading styles are rejected by backup validation', () => {
   assert.throws(() => createLearningBackup([], { ...state, progress: { ...state.progress, readingStyle: 'invalid' } }), /学习记录格式不正确/)
+})
+
+test('invalid translation sizes cannot enter a backup', () => {
+  for (const translationFontSize of [9, 25, 12.5, '18', NaN]) {
+    assert.throws(() => createLearningBackup([], { ...state, progress: { ...state.progress, translationFontSize } }), /学习记录格式不正确/)
+  }
+})
+
+test('range practice preferences round-trip and reject an unsafe loop configuration', async () => {
+  const preferences = { mode:'recall', repeatCount:'infinite', gapSeconds:3 }
+  const inspected = await inspectLearningBackup(createLearningBackup([], { ...state, progress:{ ...state.progress, rangePracticeSettings:preferences } }))
+  assert.deepEqual(inspected.manifest.progress.rangePracticeSettings, preferences)
+  for (const rangePracticeSettings of [{ mode:'repeat', repeatCount:-1, gapSeconds:2 }, { mode:'repeat', repeatCount:3, gapSeconds:0 }, []]) {
+    assert.throws(() => createLearningBackup([], { ...state, progress:{ ...state.progress, rangePracticeSettings } }), /学习记录格式不正确/)
+  }
+})
+
+test('old fast playback preferences migrate to normal speed without mutating the source state', async () => {
+  for (const rate of [1.25, 1.5]) {
+    const old = { ...state, progress: { ...state.progress, playbackRate: rate } }
+    const inspected = await inspectLearningBackup(createLearningBackup([song], old))
+    assert.equal(inspected.manifest.progress.playbackRate, 1)
+    assert.equal(old.progress.playbackRate, rate)
+  }
+  for (const rate of [0.25, 0.5, 0.75, 1]) {
+    const inspected = await inspectLearningBackup(createLearningBackup([song], { ...state, progress: { ...state.progress, playbackRate: rate } }))
+    assert.equal(inspected.manifest.progress.playbackRate, rate)
+  }
+  assert.throws(() => createLearningBackup([], { ...state, progress: { ...state.progress, playbackRate: 3 } }), /学习记录格式不正确/)
 })

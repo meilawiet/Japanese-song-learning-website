@@ -1,9 +1,10 @@
 import { Capacitor } from '@capacitor/core'
 import { aiRequestHeaders } from './aiSettings'
+import { isManuallySegmentedToken } from './lyricSegmentation'
 
 const apiOrigin = import.meta.env.VITE_ANNOTATION_API_URL || 'http://127.0.0.1:8000'
 
-export async function annotateSongLines(lines) {
+export async function annotateSongLines(lines, signal) {
   // 手机端直接使用随 APK 安装的日语词典；电脑网页仍沿用现有 Python 服务。
   if (Capacitor.isNativePlatform()) {
     const { annotateLinesOffline } = await import('./offlineAnnotation')
@@ -12,6 +13,7 @@ export async function annotateSongLines(lines) {
   const response = await fetch(`${apiOrigin}/api/annotate/batch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal,
     body: JSON.stringify({ lines: lines.map(({ id, text }) => ({ id, text })) }),
   })
   if (!response.ok) throw new Error('自动注音服务暂不可用')
@@ -50,12 +52,20 @@ async function postAi(path, payload, settings, signal) {
   return body
 }
 
-export function reviewSongWithAi(song) {
+export function reviewSongWithAi(song, annotations = [], corrections = {}) {
+  const byLine = new Map(annotations.map(item => [item.id, item]))
   return postAi('/api/ai/review-song', {
     song_id: song.id,
     title: song.title,
     artist: song.artist,
-    lines: song.lines.map(({ id, text }) => ({ id, text })),
+    lines: song.lines.map(({ id, text }) => {
+      const annotation = byLine.get(id)
+      if (annotation?.tokens?.map(token => token.surface).join('') !== text) return { id, text }
+      return { id, text, tokens: annotation.tokens.map(token => ({ index: token.index, surface: token.surface,
+        reading: corrections[`${song.id}:${id}:${token.index}`] || token.reading,
+        is_symbol: Boolean(token.is_symbol), segmentation_locked: isManuallySegmentedToken(token),
+        dictionary_form: token.dictionary_form || '', part_of_speech: token.part_of_speech || '' })) }
+    }),
   })
 }
 
@@ -63,8 +73,8 @@ export function explainSelectionWithAi(payload) {
   return postAi('/api/ai/explain-selection', payload)
 }
 
-export function explainSentenceBatchWithAi(lines) {
-  return postAi('/api/ai/explain-sentences', { lines })
+export function explainSentenceBatchWithAi(lines, signal) {
+  return postAi('/api/ai/explain-sentences', { lines }, undefined, signal)
 }
 
 export async function getAiStatus(signal) {

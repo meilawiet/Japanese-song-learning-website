@@ -1,5 +1,5 @@
-import { isCreditLine, isSongHeadingLine } from './songMetadata.js'
 import { decodeLrcBytes } from './lrcEncoding.js'
+import { compileLrcCues, formatLrcTime, parseLrcCues } from './lrcReview.js'
 
 const DATABASE_NAME = 'uta-local-song-library'
 const DATABASE_VERSION = 1
@@ -18,15 +18,19 @@ function openDatabase() {
   })
 }
 
-function runTransaction(mode, action) {
+function runTransaction(mode, action, signal) {
   return openDatabase().then((database) => new Promise((resolve, reject) => {
+    if (signal?.aborted) { database.close(); reject(new DOMException('导入已取消', 'AbortError')); return }
     const transaction = database.transaction(SONG_STORE, mode)
     const store = transaction.objectStore(SONG_STORE)
+    const abort = () => transaction.abort()
+    signal?.addEventListener('abort', abort, { once: true })
+    const finish = () => { signal?.removeEventListener('abort', abort); database.close() }
     let result
-    try { result = action(store) } catch (error) { transaction.abort(); database.close(); reject(error); return }
-    transaction.oncomplete = () => { database.close(); resolve(result?.result) }
-    transaction.onerror = () => { database.close(); reject(transaction.error || new Error('本地歌曲库写入失败。')) }
-    transaction.onabort = () => { database.close(); reject(transaction.error || new Error('本地歌曲库操作已取消。')) }
+    try { result = action(store) } catch (error) { transaction.abort(); finish(); reject(error); return }
+    transaction.oncomplete = () => { finish(); resolve(result?.result) }
+    transaction.onerror = () => { finish(); reject(transaction.error || new Error('本地歌曲库写入失败。')) }
+    transaction.onabort = () => { finish(); reject(signal?.aborted ? new DOMException('导入已取消', 'AbortError') : transaction.error || new Error('本地歌曲库操作已取消。')) }
   }))
 }
 
@@ -43,38 +47,32 @@ async function decodeLrcFile(file) {
 }
 
 export async function parseLrcFile(file) {
+  if (/\.uta-lyrics\.json$/iu.test(file.name)) {
+    const document = JSON.parse(await file.text())
+    if (document?.format !== 'uta-annotated-lyrics' || document.version !== 1 || !Array.isArray(document.lines)
+      || !document.lines.length || document.lines.length > 2000) throw new Error('注音歌词文件格式无效。')
+    const cues = document.lines.map((line, index) => {
+      if (!Array.isArray(line.segments) || line.segments.length > 500) throw new Error(`第 ${index + 1} 句注音格式无效。`)
+      const text = line.segments.map(segment => {
+        if (typeof segment.surface !== 'string' || segment.surface.length > 500 || segment.kana != null && (typeof segment.kana !== 'string' || segment.kana.length > 100)) throw new Error(`第 ${index + 1} 句注音格式无效。`)
+        return segment.surface + (segment.kana && /[\u3400-\u9fff々]/u.test(segment.surface) ? `（${segment.kana}）` : '')
+      }).join('')
+      if (!text.trim() || text.length > 1000) throw new Error(`第 ${index + 1} 句歌词无效。`)
+      return { id: `source-${index}`, timeText: Number.isFinite(line.start) && line.start >= 0 ? formatLrcTime(line.start) : '', text,
+        romaji: typeof line.romaji === 'string' ? line.romaji.slice(0, 1000) : '', track: 'original', reviewReason: '', reviewed: true }
+    })
+    const { lines, issues } = compileLrcCues(cues)
+    return { title: String(document.title || file.name).slice(0, 160), artist: String(document.artist || '本地导入').slice(0, 160), album: '', sourceFile: file.name, duration: lines.at(-1)?.start || 0, lines, cues, issues, untimed: document.timed === false }
+  }
   const content = await decodeLrcFile(file)
   const metadata = {}
   for (const match of content.matchAll(/^\[(ti|ar):(.+)]$/gim)) metadata[match[1].toLowerCase()] = match[2].trim()
   const title = cleanMetadata(metadata.ti) || fileBaseName(file.name)
   const artist = cleanMetadata(metadata.ar) || '本地导入'
 
-  const seen = new Set()
-  const lyricEntries = []
-  for (const sourceLine of content.split(/\r?\n/)) {
-    const timestamps = [...sourceLine.matchAll(/\[(\d{1,3}):(\d{2}(?:\.\d{1,3})?)\]/g)]
-    if (!timestamps.length) continue
-    const lastTimestamp = timestamps.at(-1)
-    const text = sourceLine.slice(lastTimestamp.index + lastTimestamp[0].length).replace(/\s+/g, ' ').trim()
-    const isJapanese = /[\u3040-\u30ff]/u.test(text)
-    const isChinese = /[\u3400-\u9fff]/u.test(text)
-    if (!text || isCreditLine(text) || isSongHeadingLine(text, title, artist)) continue
-    for (const [, minutes, seconds] of timestamps) {
-      const start = Number(minutes) * 60 + Number(seconds)
-      if (isJapanese) {
-        const key = `${start}-${text}`
-        if (!seen.has(key)) { seen.add(key); lyricEntries.push({ text, start }) }
-      } else if (isChinese) {
-        // The commonly used dual-language LRC layout places the translation
-        // after its Japanese line, even when its timestamp is the next cue.
-        const previousLyric = lyricEntries.at(-1)
-        if (previousLyric && !previousLyric.translation) previousLyric.translation = text
-      }
-    }
-  }
-  lyricEntries.sort((left, right) => left.start - right.start)
-  const lines = lyricEntries.map((line, id) => ({ id, ...line, translation: line.translation || '' }))
-  if (!lines.length) throw new Error('未在 LRC 中找到带时间轴的日语歌词。请确认文件是 .lrc 格式。')
+  const cues = parseLrcCues(content, title, artist)
+  if (!cues.length) throw new Error('未在 LRC 中找到带时间轴的歌词。请确认文件是 .lrc 格式。')
+  const { lines, issues } = compileLrcCues(cues)
   return {
     title,
     artist,
@@ -82,6 +80,8 @@ export async function parseLrcFile(file) {
     sourceFile: file.name,
     duration: lines.at(-1)?.start || 0,
     lines,
+    cues,
+    issues,
   }
 }
 
@@ -90,7 +90,7 @@ function createSongId() {
   return `local-${suffix}`
 }
 
-export async function createAndStoreLocalSongs(items) {
+export async function createAndStoreLocalSongs(items, signal) {
   if (!items.length) throw new Error('没有可导入的歌曲。')
   const records = items.map(({ parsed, audioFile, metadata = {} }) => {
     if (!parsed?.lines?.length || !(audioFile instanceof Blob)) throw new Error('歌曲的歌词或音频文件无效。')
@@ -100,12 +100,12 @@ export async function createAndStoreLocalSongs(items) {
     }
   })
   // One transaction keeps a failed batch from leaving partially imported songs.
-  await runTransaction('readwrite', store => { records.forEach(record => store.add(record)) })
+  await runTransaction('readwrite', store => { records.forEach(record => store.add(record)) }, signal)
   return records
 }
 
-export async function createAndStoreLocalSong(parsed, audioFile, metadata = {}) {
-  const [record] = await createAndStoreLocalSongs([{ parsed, audioFile, metadata }])
+export async function createAndStoreLocalSong(parsed, audioFile, metadata = {}, signal) {
+  const [record] = await createAndStoreLocalSongs([{ parsed, audioFile, metadata }], signal)
   return record
 }
 
@@ -135,6 +135,10 @@ export async function updateLocalSongMetadata(songId, metadata) {
     return request
   })
   return updatedRecord
+}
+
+export async function loadLocalSong(songId) {
+  return await runTransaction('readonly', store => store.get(songId)) || null
 }
 
 // 旧版在线封面迁移时只替换仍指向原网址的记录，避免覆盖用户刚手动选择的新封面。

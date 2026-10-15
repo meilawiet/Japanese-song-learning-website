@@ -1,6 +1,13 @@
 import { toHiragana, toKatakana, toRomaji } from 'wanakana'
 import { correctionKey } from './ruby.js'
 
+export const DEFAULT_LYRIC_FONT_SIZE = 21
+
+export function normalizeLyricFontSize(value) {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(40, Math.max(14, Math.round(value))) : DEFAULT_LYRIC_FONT_SIZE
+}
+
 export const DEFAULT_READING_FONT_SIZE = 10
 
 export function normalizeReadingFontSize(value) {
@@ -15,8 +22,15 @@ export function normalizeLineReadingFontSize(value) {
     ? Math.min(24, Math.max(8, Math.round(value))) : DEFAULT_LINE_READING_FONT_SIZE
 }
 
+export const DEFAULT_TRANSLATION_FONT_SIZE = 12
+
+export function normalizeTranslationFontSize(value) {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(24, Math.max(10, Math.round(value))) : DEFAULT_TRANSLATION_FONT_SIZE
+}
+
 export function normalizeReadingStyle(style) {
-  return style === 'romaji' ? 'romaji' : 'hiragana'
+  return style === 'romaji' || style === 'both' ? style : 'hiragana'
 }
 
 // Prefer readable loanword spellings over keyboard-input spellings (e.g. ti,

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { displayReading, lineReading, normalizeReadingStyle } from '../src/lib/readingDisplay.js'
+import { displayReading, lineReading, normalizeReadingStyle, normalizeTranslationFontSize } from '../src/lib/readingDisplay.js'
 
 test('default and unknown settings preserve the existing reading', () => {
   for (const style of [undefined, null, 'broken', 'hiragana']) {
@@ -8,6 +8,14 @@ test('default and unknown settings preserve the existing reading', () => {
     assert.equal(displayReading('ゆめ', style), 'ゆめ')
   }
   assert.equal(normalizeReadingStyle('romaji'), 'romaji')
+})
+
+test('missing legacy translation size keeps the old font and bounds device settings', () => {
+  for (const value of [undefined, null, NaN, Infinity, '18']) assert.equal(normalizeTranslationFontSize(value), 12)
+  assert.equal(normalizeTranslationFontSize(18), 18)
+  assert.equal(normalizeTranslationFontSize(18.6), 19)
+  assert.equal(normalizeTranslationFontSize(1), 10)
+  assert.equal(normalizeTranslationFontSize(100), 24)
 })
 
 test('romaji handles combinations, gemination, long vowels and syllabic n', () => {

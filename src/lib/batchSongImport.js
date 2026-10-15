@@ -1,5 +1,6 @@
 import { inferMetadataFromFilename } from './audioMetadata.js'
 import { isSongHeadingLine } from './songMetadata.js'
+import { compileLrcCues } from './lrcReview.js'
 
 export function batchFileId(file) {
   return [file.webkitRelativePath || file.name, file.size, file.lastModified].join('\u0000')
@@ -76,7 +77,7 @@ export function buildBatchImportRows(audios, lyrics, previousRows = []) {
       audioId: audio.id, lyricId, manualPair: false,
       title: lyric?.parsed?.title || audio.metadata?.title || inferMetadataFromFilename(audio.file.name).title,
       artist: lyric?.parsed?.artist !== '本地导入' && lyric?.parsed?.artist || audio.metadata?.artist || '本地导入',
-      selected: Boolean(lyric?.parsed && !lyric.error),
+      selected: Boolean(lyric?.parsed && !lyric.error && !lyric.parsed.issues?.length),
     }
   })
 }
@@ -86,6 +87,10 @@ export function batchRowProblem(row, rows, lyrics) {
   const lyric = lyrics.find(entry => entry.id === row.lyricId)
   if (!lyric) return '找不到所选歌词文件'
   if (lyric.error) return lyric.error
+  if (lyric.parsed?.cues) {
+    const review = compileLrcCues(lyric.parsed.cues)
+    if (review.issues.length) return `歌词有 ${review.issues.length} 项待处理：${review.issues[0].message}`
+  }
   if (!lyric.parsed?.lines?.length) return '歌词中没有可学习的句子'
   if (rows.some(other => other.audioId !== row.audioId && other.lyricId === row.lyricId)) return '这份歌词已与另一首音频配对'
   if (!row.title.trim()) return '请填写歌曲名'
@@ -101,9 +106,11 @@ export function prepareBatchImport(rows, audios, lyrics) {
     if (!audio || error) throw new Error(`${row.title || '所选歌曲'}：${error || '缺少音频文件'}`)
     const lyric = lyrics.find(entry => entry.id === row.lyricId)
     const title = row.title.trim(), artist = row.artist.trim() || '本地导入'
-    const lines = lyric.parsed.lines.filter(line => !isSongHeadingLine(line.text, title, artist))
+    const { cues, issues, ...parsed } = lyric.parsed
+    const sourceLines = cues ? compileLrcCues(cues).lines : parsed.lines
+    const lines = sourceLines.filter(line => !isSongHeadingLine(line.text, title, artist))
       .map((line, id) => ({ ...line, id }))
     if (!lines.length) throw new Error(`${title}：没有可学习的歌词句子。`)
-    return { parsed: { ...lyric.parsed, title, artist, lines, duration: lines.at(-1).start }, audioFile: audio.file }
+    return { parsed: { ...parsed, title, artist, lines, duration: lines.at(-1).start }, audioFile: audio.file }
   })
 }

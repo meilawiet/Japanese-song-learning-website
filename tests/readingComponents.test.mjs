@@ -26,6 +26,41 @@ test('ruby display switches scripts without changing original lyrics or kana suf
   assert.match(lyric('romaji'), /<ruby>帰<rt lang="ja-Latn">kae<\/rt><\/ruby>る/)
   assert.match(lyric('romaji'), /読音|读音 kaeru/)
 })
+test('desktop can show kana and romaji together, hide one word, and keep English untouched', () => {
+  const dual = lyric('both')
+  assert.match(dual, /かえ/)
+  assert.match(dual, /kae/)
+  const hidden = renderToStaticMarkup(createElement(AnnotatedLine, { tokens: [{ index: 0, surface: '帰る', reading: 'かえる' }], corrections: {}, hiddenReadings: { 'test:0:0': true }, songId: 'test', lineId: 0, mode: 'reading', readingStyle: 'both' }))
+  assert.match(hidden, />帰る</)
+  assert.ok(!hidden.includes('<rt'))
+  const english = renderToStaticMarkup(createElement(AnnotatedLine, { tokens: null, fallbackText: 'I love you', corrections: {}, songId: 'test', lineId: 0, mode: 'reading', readingStyle: 'both' }))
+  assert.match(english, /I love you/)
+  assert.ok(!english.includes('<rt'))
+  const tokenizedEnglish = renderToStaticMarkup(createElement(AnnotatedLine, { tokens: [{ index: 0, surface: 'Hello', reading: 'Hello' }, { index: 1, surface: ' world', reading: ' world' }], corrections: {}, songId: 'test', lineId: 0, mode: 'reading', readingStyle: 'both' }))
+  assert.ok(tokenizedEnglish.includes('Hello') && tokenizedEnglish.includes(' world'))
+  assert.ok(!tokenizedEnglish.includes('<rt'))
+})
+
+test('word-aligned desktop readings keep corrections, particles, English and hidden words together', () => {
+  const props = { wordAlignedReadings: true, songId: 'test', lineId: 0, readingStyle: 'both', mode: 'reading',
+    tokens: [{ index: 0, surface: '私達', reading: 'わたしたち' }, { index: 1, surface: 'へ', reading: 'へ', part_of_speech: '助詞' },
+      { index: 2, surface: 'Hello', reading: 'ハロー' }], corrections: { 'test:0:0': 'われわれ' } }
+  const markup = renderToStaticMarkup(createElement(AnnotatedLine, props))
+  assert.match(markup, /word-aligned/)
+  assert.match(markup, /token-reading-kana[^>]*>われわれ</)
+  assert.match(markup, /token-reading-romaji[^>]*>wareware</)
+  assert.match(markup, /token-reading-romaji[^>]*>e</)
+  assert.match(markup, />Hello</)
+  assert.ok(!markup.includes('haroo'))
+  assert.ok(!markup.includes('<rt'))
+  const hidden = renderToStaticMarkup(createElement(AnnotatedLine, { ...props, hiddenReadings: { 'test:0:0': true } }))
+  assert.ok(!/token-reading-(?:kana|romaji)[^>]*>(?:われわれ|wareware)</.test(hidden))
+  for (const mode of ['original', 'practice']) {
+    const concealed = renderToStaticMarkup(createElement(AnnotatedLine, { ...props, mode }))
+    assert.ok(!concealed.includes('token-reading-romaji'))
+    assert.ok(!concealed.includes('word-aligned'))
+  }
+})
 
 test('original and hidden practice modes still hide ruby in both scripts', () => {
   for (const style of ['hiragana', 'romaji']) {

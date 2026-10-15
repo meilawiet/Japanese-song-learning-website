@@ -1,83 +1,40 @@
 # UTA · Windows 日语歌学习程序
 
-UTA 是可直接运行的 Windows 桌面学习程序，支持 Windows 10 / 11 x64。通过歌曲歌词练习日语读音、词汇和句意，提供本地注音、日中词典、逐句练习与学习数据备份。
+UTA 是 Windows 10 / 11 x64 桌面程序，用歌曲歌词练习日语读音、词汇和句意。本分支仅发布 Windows EXE；当前版本为 **1.1.28**。
 
-本分支为 **`Windows-exe`**，当前版本 **1.1.6**。
+## 下载与更新
 
-## 下载与运行
+从 [Windows 1.1.28 Release](https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/windows-v1.1.28) 下载 `UTA-1.1.28-Windows-x64.zip` 和可选的 SHA-256 校验文件。解压完整的 `UTA-Windows-x64` 文件夹，再运行其中的 `UTA.exe`。程序已包含 Electron、Python 注音服务和词典，无需另装运行环境；仅复制 `UTA.exe` 无法运行。
 
-在 [Windows 1.1.6 Release](https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/windows-v1.1.6) 下载 **`UTA-1.1.6-Windows-x64.zip`**，解压整个压缩包后双击 `UTA-Windows-x64\UTA.exe`。
+学习资料位于 `UTA.exe` 同级的 **`uta-data`** 文件夹。升级时先退出 UTA，备份 `uta-data`，再用新版程序文件替换旧版文件，保留原有 `uta-data`。发布 ZIP 不含用户资料，也不提供程序内自动安装更新。移动到另一台电脑时，连同 `uta-data` 一起复制；Windows 加密的 API Key 需要在新电脑重新填写。建议把程序放在当前用户可写的目录。
 
-- 发布包包含 Electron 运行环境、Python 注音服务、Sudachi 词典和 Tomoshi 日中词典，不需要另外安装 Node.js 或 Python。
-- 必须保留完整的 `UTA-Windows-x64` 文件夹；单独复制 `UTA.exe` 无法运行。程序请放在当前用户可写的目录。
-- 发布包约 394 MB，内置词典和运行环境占主要空间；SHA-256 校验文件与 ZIP 一同提供。
-- 本地已构建的项目可运行 `release\UTA-Windows-x64\UTA.exe`，或双击根目录的 `启动 UTA Windows.cmd`。
-- 首次启动会加载词典。再次双击会返回已有窗口；关闭程序后内置服务自动退出。
+## 主要功能
 
-## 学习功能
+- **歌曲与歌词**：单首或批量导入音频和 LRC；本地文件优先配对，缺少歌词时可选联网搜索 LRCLIB / UtaTen 候选并先预览。歌词导入可检查原文、译文、罗马音轨道，修正时间戳、手动调换轨道或插句；歌词自带的假名注音优先于自动生成。
+- **注音与阅读**：本地 Sudachi 分词、假名注音、Tomoshi 日中词义；可逐词修正读音、隐藏单词注音和自定义分词。支持平假名、罗马音、假名＋罗马音显示，独立调整歌词、上方假名、下方注音或词下罗马音，以及翻译字号。
+- **学习与跟唱**：桌面播放器可从任意歌词句开始连续播放。跟唱模式使用全宽歌词界面，可选择自定义图片、纯色或默认背景，并控制译文、读音与歌词跟随。Ctrl 选择连续歌词后可按准确时间戳播放、慢放，或设置 3 次、5 次、无限循环及 1–3 秒跟读间隔；也可听一次、自己读、再听一次。单句播放仍保留原有提前量。
+- **编辑与 AI**：右键歌词可编辑原文、译文、读音和时间；编辑歌曲支持撤销与重做，未保存退出会提示。AI 可按需解析歌词、复核读音和词典分词，建议可采纳、跳过或恢复。批量导入时由用户明确选择是否生成 AI 解析。
+- **桌面操作**：任务面板显示导入、注音和 AI 解析的进度、失败原因、重试与取消；分栏宽度可调整并记住。提供播放及选句快捷键，四套主题色、歌曲库、收藏与复习清单。
+- **本地数据**：可导出和恢复 `.uta-backup`；恢复前预览并自动保存学习快照。API Key 可选择仅在当前会话使用，或用 Windows 系统加密记住，且不进入普通学习备份。
 
-- **Windows 桌面工作区**：原生窗口按钮与菜单、固定导航栏、歌曲列表与详情、独立滚动的歌词和校对窗格，以及底部播放器。
-- **歌曲管理**：导入音频与 LRC，识别常见 UTF-8 / GBK 歌词编码；编辑歌名、歌手、歌词和时间轴，更换音频或封面，支持搜索、收藏与排序。
-- **批量导入**：一次选择多个音频和歌词，同名文件自动配对；可手动选择对应歌词、编辑信息并勾选要导入的歌曲。保存失败时撤销整批写入，可直接重试。
-- **本地注音与词义**：Sudachi 自动分词和假名注音，Tomoshi 提供日中词义；自动读音可逐词校正。支持原文、平假名、罗马音和遮住读音练习。
-- **独立注音字号**：在“设置 → 注音显示”分别调整歌词上方假名和下方整句注音字号，范围均为 8–24 px；实时预览、自动保存、分别恢复默认，假名和罗马音均适用。
-- **逐句学习与复习**：从歌曲标题栏的“逐句练习”进入，听原声、尝试读音与句意、揭晓答案，记录掌握进度并整理复习清单。
-- **连续歌词片段播放**：先点击首句，再按住 Ctrl 点击末句，中间句一起选中；支持播放、暂停、继续、重播及 0.75× / 0.5× / 0.25× 慢放。直接从首句时间戳播放到末句之后的下一处时间戳，选到歌曲结尾则播放到音频结束。选段不提前 0.5 秒，单句播放保留原有提前量。
-- **AI 辅助学习**：配置兼容 Chat Completions 的服务，按需使用选词讲解、整句解析和读音复核；提供“测试连接”和“保存设置”。
-- **数据备份**：导出与恢复学习备份，保存歌曲、音频、人工修正、掌握进度和两个注音字号。
+本地歌曲播放、注音、词义和已有学习记录可离线使用。联网歌词、封面与 AI 服务依赖网络和对应服务；AI 请求可能产生服务费用。发布包不附带私人歌曲、学习记录或 API Key。
 
-本地注音、词义、音频播放和已有学习记录可离线使用。AI、在线封面和歌词搜索需要联网，AI 请求可能产生所配置服务的费用。公共发布包只包含原创示例，不附带私人歌曲或学习记录。
+## 常用操作
 
-## AI 配置
+从左侧进入“发音学习”“跟唱练习”“歌曲库”“复习”或“任务面板”。学习页点击一句定位，按住 Ctrl 再点击另一句选择连续范围；右键歌词打开编辑菜单。歌曲库可导入歌曲，设置中可调整注音、主题和 AI 服务。AI 服务填写地址、模型及 API Key 后，先“测试连接”，再“保存设置”。
 
-打开“设置 → AI 服务”，填写服务地址、模型与 API Key，点击“测试连接”，成功后点击“保存设置”。两个按钮固定在窗口底部，填写区域独立滚动。
+详细操作、快捷键及故障处理见 [Windows 使用说明](docs/WINDOWS.md)。启动失败时查看 `uta-data/logs/desktop.log`。程序尚未购买代码签名证书，Windows 可能显示未知发布者。
 
-勾选“在这台电脑上记住 API Key”时，密钥使用 Windows 系统加密保存；未勾选时仅在当前会话使用。API Key 不进入学习备份，换 Windows 用户或电脑后需重新填写。
-
-也可在 EXE 旁的 `uta-data\config.env` 中配置内置服务的默认环境变量，重启生效。详细说明见 [Windows 使用说明](docs/WINDOWS.md)。
-
-## 数据保存与更新
-
-歌曲、学习记录、缓存、日志和临时文件都保存在 `UTA.exe` 旁的 **`uta-data`** 文件夹。通过“文件 → 打开数据文件夹”可查看，通过“设置 → 数据管理”可导出或恢复 `.uta-backup`。恢复前会显示预览并请求确认。
-
-更新前退出 UTA，保留 `uta-data`，将新版完整程序文件替换到原目录。移动程序时关闭窗口，并连同 `uta-data` 一起复制。发布 ZIP 不包含你的数据文件夹。
-
-启动失败时查看 `uta-data\logs\desktop.log`；运行文件缺失时重新解压完整发布包。程序使用自动分配的本机端口，不要求用户另外启动注音服务。
-
-## Windows EXE 开发与构建
-
-克隆本分支到本地目录，例如 `E:\project\UTA-exe`：
+## 从源码构建
 
 ```powershell
 git clone --branch Windows-exe https://github.com/meilawiet/Japanese-song-learning-website.git E:\project\UTA-exe
 cd E:\project\UTA-exe
-```
-
-双击 `安装 Windows 开发环境.cmd` 安装项目所需依赖，再双击 `构建 Windows 程序.cmd`。脚本将依赖、缓存、临时文件与构建产物保存在项目目录中，也可使用：
-
-```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\windows.ps1 setup
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\windows.ps1 build
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\windows.ps1 test
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\windows.ps1 build
 ```
 
-构建输出为 `release\UTA-Windows-x64\`、版本 ZIP 及 SHA-256 校验文件。开发预览可运行 `npm.cmd run desktop:dev`。
+也可双击 `安装 Windows 开发环境.cmd`、`构建 Windows 程序.cmd`。构建结果在 `release/UTA-Windows-x64/`，ZIP 与 SHA-256 文件在 `release/`。源码入口位于 `desktop/`、`src/` 和 `server/`；构建脚本在 `scripts/`。本地依赖、缓存、临时文件和构建产物均留在项目目录，下载的 Tomoshi 词典数据库不提交到 Git。
 
-主要源码：
-
-| 路径 | 用途 |
-| --- | --- |
-| `desktop/main.cjs` | 原生窗口、菜单、存储、协议和服务进程 |
-| `src/` | 桌面学习界面与歌曲、歌词功能 |
-| `server/desktop_api.py` | 当前程序会话专用的本机 API |
-| `desktop/backend.spec` | 冻结 Python 服务与 Sudachi 词典 |
-| `scripts/package-windows.mjs` | 组装完整便携目录 |
-| `scripts/archive-windows.py` | 生成不含用户数据的 ZIP 与校验文件 |
-
-`server/data/tomoshi-dict-open.db` 由安装脚本下载，不放入 Git；首次构建须先完成安装。`server/requirements-desktop.txt` 与 `package-lock.json` 固定依赖。桌面页面使用固定的 `uta://app` 来源，保留 Chromium 沙箱和隔离上下文，关闭 Node 集成；内置 API 仅接受当前程序会话密钥。
-
-[Build UTA Windows](https://github.com/meilawiet/Japanese-song-learning-website/actions/workflows/windows.yml) 工作流可手动构建、验证并下载 Windows ZIP。成品验证说明见 [Windows 成品验证记录](docs/WINDOWS_VERIFICATION.md)。
-
-## 授权
-
-程序源码采用 MIT 协议。第三方词典和组件的来源及授权见 [第三方数据说明](THIRD_PARTY_DATA_NOTICES.md) 与成品内的 `licenses` 文件夹。Tomoshi 数据保留上游 CC BY-SA 与各层授权信息。Windows 成品尚未购买代码签名证书。
+源码采用 MIT 协议。第三方组件与词典的授权见 [第三方数据说明](THIRD_PARTY_DATA_NOTICES.md) 和成品内的 `licenses` 文件夹。

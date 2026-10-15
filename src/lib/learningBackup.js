@@ -1,3 +1,7 @@
+import { PLAYBACK_RATES, LEGACY_FAST_RATES, normalizePlaybackRate } from './playbackRate.js'
+import { DESKTOP_THEME_IDS } from './desktopThemes.js'
+import { validRangePracticeSettings } from './rangePractice.js'
+
 const SIGNATURE = 'UTA-LEARNING-BACKUP\n'
 const VERSION = 1
 const MAX_MANIFEST_BYTES = 16 * 1024 * 1024
@@ -47,11 +51,20 @@ function checkState(manifest) {
     // 项目歌曲的单句人工修改与其他学习记录一起备份。
     || (progress.lyricEditsBySong != null && (!isRecord(progress.lyricEditsBySong)
       || Object.values(progress.lyricEditsBySong).some((lines) => !isRecord(lines)
-        || Object.entries(lines).some(([id, text]) => !/^\d+$/.test(id) || typeof text !== 'string' || !text.trim() || text.length > 500))))
-    || (progress.playbackRate != null && ![1, 0.75, 0.5, 0.25].includes(progress.playbackRate))
-    || (progress.readingStyle != null && !['hiragana', 'romaji'].includes(progress.readingStyle))
+        || Object.entries(lines).some(([id, edit]) => !/^\d+$/.test(id) || !(typeof edit === 'string' && edit.trim() && edit.length <= 500
+          || isRecord(edit) && typeof edit.text === 'string' && edit.text.trim() && edit.text.length <= 500
+          && typeof edit.translation === 'string' && edit.translation.length <= 1000
+          && Number.isFinite(edit.start) && edit.start >= 0)))))
+    || (progress.playbackRate != null && ![...PLAYBACK_RATES, ...LEGACY_FAST_RATES].includes(progress.playbackRate))
+    || (progress.rangePracticeSettings != null && !validRangePracticeSettings(progress.rangePracticeSettings))
+    || (progress.readingStyle != null && !['hiragana', 'romaji', 'both'].includes(progress.readingStyle))
+    || (progress.hiddenReadings != null && (!isRecord(progress.hiddenReadings)
+      || Object.entries(progress.hiddenReadings).some(([key, value]) => !/^.+:\d+:\d+$/.test(key) || value !== true)))
+    || (progress.lyricFontSize != null && (!Number.isInteger(progress.lyricFontSize) || progress.lyricFontSize < 14 || progress.lyricFontSize > 40))
+    || (progress.desktopTheme != null && !DESKTOP_THEME_IDS.includes(progress.desktopTheme))
     || (progress.readingFontSize != null && (!Number.isInteger(progress.readingFontSize) || progress.readingFontSize < 8 || progress.readingFontSize > 24))
     || (progress.lineReadingFontSize != null && (!Number.isInteger(progress.lineReadingFontSize) || progress.lineReadingFontSize < 8 || progress.lineReadingFontSize > 24))
+    || (progress.translationFontSize != null && (!Number.isInteger(progress.translationFontSize) || progress.translationFontSize < 10 || progress.translationFontSize > 24))
     || (progress.lyricSnapshots != null && (!isRecord(progress.lyricSnapshots)
       || Object.values(progress.lyricSnapshots).some((snapshot) => !isRecord(snapshot) || !Array.isArray(snapshot.lines)
         || snapshot.lines.some((line) => !isRecord(line) || !Number.isSafeInteger(line.id) || typeof line.text !== 'string'))))
@@ -71,9 +84,21 @@ function checkState(manifest) {
       || review.suggestions.some((item) => !isRecord(item) || !Number.isSafeInteger(item.line_id)
         || !Number.isSafeInteger(item.token_index) || typeof item.surface !== 'string'
         || typeof item.original_reading !== 'string' || typeof item.suggested_reading !== 'string'
-        || typeof item.confidence !== 'number' || typeof item.reason !== 'string'))) {
+        || typeof item.confidence !== 'number' || typeof item.reason !== 'string'
+        || (item.skipped != null && typeof item.skipped !== 'boolean'))
+      || (review.segmentation_suggestions != null && (!Array.isArray(review.segmentation_suggestions)
+        || review.segmentation_suggestions.some((item) => !isRecord(item)
+          || !Number.isSafeInteger(item.line_id) || !Number.isSafeInteger(item.start_token_index)
+          || !Number.isSafeInteger(item.end_token_index) || !Array.isArray(item.original_segments)
+          || !Array.isArray(item.suggested_segments) || item.original_segments.length > 8
+          || item.suggested_segments.length > 8
+          || [...item.original_segments, ...item.suggested_segments].some(part => typeof part !== 'string' || !part || part.length > 100)
+          || item.original_segments.join('') !== item.suggested_segments.join('')
+          || typeof item.confidence !== 'number' || typeof item.reason !== 'string'
+          || (item.skipped != null && typeof item.skipped !== 'boolean')))))) {
     throw new Error('备份中的学习记录格式不正确。')
   }
+  if (progress.playbackRate != null) progress.playbackRate = normalizePlaybackRate(progress.playbackRate)
 }
 
 function checkSong(song) {
@@ -87,7 +112,11 @@ function checkSong(song) {
   }
   if (song.lines.length > 2000 || song.lines.some((line) => !isRecord(line)
     || !Number.isSafeInteger(line.id) || typeof line.text !== 'string' || !line.text.trim() || line.text.length > 500
-    || !Number.isFinite(line.start) || line.start < 0 || typeof line.translation !== 'string' || line.translation.length > 1000)
+    || !Number.isFinite(line.start) || line.start < 0 || typeof line.translation !== 'string' || line.translation.length > 1000
+    || (line.romaji != null && (typeof line.romaji !== 'string' || line.romaji.length > 1000))
+    || (line.sourceReadings != null && (!Array.isArray(line.sourceReadings) || line.sourceReadings.length > 250
+      || line.sourceReadings.some(hint => !isRecord(hint) || !Number.isSafeInteger(hint.start) || !Number.isSafeInteger(hint.end)
+        || hint.start < 0 || hint.end > line.text.length || hint.end <= hint.start || typeof hint.reading !== 'string' || hint.reading.length > 100))))
     || new Set(song.lines.map((line) => line.id)).size !== song.lines.length) {
     throw new Error('备份中的歌词格式不正确。')
   }
@@ -112,7 +141,7 @@ export function createLearningBackup(songs, state) {
   const manifest = {
     version: VERSION,
     createdAt: new Date().toISOString(),
-    progress: state.progress,
+    progress: { ...state.progress },
     annotations: state.annotations,
     aiReviews: state.aiReviews,
     sentenceExplanations: state.sentenceExplanations || {},
