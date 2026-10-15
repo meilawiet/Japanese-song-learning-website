@@ -6,14 +6,18 @@ const { spawn } = require('node:child_process');
 const { randomBytes } = require('node:crypto');
 const { APP_ORIGIN, resolveAssetPath, isExternalUrl } = require('./runtime.cjs');
 const { RestoreSnapshotStore } = require('./restoreSnapshots.cjs');
-const { lyricRequest, fetchLyrics } = require('./lyricNetwork.cjs');
+const { lyricRequest, createLyricsClient } = require('./lyricNetwork.cjs');
+const { LyricSourceStore } = require('./lyricSources.cjs');
+const { registerUpdateHandlers } = require('./updateRuntime.cjs');
 
 const appRoot = path.resolve(__dirname, '..');
 const home = app.isPackaged ? path.dirname(process.execPath) : appRoot;
+const versionRoot = app.isPackaged ? path.resolve(process.env.UTA_VERSION_ROOT || path.dirname(appRoot)) : appRoot;
+const appVersion = require(path.join(appRoot, 'package.json')).version;
 const dataDir = path.join(home, 'uta-data');
 const logDir = path.join(dataDir, 'logs');
 const tempDir = path.join(dataDir, 'tmp');
-for (const folder of [dataDir, logDir, tempDir, path.join(dataDir, 'profile'), path.join(dataDir, 'backups')]) fs.mkdirSync(folder, { recursive: true });
+for (const folder of [dataDir, logDir, tempDir, path.join(dataDir, 'profile'), path.join(dataDir, 'backups'), path.join(dataDir, 'updates')]) fs.mkdirSync(folder, { recursive: true });
 app.setName('UTA');
 app.setPath('userData', path.join(dataDir, 'profile'));
 app.setPath('sessionData', path.join(dataDir, 'profile'));
@@ -27,14 +31,22 @@ const token = randomBytes(32).toString('hex');
 let backend, backendOrigin, mainWindow, stopping = false;
 const unsavedDrafts = new Set();
 const snapshots = new RestoreSnapshotStore(dataDir);
+const lyricSources = new LyricSourceStore(dataDir);
+const requestLyricContent = createLyricsClient(fetch);
 const trustedSnapshotCaller = event => {
   if (event.sender !== mainWindow?.webContents || !event.senderFrame?.url.startsWith(APP_ORIGIN + '/')) throw new Error('Forbidden');
 };
 ipcMain.handle('uta:lyrics:request', async (event, payload) => {
   trustedSnapshotCaller(event);
-  const request = lyricRequest(payload?.source, payload?.action, payload?.value);
-  return fetchLyrics(request, fetch);
+  try {
+    const source = lyricSources.load().find(source => source.id === payload?.source && source.enabled);
+    if (!source) throw new Error('该歌词源不存在或未启用，请在设置中检查。');
+    const request = lyricRequest(payload?.source, payload?.action, payload?.value, source);
+    return { ok: true, body: await requestLyricContent(request) };
+  } catch (error) { return { ok: false, message: error.message, code: error.code, retryAfter: error.retryAfter }; }
 });
+ipcMain.handle('uta:lyrics:sources:load', event => { trustedSnapshotCaller(event); return lyricSources.load(); });
+ipcMain.handle('uta:lyrics:sources:save', (event, sources) => { trustedSnapshotCaller(event); return lyricSources.save(sources); });
 ipcMain.handle('uta:theme:apply', (event, colors) => {
   if (event.sender !== mainWindow?.webContents || !event.senderFrame?.url.startsWith(APP_ORIGIN + '/')) throw new Error('Forbidden');
   if (!colors || [colors.chrome, colors.ink, colors.bg].some(color => typeof color !== 'string' || !/^#[0-9a-f]{6}$/i.test(color))) throw new Error('Invalid theme colors');
@@ -58,14 +70,14 @@ const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function startBackend() {
   const executable = app.isPackaged
-    ? path.join(process.resourcesPath, 'backend', 'uta-backend.exe')
+    ? path.join(versionRoot, 'backend', 'uta-backend.exe')
     : path.join(appRoot, 'server', '.venv', 'Scripts', 'python.exe');
   if (!fs.existsSync(executable)) throw new Error('缺少内置注音服务，请保留完整的 UTA 程序文件夹。');
   const args = app.isPackaged ? [] : ['-B', '-u', path.join(appRoot, 'server', 'desktop_api.py')];
   backend = spawn(executable, args, { cwd: home, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
     env: { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8', PYTHONDONTWRITEBYTECODE: '1',
       UTA_ENV_FILE: path.join(dataDir, 'config.env'),
-      UTA_TOMOSHI_DB: app.isPackaged ? path.join(process.resourcesPath, 'dictionary', 'tomoshi-dict-open.db') : path.join(appRoot, 'server', 'data', 'tomoshi-dict-open.db') } });
+      UTA_TOMOSHI_DB: app.isPackaged ? path.join(versionRoot, 'dictionary', 'tomoshi-dict-open.db') : path.join(appRoot, 'server', 'data', 'tomoshi-dict-open.db') } });
   backend.stdin.on('error', () => {});
   backend.stdin.write(JSON.stringify({ token }) + '\n');
   let output = '', failure, origin;
@@ -181,7 +193,14 @@ function createWindow() {
       defaultPath: path.join(dataDir, 'backups', path.basename(item.getFilename())) });
     if (choice.canceled || !choice.filePath) item.cancel(); else item.setSavePath(choice.filePath);
   });
-  mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    const nonce = process.env.UTA_UPDATE_HEALTH_NONCE;
+    if (nonce && /^[a-f0-9]{32}$/.test(nonce)) {
+      fs.writeFile(path.join(dataDir, 'updates', `healthy-${nonce}.json`),
+        JSON.stringify({ version: appVersion, nonce }), () => {});
+    }
+  });
   mainWindow.webContents.on('did-start-loading', () => unsavedDrafts.clear());
   mainWindow.on('close', event => {
     if (!unsavedDrafts.size) return;
@@ -202,9 +221,9 @@ function createWindow() {
       { type: 'separator' }, { label: '打开数据文件夹', click: () => shell.openPath(dataDir) }, { type: 'separator' }, { role: 'quit', label: '退出' }] },
     { label: '编辑', submenu: [{ role: 'undo', label: '撤销' }, { role: 'redo', label: '重做' }, { type: 'separator' }, { role: 'cut', label: '剪切' }, { role: 'copy', label: '复制' }, { role: 'paste', label: '粘贴' }, { role: 'selectAll', label: '全选' }] },
     { label: '视图', submenu: [{ label: '发音学习', accelerator: 'Ctrl+1', click: () => sendCommand('lesson') }, { label: '歌曲库', accelerator: 'Ctrl+2', click: () => sendCommand('library') }, { label: '复习', accelerator: 'Ctrl+3', click: () => sendCommand('review') }, { type: 'separator' }, { role: 'reload', label: '刷新' }, { role: 'resetZoom', label: '实际大小' }, { role: 'zoomIn', label: '放大' }, { role: 'zoomOut', label: '缩小' }, { role: 'togglefullscreen', label: '全屏' }] },
-    { label: '帮助', submenu: [{ label: '使用说明', click: () => shell.openPath(path.join(home, '使用说明.md')) },
+    { label: '帮助', submenu: [{ label: '使用说明', click: () => shell.openPath(path.join(versionRoot, '使用说明.md')) },
       { label: '查看 Windows 版更新', click: () => openExternal('https://github.com/meilawiet/Japanese-song-learning-website/releases') },
-      { label: '关于 UTA', click: () => dialog.showMessageBox(mainWindow, { type: 'info', title: '关于 UTA', message: `UTA ${app.getVersion()} · Windows x64`, detail: '用日语歌学习发音与词汇。\n内置 Sudachi 注音与 Tomoshi 日中词典。\n学习数据保存在程序旁的 uta-data 文件夹。' }) }] },
+      { label: '关于 UTA', click: () => dialog.showMessageBox(mainWindow, { type: 'info', title: '关于 UTA', message: `UTA ${appVersion} · Windows x64`, detail: '用日语歌学习发音与词汇。\n内置 Sudachi 注音与 Tomoshi 日中词典。\n学习数据保存在程序旁的 uta-data 文件夹。' }) }] },
   ]));
   mainWindow.setMenuBarVisibility(false);
 }
@@ -215,8 +234,10 @@ if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.show(); mainWindow.focus(); } });
   app.whenReady().then(async () => {
-    log('Starting UTA ' + app.getVersion());
-    try { backendOrigin = await startBackend(); registerProtocol(); registerCredentials(); createWindow(); }
+    log('Starting UTA ' + appVersion);
+    try { backendOrigin = await startBackend(); registerProtocol(); registerCredentials(); createWindow();
+      if (app.isPackaged) registerUpdateHandlers({ app, ipcMain, mainWindow, home, dataDir, versionRoot, appVersion,
+        unsavedDrafts, trusted: trustedSnapshotCaller, log }); }
     catch (error) { log(error.message); dialog.showErrorBox('UTA 无法启动', `${error.message}\n\n日志：${logPath}`); app.quit(); }
   });
 }

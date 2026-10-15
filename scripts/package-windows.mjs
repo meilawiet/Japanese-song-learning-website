@@ -1,9 +1,14 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { rcedit } from 'rcedit'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const { writeManifest, versionName } = require('../desktop/updateCore.cjs')
 
 const root = process.cwd()
 const manifest = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'))
+versionName(manifest.version)
 const runtime = path.join(root, 'node_modules', 'electron', 'dist')
 const version = (await fs.readFile(path.join(runtime, 'version'), 'utf8')).trim()
 if (version !== manifest.devDependencies.electron) throw new Error('Electron runtime does not match package-lock.json')
@@ -26,25 +31,35 @@ await rcedit(path.join(destination, 'UTA.exe'), { icon: path.join(root, 'desktop
   'version-string': { ProductName: 'UTA', FileDescription: 'UTA 日语歌学习', CompanyName: 'meilawiet',
     OriginalFilename: 'UTA.exe', InternalName: 'UTA', LegalCopyright: 'Copyright 2026 meilawiet. MIT License.' } })
 await fs.rm(path.join(destination, 'resources', 'default_app.asar'), { force: true })
-const appDir = path.join(destination, 'resources', 'app')
-await fs.mkdir(appDir, { recursive: true })
-// Remove old hashed interface assets during rebuild; user data is outside resources/app.
-for (const name of ['desktop', 'dist-desktop']) {
-  const target = path.resolve(appDir, name)
-  if (path.dirname(target) !== path.resolve(appDir)) throw new Error('Invalid application asset path')
-  await fs.rm(target, { recursive: true, force: true })
+// Old layouts stored application files directly in resources; they are not user data.
+for (const name of ['app', 'backend', 'dictionary']) await fs.rm(path.join(destination, 'resources', name), { recursive: true, force: true })
+const launcherDir = path.join(destination, 'resources', 'app')
+await fs.mkdir(launcherDir, { recursive: true })
+await fs.writeFile(path.join(launcherDir, 'package.json'), JSON.stringify({ name: manifest.name, productName: 'UTA',
+  version: manifest.version, electronVersion: version, main: 'bootstrap.cjs', description: manifest.description }, null, 2))
+for (const name of ['bootstrap.cjs', 'updateCore.cjs', 'updateHelper.cjs']) {
+  await fs.copyFile(path.join(root, 'desktop', name), path.join(launcherDir, name))
 }
+const versionDir = path.join(destination, 'versions', manifest.version)
+if (path.dirname(path.resolve(versionDir)) !== path.resolve(destination, 'versions')) throw new Error('Invalid version directory')
+await fs.rm(versionDir, { recursive: true, force: true })
+const appDir = path.join(versionDir, 'app')
+await fs.mkdir(appDir, { recursive: true })
 await fs.writeFile(path.join(appDir, 'package.json'), JSON.stringify({ name: manifest.name, productName: 'UTA',
   version: manifest.version, main: 'desktop/main.cjs', description: manifest.description }, null, 2))
 await fs.cp(path.join(root, 'desktop'), path.join(appDir, 'desktop'), { recursive: true,
   filter: (source) => !source.endsWith('.spec') })
 await fs.cp(path.join(root, 'dist-desktop'), path.join(appDir, 'dist-desktop'), { recursive: true })
-await fs.cp(path.join(root, 'work', 'backend', 'uta-backend'), path.join(destination, 'resources', 'backend'), { recursive: true })
-const dictionaryDir = path.join(destination, 'resources', 'dictionary')
+await fs.cp(path.join(root, 'work', 'backend', 'uta-backend'), path.join(versionDir, 'backend'), { recursive: true })
+const dictionaryDir = path.join(versionDir, 'dictionary')
 await fs.mkdir(dictionaryDir, { recursive: true })
 await fs.copyFile(path.join(root, 'server', 'data', 'tomoshi-dict-open.db'), path.join(dictionaryDir, 'tomoshi-dict-open.db'))
 for (const [source, target] of [['docs/WINDOWS.md', '使用说明.md'], ['docs/WINDOWS_VERIFICATION.md', '验证记录.md'], ['LICENSE', 'UTA-LICENSE.txt'], ['THIRD_PARTY_DATA_NOTICES.md', '第三方数据说明.md']]) {
   await fs.copyFile(path.join(root, source), path.join(destination, target))
+  await fs.copyFile(path.join(root, source), path.join(versionDir, target))
 }
 await fs.cp(path.join(root, 'desktop', 'licenses'), path.join(destination, 'licenses'), { recursive: true })
+await fs.cp(path.join(root, 'desktop', 'licenses'), path.join(versionDir, 'licenses'), { recursive: true })
+await writeManifest(versionDir, manifest.version, version)
+await fs.writeFile(path.join(destination, 'current.json'), JSON.stringify({ version: manifest.version }))
 console.log('Windows application: ' + path.join(destination, 'UTA.exe'))

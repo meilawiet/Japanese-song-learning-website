@@ -49,7 +49,7 @@ export async function runDataProtectionChecks({ page, client, testDir, evidence,
   await page.reload()
   await page.locator('.desktop-shell').waitFor()
   await page.waitForFunction(() => JSON.parse(localStorage.getItem('uta-pronunciation-progress-v2')).playbackRate === 1)
-  assert.deepEqual(await page.getByLabel('歌曲播放速度').locator('option').evaluateAll(items => items.map(item => item.value)), ['0.25', '0.5', '0.75', '1'])
+  assert.deepEqual(await page.getByLabel('逐句播放速度').locator('option').evaluateAll(items => items.map(item => item.value)), ['1', '0.75', '0.5', '0.25'])
   checks.push('slow-only-legacy-speed-migration')
   async function openEditor(title) {
     await page.getByRole('button', { name: '歌曲库', exact: true }).click()

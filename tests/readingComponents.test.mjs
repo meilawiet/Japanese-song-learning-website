@@ -62,6 +62,20 @@ test('word-aligned desktop readings keep corrections, particles, English and hid
   }
 })
 
+test('desktop kana and romaji modes keep the sing-along word grouping', () => {
+  const props = { wordAlignedReadings: true, songId: 'test', lineId: 0, mode: 'reading',
+    tokens: [{ index: 0, surface: '二人', reading: 'ふたり' }, { index: 1, surface: 'の', reading: 'の' },
+      { index: 2, surface: '思い出', reading: 'おもいで' }], corrections: {} }
+  for (const style of ['hiragana', 'romaji', 'both']) {
+    const markup = renderToStaticMarkup(createElement(AnnotatedLine, { ...props, readingStyle: style }))
+    assert.match(markup, new RegExp('word-aligned-' + style))
+    assert.equal((markup.match(/class="token-reading"/g) || []).length, 3)
+    assert.ok(!markup.includes('<rt'), style + ' should use the same grouped words as sing-along')
+    assert.match(markup, /token-reading-kana[^>]*>ふたり</)
+    assert.match(markup, /token-reading-romaji[^>]*>futari</)
+  }
+})
+
 test('original and hidden practice modes still hide ruby in both scripts', () => {
   for (const style of ['hiragana', 'romaji']) {
     for (const mode of ['original', 'practice']) assert.ok(!lyric(style, mode).includes('<rt'))

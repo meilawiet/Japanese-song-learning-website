@@ -42,6 +42,24 @@
 .uta-desktop .desktop-theme-sample>div { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:17px; padding-top:13px; border-top:1px solid var(--desktop-border); }
 .uta-desktop .desktop-theme-sample>div>span { font-size:10px; color:var(--desktop-muted); }
 .uta-desktop .desktop-theme-sample button { padding:7px 13px; border:0; border-radius:5px; background:var(--desktop-accent); color:#fff; font-size:11px; }
+/* Song and lyric editors are rendered beside the desktop shell, so theme them explicitly. */
+.uta-desktop .song-editor-backdrop,.uta-desktop .line-editor-backdrop,.uta-desktop .segmentation-backdrop { background:color-mix(in srgb,var(--desktop-ink) 55%,transparent); }
+.uta-desktop .song-editor,.uta-desktop .line-editor,.uta-desktop .segmentation-dialog { border:1px solid var(--desktop-border); background:var(--desktop-surface); color:var(--desktop-ink); box-shadow:0 20px 70px var(--desktop-shadow); }
+.uta-desktop .song-editor-head p,.uta-desktop .song-editor-files small,.uta-desktop .song-editor-note,.uta-desktop .song-editor-lines li > span,.uta-desktop .song-editor-lines li label,.uta-desktop .line-editor > p:not(.line-editor-warning):not(.line-editor-error):not(.line-editor-segmentation-notice),.uta-desktop .segmentation-dialog > p,.uta-desktop .segmentation-ai-proposal small { color:var(--desktop-subtle); }
+.uta-desktop .song-editor-meta label,.uta-desktop .song-editor-files label,.uta-desktop .line-editor-lyric,.uta-desktop .line-editor-readings label { color:var(--desktop-muted); }
+.uta-desktop .song-editor-head h2,.uta-desktop .line-editor h2,.uta-desktop .segmentation-dialog h3 { color:var(--desktop-heading); }
+.uta-desktop .song-editor-head button,.uta-desktop .song-editor-lines li > button,.uta-desktop .line-editor header button { color:var(--desktop-muted); }
+.uta-desktop .song-editor-meta input,.uta-desktop .song-editor-lines input,.uta-desktop .line-editor input,.uta-desktop .line-editor textarea { border-color:var(--desktop-border); background:var(--desktop-surface); color:var(--desktop-ink); }
+.uta-desktop .song-editor-meta input:focus,.uta-desktop .song-editor-lines input:focus,.uta-desktop .line-editor input:focus,.uta-desktop .line-editor textarea:focus { border-color:var(--desktop-accent); outline:2px solid var(--desktop-soft); }
+.uta-desktop .song-editor-files label,.uta-desktop .song-editor-lines,.uta-desktop .song-editor-lines li,.uta-desktop .song-editor-actions,.uta-desktop .line-editor footer,.uta-desktop .segmentation-characters { border-color:var(--desktop-border); }
+.uta-desktop .song-editor-files input,.uta-desktop .song-editor-lines-head button,.uta-desktop .line-editor-romaji,.uta-desktop .line-editor .line-editor-segmentation-notice,.uta-desktop .segmentation-ai-proposal strong,.uta-desktop .segmentation-boundary.active { color:var(--desktop-accent); }
+.uta-desktop .song-editor-actions button,.uta-desktop .line-editor footer button,.uta-desktop .segmentation-dialog footer button { border-color:var(--desktop-border); background:var(--desktop-surface); color:var(--desktop-accent); }
+.uta-desktop .song-editor-actions button:last-child,.uta-desktop .line-editor footer button:last-child,.uta-desktop .segmentation-dialog footer button:last-child { border-color:var(--desktop-accent); background:var(--desktop-accent); color:#fff; }
+.uta-desktop .line-editor-reading-head button { background:var(--desktop-soft); color:var(--desktop-accent); }
+.uta-desktop .segmentation-ai-proposal { border-color:var(--desktop-border); background:var(--desktop-soft); }
+.uta-desktop .segmentation-boundary { color:var(--desktop-border); }
+.uta-desktop .segmentation-boundary.fixed { color:var(--desktop-subtle); }
+.uta-desktop .segmentation-boundary:not(.fixed):hover,.uta-desktop .segmentation-boundary:focus-visible { background:var(--desktop-soft); outline-color:var(--desktop-accent); }
 @media (max-width:680px) {
   .uta-desktop .desktop-theme-grid { grid-template-columns:1fr; }
 }

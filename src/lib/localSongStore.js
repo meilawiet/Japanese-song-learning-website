@@ -51,15 +51,17 @@ export async function parseLrcFile(file) {
     const document = JSON.parse(await file.text())
     if (document?.format !== 'uta-annotated-lyrics' || document.version !== 1 || !Array.isArray(document.lines)
       || !document.lines.length || document.lines.length > 2000) throw new Error('注音歌词文件格式无效。')
-    const cues = document.lines.map((line, index) => {
+    const cues = document.lines.flatMap((line, index) => {
       if (!Array.isArray(line.segments) || line.segments.length > 500) throw new Error(`第 ${index + 1} 句注音格式无效。`)
       const text = line.segments.map(segment => {
         if (typeof segment.surface !== 'string' || segment.surface.length > 500 || segment.kana != null && (typeof segment.kana !== 'string' || segment.kana.length > 100)) throw new Error(`第 ${index + 1} 句注音格式无效。`)
         return segment.surface + (segment.kana && /[\u3400-\u9fff々]/u.test(segment.surface) ? `（${segment.kana}）` : '')
       }).join('')
       if (!text.trim() || text.length > 1000) throw new Error(`第 ${index + 1} 句歌词无效。`)
-      return { id: `source-${index}`, timeText: Number.isFinite(line.start) && line.start >= 0 ? formatLrcTime(line.start) : '', text,
+      if (line.translation != null && (typeof line.translation !== 'string' || line.translation.length > 1000)) throw new Error(`第 ${index + 1} 句译文格式无效。`)
+      const cue = { id: `source-${index}`, timeText: Number.isFinite(line.start) && line.start >= 0 ? formatLrcTime(line.start) : '', text,
         romaji: typeof line.romaji === 'string' ? line.romaji.slice(0, 1000) : '', track: 'original', reviewReason: '', reviewed: true }
+      return [cue, ...(line.translation?.trim() ? [{ id: `source-${index}-translation`, timeText: cue.timeText, text: line.translation, track: 'translation', reviewReason: '', reviewed: true }] : [])]
     })
     const { lines, issues } = compileLrcCues(cues)
     return { title: String(document.title || file.name).slice(0, 160), artist: String(document.artist || '本地导入').slice(0, 160), album: '', sourceFile: file.name, duration: lines.at(-1)?.start || 0, lines, cues, issues, untimed: document.timed === false }

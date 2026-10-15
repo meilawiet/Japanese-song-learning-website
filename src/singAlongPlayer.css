@@ -23,7 +23,7 @@
 .desktop-sing-guide input { accent-color:#9fe0b7; }
 .desktop-sing-error,.desktop-sing-note { margin:0 30px 5px; padding:7px 10px; border-radius:5px; background:#6a3127bd; color:#fff0e8; font-size:11px; }
 .desktop-sing-note { background:#173c37bd; }
-.desktop-sing-list { display:block; flex:1; width:min(840px,calc(100% - 112px)); min-height:0; overflow:auto; margin:0 auto; padding:26vh 10px 45vh; list-style:none; text-align:center; scrollbar-width:thin; scrollbar-color:#bedec170 transparent; }
+.desktop-sing-list { display:block; flex:1; width:min(1280px,calc(100% - 64px)); min-height:0; overflow:auto; margin:0 auto; padding:26vh 10px 45vh; list-style:none; text-align:center; scrollbar-width:thin; scrollbar-color:#bedec170 transparent; }
 .desktop-sing-list li { border:0; margin:0; }
 .desktop-sing-line { display:grid; grid-template-columns:42px minmax(0,1fr) 75px; gap:9px; align-items:center; width:100%; min-height:95px; padding:11px 13px; border:0; border-left:3px solid transparent; border-radius:0; background:transparent; color:#d4e5da91; text-align:center; cursor:pointer; transition:background .15s,color .15s; }
 .desktop-sing-line:hover:not(:disabled) { background:#ecfff011; color:#f6fff9; }
@@ -32,10 +32,10 @@
 .desktop-sing-number { color:inherit; opacity:.72; font:600 11px "Segoe UI",sans-serif; letter-spacing:.06em; }
 .desktop-sing-list li.current .desktop-sing-number { color:#bdeccb; opacity:1; }
 .desktop-sing-line-body { display:block; min-width:0; text-align:center; }
-.desktop-sing-words { display:flex; flex-wrap:wrap; align-items:end; justify-content:center; column-gap:clamp(8px,1.1vw,18px); row-gap:12px; min-width:0; }
-.uta-desktop .desktop-sing-words .token-reading { display:grid; grid-template-rows:17px minmax(33px,auto) 17px; align-items:center; min-width:0; max-width:100%; }
+.desktop-sing-words { display:block; min-width:0; text-align:center; text-wrap:balance; }
+.uta-desktop .desktop-sing-words .token-reading { display:inline-grid; vertical-align:bottom; margin:0 clamp(3px,.5vw,7px); grid-template-rows:17px minmax(33px,auto) 17px; align-items:center; min-width:0; max-width:100%; }
 .uta-desktop .desktop-sing-words .token-reading-kana { grid-row:1; color:inherit; opacity:.77; font-size:var(--reading-font-size,10px); line-height:1.1; align-self:end; }
-.uta-desktop .desktop-sing-words .token-reading-romaji { grid-row:3; color:#c8f2d6; font-size:max(10px,var(--line-reading-font-size,11px)); line-height:1.1; align-self:start; white-space:nowrap; }
+.uta-desktop .desktop-sing-words .token-reading-romaji { grid-row:3; color:#c8f2d6; font-size:var(--line-reading-font-size,11px); line-height:1.25; align-self:start; white-space:nowrap; }
 .uta-desktop .desktop-sing-words .token-reading-surface { grid-row:2; color:inherit; font-size:clamp(19px,calc(var(--lyric-font-size,21px) * 1.1),32px); line-height:1.25; align-self:center; text-shadow:0 2px 8px #10242580; }
 .uta-desktop .desktop-sing-list li.current .token-reading { grid-template-rows:19px minmax(45px,auto) 20px; }
 .uta-desktop .desktop-sing-list li.current .token-reading-surface { font-size:clamp(25px,calc(var(--lyric-font-size,21px) * 1.55),43px); }

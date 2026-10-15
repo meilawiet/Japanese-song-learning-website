@@ -15,6 +15,8 @@
 .song-editor-history small { color:var(--desktop-subtle,#7c8da1); font-size:10px; }
 .uta-desktop .page-grain,.uta-desktop .topbar,.uta-desktop main#top > footer,.uta-desktop .lesson-rail,.uta-desktop .method-section { display:none; }
 .desktop-shell { height:100dvh; display:grid; grid-template-columns:204px minmax(0,1fr); grid-template-rows:42px minmax(0,1fr) 90px 24px; background:var(--desktop-bg,#f4f6f9); }
+.desktop-shell-lesson { grid-template-rows:42px minmax(0,1fr) 24px; }
+.desktop-shell-lesson .desktop-statusbar { grid-row:3; }
 .desktop-titlebar { grid-column:1/-1; display:flex; align-items:center; gap:9px; padding:0 150px 0 15px; background:var(--desktop-chrome,#edf1f7); border-bottom:1px solid var(--desktop-border,#dce2eb); -webkit-app-region:drag; user-select:none; }
 .desktop-app-icon { width:22px; height:22px; border-radius:6px; background:var(--desktop-accent,#2867d7); color:var(--desktop-surface,#fff); display:grid; place-items:center; font-size:16px; }
 .desktop-titlebar>b { font-size:13px; }.desktop-window-caption { color:var(--desktop-muted,#697589); font-size:11px; }
@@ -41,6 +43,14 @@
 .uta-desktop .desktop-reading-hint { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; line-height:1.5; color:var(--desktop-subtle,#8895a8); }
 .uta-desktop .desktop-reading-hint.has-error { color:#b7545d; }
 .uta-desktop .lyrics-panel > .panel-head .view-toggle { flex-shrink:0; margin-left:auto; }
+.uta-desktop .desktop-lesson-display-label { display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:auto; color:var(--desktop-muted,#5c7064); font-size:11px; }
+.uta-desktop .desktop-lesson-display-label select { width:140px; min-height:35px; padding:7px 10px; border:1px solid var(--desktop-border,#dce3ee); border-radius:6px; background:var(--desktop-bg,#f5f7fa); color:var(--desktop-heading,#334860); font-size:11px; cursor:pointer; }
+.uta-desktop .desktop-lesson-display-label select:hover { border-color:var(--desktop-accent,#2867d7); }
+.uta-desktop .lyrics-panel > .audio-tools { display:flex; align-items:center; flex-shrink:0; margin:0 0 8px; }
+.uta-desktop .lyrics-panel > .audio-tools .audio-play-tip { color:var(--desktop-subtle,#7a8a83); }
+.uta-desktop .lyrics-panel > .audio-tools .audio-play-tip svg { color:var(--desktop-accent,#2867d7); }
+.uta-desktop .lyrics-panel > .audio-tools .speed-control { color:var(--desktop-muted,#5c7064); }
+.uta-desktop .lyrics-panel > .audio-tools .speed-control select { border:1px solid var(--desktop-border,#d5e1d8); border-radius:5px; background:var(--desktop-surface,#fff); color:var(--desktop-ink,#263b32); }
 .uta-desktop .strip-index,.uta-desktop .source-badge,.uta-desktop .audio-tools,.uta-desktop .selection-guide,.uta-desktop .mobile-word-dock { display:none; }
 .uta-desktop .sentence-explanation-status { margin:0 0 7px; padding:0; border:0; background:transparent; font-size:11px; color:var(--desktop-subtle,#8190a6); flex-shrink:0; }.uta-desktop .sentence-explanation-status button { font-size:11px; color:var(--desktop-accent,#2867d7); }.uta-desktop .sentence-explanation-disclosure { margin:0 0 9px; font-size:10px; color:var(--desktop-subtle,#99a3b2); }.uta-desktop .practice-launch { margin:0 0 12px; padding:10px 12px; border:1px solid var(--desktop-chrome,#e5ebf5); background:var(--desktop-surface,#fafbfd); border-radius:5px; flex-shrink:0; }.uta-desktop .practice-launch b { font-size:12px; }.uta-desktop .practice-launch span { font-size:10px; color:var(--desktop-subtle,#8b96a7); }.uta-desktop .practice-launch button { border-radius:4px; font-size:11px; padding:7px 9px; }.uta-desktop .lyrics-list { overflow:auto; flex:1; min-height:120px; padding:0 4px 20px; margin:0 -4px; scrollbar-gutter:stable; }.uta-desktop .lyric-row { display:grid; grid-template-columns:24px minmax(0,1fr) 74px; gap:12px; margin:0; padding:22px 8px; border:0; border-bottom:1px solid var(--desktop-chrome,#edf0f5); border-radius:5px; }.uta-desktop .lyric-row.desktop-now-playing { background:var(--desktop-soft,#eaf2ff); box-shadow:inset 3px 0 var(--desktop-accent,#2867d7); }
 .uta-desktop .lyric-row.active { margin:0; background:var(--desktop-bg,#f0f5ff); border-left:3px solid var(--desktop-accent,#4277d3); padding-left:5px; }.uta-desktop .line-number { color:var(--desktop-subtle,#9aa9c0); font-size:11px; padding-top:8px; }.uta-desktop .japanese { font-family:"Yu Gothic UI","Meiryo",var(--sans); font-size:21px; line-height:2; letter-spacing:.02em; }.uta-desktop .japanese rt { font-size:10px; color:var(--desktop-subtle,#6b7f9d); }.uta-desktop .reading { font-size:11px; color:var(--desktop-subtle,#8491a5); margin-top:5px; }.uta-desktop .translation { font-size:12px; color:var(--desktop-muted,#5e6f88); margin-top:7px; }.uta-desktop .line-actions { display:flex; flex-wrap:wrap; gap:7px; align-content:center; justify-content:center; }.uta-desktop .line-play { background:var(--desktop-soft,#e5edfc); color:var(--desktop-accent,#2867d7); border:0; width:28px; height:28px; }.uta-desktop .line-mastery { font-size:9px; border:0; padding:5px; background:transparent; color:var(--desktop-subtle,#9aa6b6); }.uta-desktop .line-mastery.mastered { color:var(--desktop-accent,#2867d7); background:var(--desktop-soft,#e3edfc); }.uta-desktop .sentence-explain-link { font-size:10px; padding:3px; color:var(--desktop-subtle,#7c8fa9); }.uta-desktop .lyrics-footer { font-size:9px; padding:9px 0; margin:0; flex-shrink:0; color:var(--desktop-subtle,#9aa6b8); gap:10px; }
@@ -259,12 +269,16 @@
 .desktop-player-song span:not(.desktop-cover) { font-size:11px; }
 
 /* Each segmented word owns its kana, original text and lower romanization. */
-.uta-desktop .auto-lyric.word-aligned { display:flex; flex-wrap:wrap; align-items:stretch; column-gap:8px; row-gap:12px; max-width:100%; }
+.uta-desktop .auto-lyric.word-aligned { display:flex; flex-wrap:wrap; align-items:stretch; column-gap:clamp(6px,1vw,14px); row-gap:12px; max-width:100%; }
 .uta-desktop .word-aligned .lyric-token-group { display:inline-grid; position:relative; max-width:100%; min-width:0; }
 .uta-desktop .word-aligned .lyric-token { display:flex; align-items:flex-start; max-width:100%; min-width:0; letter-spacing:0; }
 .uta-desktop .word-aligned .lyric-symbol { display:inline-grid; max-width:100%; }
 /* A block grid avoids inline baselines that differ when the kana row is empty. */
 .uta-desktop .token-reading { display:grid; grid-template-rows:calc(var(--reading-font-size,10px)*1.15) calc(var(--lyric-font-size,21px)*1.35) auto; grid-template-columns:minmax(0,max-content); align-items:center; max-width:100%; min-width:0; }
+.uta-desktop .word-aligned-hiragana .token-reading { grid-template-rows:calc(var(--reading-font-size,10px)*1.15) calc(var(--lyric-font-size,21px)*1.35); }
+.uta-desktop .word-aligned-hiragana .token-reading-romaji { display:none; }
+.uta-desktop .word-aligned-romaji .token-reading { grid-template-rows:calc(var(--lyric-font-size,21px)*1.35) auto; }
+.uta-desktop .word-aligned-romaji .token-reading-kana { display:none; }
 
 /* Windows workspace preview: adjustable, remembered panes. */
 .desktop-shell { grid-template-columns:var(--desktop-sidebar-width,204px) minmax(0,1fr); }
@@ -389,3 +403,32 @@
 .desktop-sing-line-state { display:inline-flex; align-items:center; justify-content:flex-end; gap:5px; color:var(--desktop-accent); font-size:11px; white-space:nowrap; }
 .desktop-sing-list li.current .desktop-sing-number { color:var(--desktop-accent); }
 @media (max-width:1120px) { .desktop-sing-header { padding:16px 20px; }.desktop-sing-sheet { margin:0 16px 12px; }.desktop-sing-toolbar { padding:15px 18px 0; grid-template-columns:minmax(0,1fr) 50px 50px; gap:8px; }.desktop-sing-toolbar > button,.desktop-sing-more > summary { min-height:48px; }.desktop-sing-hint,.desktop-sing-error,.desktop-sing-note { margin-left:18px; margin-right:18px; }.desktop-sing-progress { margin-left:18px; margin-right:18px; }.desktop-sing-progress small { display:none; }.desktop-sing-list { margin:0 18px; }.desktop-sing-line { grid-template-columns:64px minmax(0,1fr) 64px; gap:8px; min-height:112px; padding:13px 7px; }.desktop-sing-line-state { font-size:10px; } }
+.desktop-update-settings { display: grid; align-content: start; justify-items: start; gap: 12px; }
+.desktop-update-settings .settings-description { margin: 0; }
+.desktop-update-settings .settings-primary { display: inline-flex; align-items: center; gap: 7px; }
+.desktop-update-result { width: 100%; align-items: flex-start; }
+.desktop-update-result > div { min-width: 0; }
+.desktop-update-notes { white-space: pre-wrap; max-height: 160px; overflow: auto; }
+.desktop-update-progress { display: grid; gap: 7px; width: 100%; }
+.desktop-update-progress progress { width: 100%; accent-color: var(--desktop-accent, #28644f); }
+.desktop-update-modes { display:flex; flex-wrap:wrap; gap:0; }
+.desktop-update-dropzone { width:100%; padding:24px 16px; border:2px dashed var(--desktop-border); border-radius:8px; background:var(--desktop-bg); color:var(--desktop-muted); display:grid; justify-items:center; gap:12px; text-align:center; transition:border-color .15s,background .15s; }
+.desktop-update-dropzone > svg { color:var(--desktop-accent); }.desktop-update-dropzone strong { font-size:14px; color:var(--desktop-heading); }.desktop-update-dropzone span { font-size:11px; line-height:1.6; }.desktop-update-dropzone button { display:inline-flex; align-items:center; gap:7px; padding:9px 13px; border:1px solid var(--desktop-border); border-radius:5px; background:var(--desktop-surface); color:var(--desktop-accent); font-size:12px; }
+.desktop-update-dropzone.dragging { border-color:var(--desktop-accent); background:var(--desktop-soft); }.desktop-update-dropzone.busy { opacity:.65; }
+.desktop-update-prepared { display:grid; gap:10px; width:100%; padding:14px; border:1px solid var(--desktop-border); border-radius:6px; background:var(--desktop-soft); }.desktop-update-prepared strong { color:var(--desktop-heading); font-family:"Segoe UI",sans-serif; }.desktop-update-prepared p { margin:0; color:var(--desktop-muted); font-size:11px; }.desktop-update-prepared button { justify-self:start; padding:10px 14px; border:0; border-radius:5px; }
+.desktop-update-filename { overflow-wrap:anywhere; }
+.desktop-lyric-sources form,.lyric-source-cards { display:grid; gap:14px; }
+.lyric-source-card { min-width:0; margin:0; padding:12px; border:1px solid var(--desktop-border); border-radius:6px; display:grid; gap:10px; background:var(--desktop-bg); }
+.lyric-source-card legend { font-size:11px; color:var(--desktop-muted); padding:0 5px; }
+.lyric-source-card > label { display:grid; gap:5px; font-size:12px; color:var(--desktop-muted); }
+.lyric-source-card input:not([type=checkbox]) { width:100%; min-width:0; padding:9px; background:var(--desktop-surface); border:1px solid var(--desktop-border); color:var(--desktop-ink); }
+.lyric-source-card input[readonly] { color:var(--desktop-subtle); }
+.lyric-source-heading,.lyric-source-foot,.lyric-source-actions { display:flex; gap:10px; align-items:center; justify-content:space-between; }
+.lyric-source-heading label { display:flex; align-items:center; gap:6px; font-size:12px; }
+.lyric-source-heading span,.lyric-source-foot small { font-size:10px; color:var(--desktop-muted); }
+.lyric-source-foot { align-items:flex-start; }.lyric-source-foot small { flex:1; line-height:1.6; }
+.lyric-source-card button,.lyric-source-actions button { display:inline-flex; gap:5px; align-items:center; padding:7px 9px; border:1px solid var(--desktop-border); background:var(--desktop-surface); color:var(--desktop-accent); border-radius:4px; font-size:11px; flex-shrink:0; }
+.desktop-lyric-sources .settings-form-actions { align-items:center; flex-wrap:wrap; }.desktop-lyric-sources .settings-form-actions small { font-size:10px; color:var(--desktop-muted); }
+.lyric-source-actions { flex-wrap:wrap; }.lyric-source-actions select { flex:1; min-width:120px; max-width:190px; padding:7px; border:1px solid var(--desktop-border); background:var(--desktop-surface); color:var(--desktop-accent); font-size:11px; }
+.desktop-online-lyrics .online-song-source-warnings { margin-top:10px; padding:9px; border:1px solid var(--desktop-border); border-radius:5px; color:var(--desktop-muted); background:var(--desktop-soft); font-size:11px; line-height:1.6; }
+.desktop-online-lyrics .online-song-source-warnings strong { font-weight:500; }.desktop-online-lyrics .online-song-source-warnings p { margin:4px 0 0; color:inherit; font-size:inherit; }

@@ -18,7 +18,7 @@ export function formatLrcTime(seconds) {
 function initialTrack(text, hasOriginal, pairedWithKanaOriginal = false) {
   if (/[\u3040-\u30ff]/u.test(text)) return { track: 'original', reason: '' }
   if (/[\u3400-\u9fff]/u.test(text)) return { track: hasOriginal ? 'translation' : 'original', reason: pairedWithKanaOriginal ? '' : '纯汉字也可能是日文原文，请确认归类。' }
-  if (/[A-Za-z]/u.test(text)) return { track: hasOriginal ? 'romaji' : 'original', reason: '英文与罗马音无法可靠自动区分，请确认归类。' }
+  if (/[A-Za-z]/u.test(text)) return { track: hasOriginal ? 'romaji' : 'original', reason: '' }
   return { track: 'original', reason: '无法判断文字轨道，请确认归类。' }
 }
 

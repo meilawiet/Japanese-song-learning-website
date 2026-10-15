@@ -4,13 +4,14 @@ import { compileLrcCues, confirmLrcTrackClassifications, insertLrcCue, parseLrcC
 import { parseLrcFile } from '../src/lib/localSongStore.js'
 import { batchRowProblem, prepareBatchImport } from '../src/lib/batchSongImport.js'
 
-test('pure-kanji and English lyric lines remain visible and require a track decision', async () => {
+test('pure-kanji remains reviewable while English and romaji no longer require confirmation', async () => {
   const file = new File(['[ti:手作り]\n[00:01.00]東京\n[00:02.00]夜を歩く\n[00:03.00]I will follow\n[00:04.00]街の灯り\n'], 'review.lrc')
   const parsed = await parseLrcFile(file)
   assert.deepEqual(parsed.cues.map(cue => [cue.text, cue.track]), [
     ['東京', 'original'], ['夜を歩く', 'original'], ['I will follow', 'romaji'], ['街の灯り', 'original'],
   ])
-  assert.equal(parsed.issues.length, 2)
+  assert.equal(parsed.issues.length, 1)
+  assert.equal(parsed.cues.find(cue => cue.text === 'I will follow').reviewReason, '')
   assert.equal(parsed.cues.some(cue => cue.text === 'I will follow'), true)
   const corrected = parsed.cues.map(cue => cue.text === 'I will follow' ? { ...cue, track: 'original', reviewed: true } : cue.text === '東京' ? { ...cue, reviewed: true } : cue)
   const compiled = compileLrcCues(corrected)
@@ -28,6 +29,18 @@ test('同时间戳的汉字译文可直接导入，整首歌词不必逐句确�
   assert.equal(parsed.issues.length, 0)
   assert.equal(parsed.lines.length, 48)
   assert.ok(parsed.cues.every((cue, index) => index % 2 === 0 ? cue.track === 'original' : cue.track === 'translation' && !cue.reviewReason))
+})
+
+test('英文和罗马音歌词直接进入单首和批量导入，不产生归类确认', async () => {
+  const file = new File(['[00:01]I will follow\n[00:02]君を見た\n[00:02]kimi o mita'], 'song.lrc')
+  const parsed = await parseLrcFile(file)
+  assert.equal(parsed.issues.length, 0)
+  assert.equal(parsed.lines[0].text, 'I will follow')
+  assert.equal(parsed.lines[1].romaji, 'kimi o mita')
+  const row = { audioId: 'audio', lyricId: 'lyrics', title: 'song', artist: 'UTA', selected: true }
+  const lyrics = [{ id: 'lyrics', parsed, file }]
+  assert.equal(batchRowProblem(row, [row], lyrics), '')
+  assert.equal(prepareBatchImport([row], [{ id: 'audio', file: new File(['audio'], 'song.wav') }], lyrics).length, 1)
 })
 
 test('批量确认只接受轨道判断，时间戳异常仍需单独处理', () => {

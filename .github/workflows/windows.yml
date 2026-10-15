@@ -30,8 +30,10 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Build and verify
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          npm.cmd run windows:package
+          npm.cmd run windows:release
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           npm.cmd test
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
@@ -39,11 +41,11 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           npm.cmd run test:desktop
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          server/.venv/Scripts/python.exe -B scripts/archive-windows.py
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:
           name: UTA-Windows-x64
           path: |
             release/UTA-*-Windows-x64.zip
             release/UTA-*-Windows-x64.zip.sha256
+            release/UTA-*-Windows-x64.utapatch
+            release/UTA-*-Windows-x64.utapatch.sha256

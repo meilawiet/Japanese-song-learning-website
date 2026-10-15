@@ -1,6 +1,6 @@
 {
   "name": "uta-japanese-song-learning",
-  "version": "1.1.28",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,6 +17,7 @@
     "desktop:dev": "node node_modules/vite/bin/vite.js build --config vite.desktop.config.js && electron .",
     "desktop:build": "node scripts/build-desktop.mjs",
     "windows:package": "npm run desktop:build && node scripts/package-windows.mjs && server\\.venv\\Scripts\\python.exe -B scripts\\archive-windows.py",
+    "windows:release": "npm run windows:package && server\\.venv\\Scripts\\python.exe -B scripts\\download-windows-base.py && node scripts/create-windows-patch.mjs",
     "test:desktop": "node tests/desktop.smoke.mjs"
   },
   "dependencies": {
@@ -25,6 +26,7 @@
     "@capacitor/core": "8.5.3",
     "@faanau/kuromoji": "^0.2.1",
     "lucide-react": "^0.468.0",
+    "qrc-decoder": "1.0.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "wanakana": "^5.3.1"

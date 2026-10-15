@@ -10,7 +10,7 @@ import { saveRestoreSnapshot } from './lib/restoreSnapshot'
 import { pendingReviewSuggestions, pendingSegmentationSuggestions, skipReviewSuggestion, restoreSkippedSuggestions, mergeReviewDecisions } from './lib/aiReviewDecisions'
 import BatchSongImportDialog from './components/BatchSongImportDialog'
 import LrcReviewEditor from './components/LrcReviewEditor'
-import { DesktopChrome, DesktopSongHeader, DesktopLibrary, DesktopReview, DesktopPlayer } from './components/DesktopWorkspace'
+import { DesktopChrome, DesktopSongHeader, DesktopLibrary, DesktopReview, DesktopPlayer, DesktopStatusBar } from './components/DesktopWorkspace'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
@@ -205,6 +205,17 @@ export default function App() {
   }, [])
   const readingLabel = readingStyle === 'romaji' ? '罗马音' : readingStyle === 'both' ? '假名＋罗马音' : '平假名'
   const readingLang = readingStyle === 'romaji' ? 'ja-Latn' : 'ja'
+  const lessonDisplayMode = mode === 'reading'
+    ? readingStyle === 'hiragana' ? 'kana' : readingStyle
+    : 'lyrics'
+  const chooseLessonDisplayMode = value => {
+    if (value === 'lyrics') {
+      setMode('original')
+    } else {
+      setReadingStyle(value === 'kana' ? 'hiragana' : value)
+      setMode('reading')
+    }
+  }
   const [localSongs, setLocalSongs] = useState([])
   const [localSongsReady, setLocalSongsReady] = useState(false)
   const [localAudioUrls, setLocalAudioUrls] = useState({})
@@ -271,6 +282,23 @@ export default function App() {
   const [songPickerSearch, setSongPickerSearch] = useState('')
   const [deletingSongId, setDeletingSongId] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [updateDrop, setUpdateDrop] = useState(null)
+  useEffect(() => {
+    if (!IS_DESKTOP_APP || !window.utaDesktop.packaged) return undefined
+    const dragOver = event => {
+      if ([...(event.dataTransfer?.items || [])].some(item => item.kind === 'file')) event.preventDefault()
+    }
+    const drop = event => {
+      if (event.defaultPrevented) return
+      const files = [...(event.dataTransfer?.files || [])]
+      if (!files.some(file => /\.utapatch$/i.test(file.name))) return
+      event.preventDefault()
+      setUpdateDrop({ files }); setSettingsOpen(true)
+    }
+    window.addEventListener('dragover', dragOver)
+    window.addEventListener('drop', drop)
+    return () => { window.removeEventListener('dragover', dragOver); window.removeEventListener('drop', drop) }
+  }, [])
   const [backupBusy, setBackupBusy] = useState('')
   const [backupPreview, setBackupPreview] = useState(null)
   const [backupError, setBackupError] = useState('')
@@ -280,6 +308,7 @@ export default function App() {
   const suppressNextTokenClick = useRef(false)
   const audioRef = useRef(null)
   const desktopSelectionAnchorRef = useRef(null)
+  const desktopDoubleClickTargetRef = useRef(null)
   const selectedRangePlaybackRef = useRef(null)
   const selectedRangeEndTimerRef = useRef(null)
   const clipEndRef = useRef(null)
@@ -481,6 +510,13 @@ export default function App() {
     return song && line ? [{ song, line }] : []
   }), [allSongs, reviewItems])
   const activeSong = allSongs.find((song) => song.id === activeSongId) || initialSong()
+  // The bundled text is only an empty-library fallback on Windows. Once real
+  // songs load, open one of them instead of leaving the hidden demo active.
+  useEffect(() => {
+    if (!IS_DESKTOP_APP || !localSongsReady || !activeSong.isDemo) return
+    const firstRealSong = allSongs.find((song) => !song.isDemo)
+    if (firstRealSong) setActiveSongId(firstRealSong.id)
+  }, [localSongsReady, allSongs, activeSong.id])
   function artworkForSong(song) {
     if (!song) return null
     const chosen = Object.hasOwn(artworkOverrides, song.id) ? artworkOverrides[song.id] : song
@@ -808,6 +844,12 @@ export default function App() {
 
   function handleLyricPointerDown(event, lineId) {
     if (event.button === 0 && isDesktopRangeClick(event)) { event.preventDefault(); event.stopPropagation(); return }
+    if (IS_DESKTOP_APP && event.button === 0 && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+      const previous = desktopDoubleClickTargetRef.current
+      if (!previous || event.timeStamp - previous.at > 500 || Math.hypot(event.clientX - previous.x, event.clientY - previous.y) > 8) {
+        desktopDoubleClickTargetRef.current = { lineId, at:event.timeStamp, x:event.clientX, y:event.clientY }
+      }
+    }
     beginLyricPress(event, lineId)
   }
 
@@ -885,7 +927,7 @@ export default function App() {
 
   // 手机端整句都是播放热区；电脑端继续使用原来的“点击选中句子”行为。
   function isMobileLyricPlayback() {
-    return IS_ANDROID_APP || window.matchMedia('(max-width: 650px)').matches
+    return IS_ANDROID_APP || !IS_DESKTOP_APP && window.matchMedia('(max-width: 650px)').matches
   }
 
   function handleLyricRowClick(event, lineId) {
@@ -893,6 +935,19 @@ export default function App() {
     if (event.target.closest('button, a, input, select, textarea, .sentence-inline-analysis')) return
     chooseLine(lineId)
     if (isMobileLyricPlayback()) playLine(lineId)
+  }
+
+  function handleDesktopLyricDoubleClick(event, lineId) {
+    if (!IS_DESKTOP_APP || event.ctrlKey || event.shiftKey || event.altKey
+      || event.target.closest('.line-actions, .phrase-explain-button, .sentence-inline-analysis')) return
+    event.preventDefault()
+    // The first click can dismiss the range toolbar and move the list before the second click.
+    const first = desktopDoubleClickTargetRef.current
+    const targetId = first && event.timeStamp - first.at <= 500
+      && Math.hypot(event.clientX - first.x, event.clientY - first.y) <= 8 ? first.lineId : lineId
+    desktopDoubleClickTargetRef.current = null
+    chooseLine(targetId)
+    playLine(targetId)
   }
 
   function moveDesktopLyricFocus(offset, extend = false) {
@@ -2296,7 +2351,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown)
   })
 
-  return <div className={IS_DESKTOP_APP ? `desktop-shell${activePage === 'sing-along' ? ' desktop-shell-singalong' : ''}` : undefined} style={IS_DESKTOP_APP ? { '--desktop-sidebar-width': `${desktopLayout.sidebar}px`, '--desktop-word-width': `${desktopLayout.word}px` } : undefined}>
+  return <div className={IS_DESKTOP_APP ? `desktop-shell${activePage === 'sing-along' ? ' desktop-shell-singalong' : ''}${activePage === 'lesson' ? ' desktop-shell-lesson' : ''}` : undefined} style={IS_DESKTOP_APP ? { '--desktop-sidebar-width': `${desktopLayout.sidebar}px`, '--desktop-word-width': `${desktopLayout.word}px` } : undefined}>
     {IS_DESKTOP_APP && <DesktopChrome page={activePage} song={activeSong} songs={allSongs} reviewCount={reviewQueue.length} onLesson={showLessonPage} onSingAlong={() => showDesktopSingAlong()} onLibrary={() => showLibraryPage()} onReview={showReviewQueue} onSettings={() => setSettingsOpen(true)} onSong={activePage === 'sing-along' ? songId => showDesktopSingAlong(songId) : chooseSongFromLibrary} onTasks={() => setTaskPanelOpen(value => !value)} taskCount={desktopTasks.filter(task => task.state === 'running' || task.state === 'queued' || task.state === 'failed').length} sidebarWidth={desktopLayout.sidebar} onSidebarWidth={sidebar => setDesktopLayout(previous => ({ ...previous, sidebar, word: Math.min(previous.word, Math.max(240, window.innerWidth - sidebar - 400)) }))} editUndo={lastSongEdit ? { title: lastSongEdit.title, onUndo: undoLastSongEdit, onDismiss: () => setLastSongEdit(null), busy: undoSongBusy || Boolean(backupBusy) || editingDetailsBusy } : null}/>}
     {IS_DESKTOP_APP && <DesktopTaskPanel open={taskPanelOpen} tasks={desktopTasks} currentSongTitle={activeSong.title} remainingAi={activeSong.lines.length - readySentenceCount} aiBusy={Boolean(sentenceExplanationJob)} onGenerateAi={generateCurrentSongExplanations} onClose={() => setTaskPanelOpen(false)} onRetry={retryDesktopTask} onCancel={cancelDesktopTask}/>}
     {IS_ANDROID_APP && songPickerOpen && <div className="study-song-picker" role="dialog" aria-modal="true" aria-label="选择歌曲"><button className="study-picker-close" type="button" onClick={() => setSongPickerOpen(false)} aria-label="返回当前练习">‹ 返回</button><AndroidSongLibrary selectionMode songs={allSongs.filter((song) => !song.isDemo && normalizeSongSearch(`${song.title}${song.artist}`).includes(normalizeSongSearch(songPickerSearch)))} total={androidLibraryTotal} search={songPickerSearch} onSearch={setSongPickerSearch} artworkFor={artworkForSong} learnedBySong={learnedBySong} activeSongId={activeSong.id} onOpen={(id) => { chooseSong(id); setSongPickerOpen(false); window.scrollTo({ top: 0, behavior: 'instant' }) }} /></div>}
@@ -2381,9 +2436,14 @@ export default function App() {
         </aside>
 
         <section className="lyrics-panel" aria-labelledby="lyrics-heading">
-          <div className="panel-head"><div className={IS_DESKTOP_APP ? 'desktop-lyrics-heading' : undefined}><p className="eyebrow">{practiceActive ? 'LISTEN, RECALL, REVEAL' : 'AUTO ANNOTATE, THEN VERIFY'}</p><h2 id="lyrics-heading">{practiceActive ? '逐句练习' : '逐句读音'}</h2>{IS_DESKTOP_APP && !practiceActive && <span className={`desktop-reading-hint${annotationError ? ' has-error' : ''}`} role={annotationError ? 'alert' : 'status'} title={annotating ? '正在为整首歌词生成读音…' : annotationError || '点击带注音的汉字词，可在右侧修改读音'}>{annotating ? '正在为整首歌词生成读音…' : annotationError || '点击带注音的汉字词，可在右侧修改读音'}</span>}</div>{!practiceActive && <div className="view-toggle" role="group" aria-label="读音显示方式">{[['original', '原文'], ['reading', readingLabel], ['practice', '遮住练习']].map(([value, label]) => <button className={mode === value ? 'selected' : ''} onClick={() => setMode(value)} type="button" key={value}>{label}</button>)}</div>}</div>
+          <div className="panel-head">
+            <div className={IS_DESKTOP_APP ? 'desktop-lyrics-heading' : undefined}><p className="eyebrow">{practiceActive ? 'LISTEN, RECALL, REVEAL' : 'AUTO ANNOTATE, THEN VERIFY'}</p><h2 id="lyrics-heading">{practiceActive ? '逐句练习' : '逐句读音'}</h2>{IS_DESKTOP_APP && !practiceActive && <span className={`desktop-reading-hint${annotationError ? ' has-error' : ''}`} role={annotationError ? 'alert' : 'status'} title={annotating ? '正在为整首歌词生成读音…' : annotationError || '点击带注音的汉字词，可在右侧修改读音'}>{annotating ? '正在为整首歌词生成读音…' : annotationError || '点击带注音的汉字词，可在右侧修改读音'}</span>}</div>
+            {!practiceActive && (IS_DESKTOP_APP
+              ? <label className="desktop-lesson-display-label"><span>显示方式</span><select aria-label="学习页读音显示方式" value={lessonDisplayMode} onChange={event => chooseLessonDisplayMode(event.target.value)}><option value="both">假名＋罗马音</option><option value="kana">仅假名</option><option value="romaji">仅罗马音</option><option value="lyrics">仅歌词</option></select></label>
+              : <div className="view-toggle" role="group" aria-label="读音显示方式">{[['original', '原文'], ['reading', readingLabel], ['practice', '遮住练习']].map(([value, label]) => <button className={mode === value ? 'selected' : ''} onClick={() => setMode(value)} type="button" key={value}>{label}</button>)}</div>)}
+          </div>
           {!IS_DESKTOP_APP && !practiceActive && <div className="pronunciation-strip"><div><span className="strip-index">{annotating ? 'ANNOTATING' : annotationError ? 'OFFLINE' : 'AUTO READY'}</span><b>{annotating ? '正在为整首歌词生成读音…' : annotationError || '点击带注音的汉字词，可在右侧修改读音'}</b></div><span className="source-badge"><WandSparkles size={13} /> SudachiPy + 本地日中词典</span></div>}
-          <div className="audio-tools"><p className="audio-play-tip"><Volume2 size={13} /> {audioUrl ? practiceActive ? '先听这一句，再尝试自己读出歌词。' : IS_ANDROID_APP ? '点整句区域播放，再点暂停；暂停后再点，从句首重播。' : '点击每句右侧的播放按钮；手机上也可点击整句区域播放或暂停。' : '未找到同名音频，仍可练习读音与词义。'}</p><label className="speed-control"><span>慢放</span><select value={playbackRate} onChange={(event) => choosePlaybackRate(Number(event.target.value))} aria-label="逐句播放速度"><option value={1}>1×</option><option value={0.75}>0.75×</option><option value={0.5}>0.5×</option><option value={0.25}>0.25×</option></select></label></div>
+          <div className="audio-tools"><p className="audio-play-tip"><Volume2 size={13} /> {audioUrl ? practiceActive ? '先听这一句，再尝试自己读出歌词。' : IS_ANDROID_APP ? '点整句区域播放，再点暂停；暂停后再点，从句首重播。' : IS_DESKTOP_APP ? '双击一句歌词播放；再次双击可暂停。' : '点击每句右侧的播放按钮；手机上也可点击整句区域播放或暂停。' : '未找到同名音频，仍可练习读音与词义。'}</p><label className="speed-control"><span>慢放</span><select value={playbackRate} onChange={(event) => choosePlaybackRate(Number(event.target.value))} aria-label="逐句播放速度"><option value={1}>1×</option><option value={0.75}>0.75×</option><option value={0.5}>0.5×</option><option value={0.25}>0.25×</option></select></label></div>
           {!IS_DESKTOP_APP && !practiceActive && <div className="sentence-explanation-status"><div><Sparkles size={15} /><span>{sentenceExplanationJob?.songId === activeSong.id ? `正在生成整句解析 ${sentenceExplanationJob.ready} / ${sentenceExplanationJob.total}` : readySentenceCount === activeSong.lines.length ? `整首歌的 ${readySentenceCount} 句解析已就绪` : `整句解析已准备 ${readySentenceCount} / ${activeSong.lines.length} 句`}</span></div>{readySentenceCount < activeSong.lines.length && <button type="button" disabled={Boolean(sentenceExplanationJob)} onClick={generateCurrentSongExplanations}>{sentenceExplanationJob?.songId === activeSong.id ? '生成中…' : '生成剩余解析'}</button>}</div>}
           {!IS_DESKTOP_APP && !practiceActive && readySentenceCount < activeSong.lines.length && <p className="sentence-explanation-disclosure">生成时会将歌词及已有译文发送给设置中的 AI 服务，可能产生 API 调用费用。</p>}
           {!IS_DESKTOP_APP && !practiceActive && sentenceExplanationError?.songId === activeSong.id && <p className="sentence-explanation-error" role="alert"><CircleAlert size={13} /> {sentenceExplanationError.message}</p>}
@@ -2421,20 +2481,20 @@ export default function App() {
               const hasSentenceExplanation = hasCachedSentenceExplanation(currentSentenceCache, line)
               const sentenceExpanded = sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === line.id
               // 原点击播放保留；新增整句长按与滚动取消，抬手后不误触播放或词语详情。
-              return <article id={`lyric-row-${activeSong.id}-${line.id}`} className={`lyric-row ${current ? 'active' : ''} ${IS_DESKTOP_APP && desktopSelectedLineIds.has(line.id) ? 'desktop-range-selected' : ''} ${IS_DESKTOP_APP && singAlongLineId === line.id && singAlongPlaying ? 'desktop-now-playing' : ''}`} onPointerDownCapture={(event) => handleLyricPointerDown(event, line.id)} onPointerMoveCapture={moveLyricPress} onPointerUpCapture={(event) => { cancelLyricPress(); suppressLyricPressClick(event) }} onPointerCancel={cancelLyricPress} onPointerLeave={cancelLyricPress} onClickCapture={(event) => handleLyricClickCapture(event, line.id)} onContextMenu={(event) => { if (IS_ANDROID_APP || IS_DESKTOP_APP) event.preventDefault(); if (IS_DESKTOP_APP) { setDesktopContextMenu({ songId: activeSong.id, lineId: line.id, x: Math.min(event.clientX, window.innerWidth - 276), y: Math.min(event.clientY, window.innerHeight - 285) }); setLyricEditMenu(null) } }} onClick={(event) => handleLyricRowClick(event, line.id)} key={`${activeSong.id}-${line.id}`}>
+              return <article id={`lyric-row-${activeSong.id}-${line.id}`} className={`lyric-row ${current ? 'active' : ''} ${IS_DESKTOP_APP && desktopSelectedLineIds.has(line.id) ? 'desktop-range-selected' : ''} ${IS_DESKTOP_APP && singAlongLineId === line.id && singAlongPlaying ? 'desktop-now-playing' : ''}`} onPointerDownCapture={(event) => handleLyricPointerDown(event, line.id)} onPointerMoveCapture={moveLyricPress} onPointerUpCapture={(event) => { cancelLyricPress(); suppressLyricPressClick(event) }} onPointerCancel={cancelLyricPress} onPointerLeave={cancelLyricPress} onClickCapture={(event) => handleLyricClickCapture(event, line.id)} onContextMenu={(event) => { if (IS_ANDROID_APP || IS_DESKTOP_APP) event.preventDefault(); if (IS_DESKTOP_APP) { setDesktopContextMenu({ songId: activeSong.id, lineId: line.id, x: Math.min(event.clientX, window.innerWidth - 276), y: Math.min(event.clientY, window.innerHeight - 285) }); setLyricEditMenu(null) } }} onClick={(event) => handleLyricRowClick(event, line.id)} onDoubleClick={(event) => handleDesktopLyricDoubleClick(event, line.id)} key={`${activeSong.id}-${line.id}`}>
                 <span className="line-number">{String(line.displayNumber).padStart(2, '0')}</span>
                 <div className="auto-line-wrap">
                   <div className="japanese"><AnnotatedLine wordAlignedReadings={IS_DESKTOP_APP} interactive={!IS_ANDROID_APP} tokens={lineTokens} corrections={corrections} hiddenReadings={hiddenReadings} fallbackText={line.text} songId={activeSong.id} lineId={line.id} mode={mode} readingStyle={readingStyle} selectedIndex={current ? selectedTokenIndex : -1} selectionRange={dragSelection?.lineId === line.id ? dragSelection : selectedPhraseRange?.lineId === line.id ? selectedPhraseRange : null} showSelectionAction={selectedText?.lineId === line.id && selectedPhraseRange?.lineId === line.id} onStartSelection={(tokenIndex) => beginTokenSelection(line.id, tokenIndex)} onExtendSelection={(tokenIndex) => extendTokenSelection(line.id, tokenIndex)} onFinishSelection={finishTokenSelection} onExplainSelection={() => askAiToExplain(selectedText)} onSelectToken={(tokenIndex) => handleTokenClick(line.id, tokenIndex)} /></div>
-                  {!(IS_DESKTOP_APP && readingStyle === 'both' && mode === 'reading' && lineTokens?.length) && <div className={`reading ${lineTokens ? '' : 'needs-review'}`}>{mode === 'reading' ? englishOnly ? null : readingStyle === 'both' ? <><span lang="ja">{lineReading || '正在生成读音…'}</span><span lang="ja-Latn">{lineRomaji}</span></> : lineReading || '正在生成读音…' : mode === 'practice' ? '读音已隐藏，尝试自己读出这一句' : `切换到“${readingLabel}”查看自动标注`}</div>}
+                  {!(IS_DESKTOP_APP && mode === 'reading' && lineTokens?.length) && <div className={`reading ${lineTokens ? '' : 'needs-review'}`}>{mode === 'reading' ? englishOnly ? null : readingStyle === 'both' ? <><span lang="ja">{lineReading || '正在生成读音…'}</span><span lang="ja-Latn">{lineRomaji}</span></> : lineReading || '正在生成读音…' : mode === 'practice' ? '读音已隐藏，尝试自己读出这一句' : `切换到“${readingLabel}”查看自动标注`}</div>}
                   {line.translation && <div className="translation lyric-translation">{line.translation}</div>}
                 </div>
-                <div className="line-actions"><button className={`line-action line-play ${isPlaying ? 'playing' : ''}`} type="button" onClick={(event) => { event.stopPropagation(); playLine(line.id) }} aria-label={`${isPlaying ? '暂停' : '播放'}第 ${line.displayNumber} 句`} title={`${isPlaying ? '暂停' : '播放'}这一句`}>{isPlaying ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}</button><button className={`line-mastery ${isLearned ? 'mastered' : ''}`} type="button" aria-pressed={isLearned} onClick={(event) => { event.stopPropagation(); toggleLearnedLine(line.id) }} title={isLearned ? '点击改为未掌握' : '点击标记为已掌握'}>{isLearned ? <Check size={12} /> : <Circle size={11} />}<span>{isLearned ? '已掌握' : '未掌握'}</span></button><button className="sentence-explain-link" type="button" aria-expanded={sentenceExpanded} aria-controls={`sentence-analysis-${activeSong.id}-${line.id}`} disabled={!hasSentenceExplanation && Boolean(sentenceExplanationJob)} onClick={(event) => { event.stopPropagation(); showSentenceExplanation(line) }}><Sparkles size={11} /> {sentenceExpanded ? '收起解析' : hasSentenceExplanation ? '查看解析' : sentenceExplanationJob ? '生成中…' : '生成解析'}</button></div>
+                <div className="line-actions">{!IS_DESKTOP_APP && <button className={`line-action line-play ${isPlaying ? 'playing' : ''}`} type="button" onClick={(event) => { event.stopPropagation(); playLine(line.id) }} aria-label={`${isPlaying ? '暂停' : '播放'}第 ${line.displayNumber} 句`} title={`${isPlaying ? '暂停' : '播放'}这一句`}>{isPlaying ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}</button>}<button className={`line-mastery ${isLearned ? 'mastered' : ''}`} type="button" aria-pressed={isLearned} onClick={(event) => { event.stopPropagation(); toggleLearnedLine(line.id) }} title={isLearned ? '点击改为未掌握' : '点击标记为已掌握'}>{isLearned ? <Check size={12} /> : <Circle size={11} />}<span>{isLearned ? '已掌握' : '未掌握'}</span></button><button className="sentence-explain-link" type="button" aria-expanded={sentenceExpanded} aria-controls={`sentence-analysis-${activeSong.id}-${line.id}`} disabled={!hasSentenceExplanation && Boolean(sentenceExplanationJob)} onClick={(event) => { event.stopPropagation(); showSentenceExplanation(line) }}><Sparkles size={11} /> {sentenceExpanded ? '收起解析' : hasSentenceExplanation ? '查看解析' : sentenceExplanationJob ? '生成中…' : '生成解析'}</button></div>
                 {IS_ANDROID_APP && <span className="android-line-state">{isPlaying ? '♪ 正在播放' : current ? '点整句播放 · 长按编辑' : ''}</span>}
                 {sentenceExpanded && <SentenceAnalysis explanation={sentenceExplanationOpen.explanation} id={`sentence-analysis-${activeSong.id}-${line.id}`} />}
               </article>
             })}
           </div>
-          <div className="lyrics-footer"><span>{IS_DESKTOP_APP ? '↑↓ 选句 · Shift+↑↓ 连选 · Enter 播放单句 · Space 播放/暂停 · Ctrl+Space 播放选段' : '点击任一词即可在右侧校对；选中短语可请求 AI 解释'}</span><span>{IS_DESKTOP_APP ? '右键更多操作' : '每句右侧可切换掌握状态'}</span></div>
+          <div className="lyrics-footer"><span>{IS_DESKTOP_APP ? '双击播放单句 · ↑↓ 选句 · Shift+↑↓ 连选 · Enter 播放单句 · Space 播放/暂停 · Ctrl+Space 播放选段' : '点击任一词即可在右侧校对；选中短语可请求 AI 解释'}</span><span>{IS_DESKTOP_APP ? '右键更多操作' : '每句右侧可切换掌握状态'}</span></div>
           </>}
         </section>
 
@@ -2530,7 +2590,8 @@ export default function App() {
         </>}
       </section>}
     </main>
-    {IS_DESKTOP_APP && <DesktopPlayer song={activeSong} artwork={artworkForSong(activeSong)} available={Boolean(audioUrl)} playing={desktopAudio.playing || rangePractice.phase === 'gap' && !rangePractice.paused} currentTime={desktopAudio.time} duration={desktopAudio.duration} rate={playbackRate} error={audioError || annotationError} onToggle={toggleSingAlong} onSeek={seekDesktopAudio} onRate={choosePlaybackRate} onPrevious={() => playDesktopAdjacent(-1)} onNext={() => playDesktopAdjacent(1)} volume={desktopVolume} onVolume={value => { setDesktopVolume(value); if (audioRef.current) audioRef.current.volume = value }}/>}
+    {IS_DESKTOP_APP && activePage !== 'lesson' && <DesktopPlayer song={activeSong} artwork={artworkForSong(activeSong)} available={Boolean(audioUrl)} playing={desktopAudio.playing || rangePractice.phase === 'gap' && !rangePractice.paused} currentTime={desktopAudio.time} duration={desktopAudio.duration} rate={playbackRate} onToggle={toggleSingAlong} onSeek={seekDesktopAudio} onRate={choosePlaybackRate} onPrevious={() => playDesktopAdjacent(-1)} onNext={() => playDesktopAdjacent(1)} volume={desktopVolume} onVolume={value => { setDesktopVolume(value); if (audioRef.current) audioRef.current.volume = value }}/>}
+    {IS_DESKTOP_APP && <DesktopStatusBar error={audioError || annotationError}/>}
     {IS_ANDROID_APP && <AndroidBottomNav activeTab={mobileTab} onSelect={showMobileTab} />}
 
     {editingDetailsSong && <SongDetailsEditor key={editingDetailsSong.id} song={editingDetailsSong} onClose={() => { if (!editingDetailsBusy) setEditingDetailsSong(null) }} onSave={saveSongDetails} busy={editingDetailsBusy} />}
@@ -2547,7 +2608,7 @@ export default function App() {
     {/* 旧网页页脚保留；安卓让底部主导航固定在屏幕下沿。 */}
     {!IS_ANDROID_APP && !IS_DESKTOP_APP && <footer><span>UTA. Learn Japanese, one lyric at a time.</span><span>自动注音在本机生成 · 词义数据：<a href="https://github.com/tomoshi-app/tomoshi-dict-data" target="_blank" rel="noreferrer">Tomoshi / EDRDG</a> · AI 请求仅在你主动点击后发起</span></footer>}
 
-    {settingsOpen && <SettingsDialog updates={appUpdates} onCloudExport={createCloudData} readingStyle={readingStyle} onReadingStyleChange={setReadingStyle} lyricFontSize={lyricFontSize} onLyricFontSizeChange={value => setLyricFontSize(normalizeLyricFontSize(value))} desktopTheme={desktopTheme} onDesktopThemeChange={value => setDesktopTheme(normalizeDesktopTheme(value))} readingFontSize={readingFontSize} onReadingFontSizeChange={value => setReadingFontSize(normalizeReadingFontSize(value))} lineReadingFontSize={lineReadingFontSize} onLineReadingFontSizeChange={value => setLineReadingFontSize(normalizeLineReadingFontSize(value))} translationFontSize={translationFontSize} onTranslationFontSizeChange={value => setTranslationFontSize(normalizeTranslationFontSize(value))} onClose={() => setSettingsOpen(false)} onExport={exportLearningData} onRestore={async (file) => { const ready = await prepareBackupRestore(file); if (ready) setSettingsOpen(false) }} backupBusy={backupBusy} backupError={backupError} />}
+    {settingsOpen && <SettingsDialog updateDrop={updateDrop} onUpdateDropHandled={() => setUpdateDrop(null)} updates={appUpdates} onCloudExport={createCloudData} readingStyle={readingStyle} onReadingStyleChange={setReadingStyle} lyricFontSize={lyricFontSize} onLyricFontSizeChange={value => setLyricFontSize(normalizeLyricFontSize(value))} desktopTheme={desktopTheme} onDesktopThemeChange={value => setDesktopTheme(normalizeDesktopTheme(value))} readingFontSize={readingFontSize} onReadingFontSizeChange={value => setReadingFontSize(normalizeReadingFontSize(value))} lineReadingFontSize={lineReadingFontSize} onLineReadingFontSizeChange={value => setLineReadingFontSize(normalizeLineReadingFontSize(value))} translationFontSize={translationFontSize} onTranslationFontSizeChange={value => setTranslationFontSize(normalizeTranslationFontSize(value))} onClose={() => setSettingsOpen(false)} onExport={exportLearningData} onRestore={async (file) => { const ready = await prepareBackupRestore(file); if (ready) setSettingsOpen(false) }} backupBusy={backupBusy} backupError={backupError} />}
     {backupPreview && <div className="backup-backdrop" role="presentation" onClick={() => { if (backupBusy !== 'restore') { setBackupPreview(null); setBackupError('') } }}><section className="backup-dialog" role="dialog" aria-modal="true" aria-labelledby="backup-dialog-title" onClick={(event) => event.stopPropagation()}>
       <button className="backup-close" type="button" disabled={backupBusy === 'restore'} onClick={() => { setBackupPreview(null); setBackupError('') }} aria-label="关闭备份预览"><X size={18} /></button>
       <p className="eyebrow">RESTORE LOCAL DATA</p><h2 id="backup-dialog-title">确认恢复备份</h2>

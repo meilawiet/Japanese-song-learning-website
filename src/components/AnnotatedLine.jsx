@@ -28,9 +28,9 @@ export default function AnnotatedLine({
   // 安卓逐句取消旧选词/拖选入口，静态注音仍使用同一人工校正数据；整句点击由父层播放。
   if (!interactive) return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>{mode === 'reading' ? <ReadingLyric tokens={tokens} corrections={corrections} songId={songId} lineId={lineId} readingStyle={readingStyle} /> : tokens.map(token => token.surface).join('')}</span>
 
-  const wordAligned = wordAlignedReadings && readingStyle === 'both' && mode === 'reading'
+  const wordAligned = wordAlignedReadings && mode === 'reading'
     && tokens.some(token => /[^\x00-\x7F]/.test(token.surface) && !token.is_symbol)
-  return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}${wordAligned ? ' word-aligned' : ''}`}>
+  return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}${wordAligned ? ' word-aligned word-aligned-' + readingStyle : ''}`}>
     {tokens.map((token) => {
       const key = `${songId}:${lineId}:${token.index}`
       if (token.is_symbol) return <span className="lyric-symbol" key={key}>{wordAligned ? <WordReading token={token} /> : token.surface}</span>
