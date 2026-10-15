@@ -7,8 +7,10 @@ import { lyricsRecordToFile, searchSyncedLyrics } from '../lib/onlineLyrics'
 // 原固定列表：import { fetchPlatformLyrics, LYRIC_SOURCES, searchPlatformSongs } from '../lib/platformLyrics'
 import { fetchPlatformLyrics, searchPlatformSongs } from '../lib/platformLyrics'
 import { readResourceSources, resourceSearchUrl, sourceAdapter } from '../lib/resourceSources'
-import {searchLyricsSources,rankLyricResults} from '../lib/lyricSearch.js'
-// 分享平台只负责识别歌曲，后续检索继续使用用户选择的歌词来源。
+// 原导入：import {searchLyricsSources,rankLyricResults} from '../lib/lyricSearch.js'
+// 分享链接识别后优先使用已配置的同平台来源，未配置时使用混合搜索。
+import {searchLyricsSources,rankLyricResults,shareSearchSource} from '../lib/lyricSearch.js'
+// 原行为：分享平台只负责识别歌曲，后续检索继续使用用户选择的歌词来源。
 import {resolveSongShare} from '../lib/songShare.js'
 
 // 只有歌曲宝已确认可把关键词写进站内网址；其他站点用限定域名的网页搜索。
@@ -63,10 +65,15 @@ export default function OnlineSongSearch({ onChooseLyrics, autoQuery = '' }) {
   // 原来源删除后只回退第一个；混合模式保留，单源被删后回到混合。
   useEffect(()=>{if(native&&source!=='mixed'&&!lyricSources.some(item=>item.id===source))setSource('mixed')},[configuredSources,native,source])
   // 原来直接用固定 source 标识；现在通过用户配置网址匹配适配器。
-  const find = (keyword, signal) => {
-    if (!adapter) throw new Error('请先在设置 → 数据管理 → 歌曲与歌词来源中添加可搜索的来源。')
+  // 原签名：const find = (keyword, signal) => {
+  // 显式传入本次来源，避免 setSource 尚未重新渲染时仍按上一次来源搜索。
+  const find = (keyword, signal, requestSource = source) => {
+    // 原校验：if (!adapter) throw new Error('请先在设置 → 数据管理 → 歌曲与歌词来源中添加可搜索的来源。')
+    const requestSources = requestSource==='mixed'?lyricSources:lyricSources.filter(item=>item.id===requestSource)
+    if (!requestSources.length) throw new Error('请先在设置 → 数据管理 → 歌曲与歌词来源中添加可搜索的来源。')
     // 原来只搜索当前 adapter；混合模式按适配器去重，某个来源失败时保留其他结果。
-    return searchLyricsSources(source==='mixed'?lyricSources:lyricSources.filter(item=>item.id===source),keyword,signal)
+    // 原请求：return searchLyricsSources(source==='mixed'?lyricSources:lyricSources.filter(item=>item.id===source),keyword,signal)
+    return searchLyricsSources(requestSources,keyword,signal)
   }
 
   // 音频文件识别出歌名后自动发起一次搜索；手动搜索仍可覆盖关键词。
@@ -115,13 +122,21 @@ export default function OnlineSongSearch({ onChooseLyrics, autoQuery = '' }) {
       // 原请求：searchSyncedLyrics(query)，保留 LRCLIB 为可选来源。
       // const {records:found,errors} = await find(query, controller.signal)
       let keyword = value
+      // 普通关键词沿用用户选择；分享链接在识别平台后单独决定本次来源。
+      let requestSource = source
       if (isShare) {
         const identified = await resolveSongShare(value, controller.signal)
         if (requestId !== searchRequest.current || controller.signal.aborted) return
         keyword = identified.query
+        // 仅安卓有用户配置的平台适配器；网页仍保持原有 LRCLIB 搜索。
+        if (native) {
+          requestSource = shareSearchSource(lyricSources, identified.provider)
+          setSource(requestSource)
+        }
         setQuery(keyword); setSharedSong(identified); setResolvingShare(false)
       }
-      const {records:found,errors} = await find(keyword, controller.signal)
+      // 原请求：const {records:found,errors} = await find(keyword, controller.signal)
+      const {records:found,errors} = await find(keyword, controller.signal, requestSource)
       if (requestId === searchRequest.current) {
         setResults(found)
         if(errors.length)setError(errors.join('；'))
@@ -171,7 +186,10 @@ export default function OnlineSongSearch({ onChooseLyrics, autoQuery = '' }) {
       await onChooseLyrics(lyricsRecordToFile(ready))
       if (requestId !== selectionRequest.current || controller.signal.aborted) return
       setSelectedId(record.id)
-      if (ready.trackSummary?.unmatched) setError(`有 ${ready.trackSummary.unmatched} 行翻译或罗马音的时间戳与原文不一致，未自动配对，请核对预览。`)
+      // 原提示只包含时间戳差异；QQ 来源轨道解码异常也要明确保留提示。
+      // if (ready.trackSummary?.unmatched) setError(`有 ${ready.trackSummary.unmatched} 行翻译或罗马音的时间戳与原文不一致，未自动配对，请核对预览。`)
+      const notices=[...(ready.sourceWarnings||[]),...(ready.trackSummary?.unmatched?[`有 ${ready.trackSummary.unmatched} 行翻译或罗马音的时间戳与原文不一致，未自动配对，请核对预览。`]:[])]
+      if(notices.length)setError(notices.join('；'))
     } catch (reason) {
       if (!controller.signal.aborted && requestId === selectionRequest.current) setError(reason instanceof Error ? reason.message : '歌词获取失败，请选择其他版本。')
     } finally { if (requestId === selectionRequest.current) setLoadingId(null) }
@@ -199,7 +217,9 @@ export default function OnlineSongSearch({ onChooseLyrics, autoQuery = '' }) {
     {error && <p className="online-song-search-error" role="status">{error}</p>}
     {/* 原结果固定写 LRCLIB、点击直接转文件；音乐平台需先获取具体版本的歌词。 */}
     {results.length > 0 && <div className="online-song-results"><span>{source==='mixed'?'混合搜索':lyricSources.find(item => item.id === source)?.name} · 找到 {results.length} 个结果</span><ol>{results.map((record) => <li key={record.id}><div><strong>{record.title}</strong><small>{lyricSources.find(item=>item.adapter===record.provider)?.name||record.provider} · {record.artist}{record.album ? ` · ${record.album}` : ''}{record.duration ? ` · ${Math.floor(record.duration / 60)}:${String(Math.round(record.duration) % 60).padStart(2, '0')}` : ''}</small>{record.hasAnnotation&&<small>含来源注音</small>}{record.timed===false&&<small>无时间轴 · 可先导入阅读</small>}{record.trackSummary && <small>原文 {record.trackSummary.original} 句 · 翻译 {record.trackSummary.translation} 句 · 假名 {record.trackSummary.kana||0} 句 · 罗马音 {record.trackSummary.romaji} 句</small>}</div><button type="button" disabled={Boolean(loadingId) || busy} onClick={() => chooseLyrics(record)}>{loadingId === record.id ? '获取中…' : selectedId === record.id ? '已选用' : '选用歌词'}</button></li>)}</ol></div>}
-    {native && <p className="online-song-hint">来源可在设置 → 数据管理 → 歌曲与歌词来源中管理。含注音结果优先展示；假名、翻译和罗马音按来源实际内容导入。音乐平台仅搜索你手动配置的来源。</p>}
+    {/* 原说明：来源可在设置 → 数据管理 → 歌曲与歌词来源中管理。含注音结果优先展示；假名、翻译和罗马音按来源实际内容导入。音乐平台仅搜索你手动配置的来源。 */}
+    {/* 说明链接优先来源及未配置时的回退行为，用户仍可手动切换来源。 */}
+    {native && <p className="online-song-hint">来源可在设置 → 数据管理 → 歌曲与歌词来源中管理。分享链接优先搜索已配置的对应平台，未配置时使用混合搜索。含注音结果优先展示；假名、翻译和罗马音按来源实际内容导入。音乐平台仅搜索你手动配置的来源。</p>}
     <div className="online-song-sites"><span>继续到网站查找歌曲或歌词</span><div>{sites.map((site) => <button type="button" key={site.id || site.name} onClick={() => openSite(site)}>{site.name} <ExternalLink size={13} /></button>)}</div></div>
     <p className="online-song-hint">{native ? '网站入口按你的配置打开。下载后返回 UTA，使用文件选择按钮导入音频或歌词文本。' : '歌曲宝支持带关键词搜索；下歌吧直接打开网站，其他入口使用限定网站的网页搜索。网站下载会保存在手机中；返回 UTA 后，使用上方文件选择按钮导入音频或歌词文本。'}</p>
   </section>

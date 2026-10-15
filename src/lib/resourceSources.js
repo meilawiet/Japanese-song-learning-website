@@ -21,8 +21,10 @@ export function validateResourceSource(value) {
   try { url = new URL(raw.replaceAll('{query}', 'uta')) } catch { throw new Error('请输入包含 https:// 或 http:// 的完整网址。') }
   if (!['https:', 'http:'].includes(url.protocol) || !url.hostname || url.username || url.password) throw new Error('仅支持不包含账号密码的 HTTP 或 HTTPS 网址。')
   const adapter = sourceAdapter({ url: raw })
-  // 原名称映射没有 UtaTen；QQ 仍可手动配置为网页查找入口。
-  const name = suppliedName || ({utaten:'UtaTen',netease:'网易云音乐',kugou:'酷狗音乐',kuwo:'酷我音乐',lrclib:'LRCLIB'})[adapter] || (['y.qq.com','music.qq.com'].includes(url.hostname)?'QQ音乐':url.hostname.slice(0,60))
+  // 原名称映射没有 QQ 适配器：
+  // const name = suppliedName || ({utaten:'UtaTen',netease:'网易云音乐',kugou:'酷狗音乐',kuwo:'酷我音乐',lrclib:'LRCLIB'})[adapter] || (['y.qq.com','music.qq.com'].includes(url.hostname)?'QQ音乐':url.hostname.slice(0,60))
+  // 用户已有的 QQ 网页配置直接识别为歌词源，不自动新增配置。
+  const name = suppliedName || ({utaten:'UtaTen',netease:'网易云音乐',kugou:'酷狗音乐',kuwo:'酷我音乐',qq:'QQ 音乐',lrclib:'LRCLIB'})[adapter] || url.hostname.slice(0,60)
   return { id: String(value.id || crypto.randomUUID()), name, url: raw }
 }
 export function sourceAdapter(source) {
@@ -32,6 +34,8 @@ export function sourceAdapter(source) {
   if (['music.163.com', 'www.music.163.com'].includes(host)) return 'netease'
   if (['kugou.com', 'www.kugou.com'].includes(host)) return 'kugou'
   if (['kuwo.cn', 'www.kuwo.cn'].includes(host)) return 'kuwo'
+  // 仅精确匹配 QQ 音乐常用站点；接口地址始终由适配器生成，不采用用户网址作为请求目标。
+  if (['y.qq.com','www.y.qq.com','i.y.qq.com','i2.y.qq.com','music.qq.com'].includes(host)) return 'qq'
   if (host === 'lrclib.net' || host === 'www.lrclib.net') return 'lrclib'
   if (host === 'utaten.com' || host === 'www.utaten.com') return 'utaten'
   return null

@@ -35,7 +35,9 @@ test('AI复核缓存结果提供对应句试听和暂停，关闭重开无需重
 test('取消注音在逐句、跟唱和再次编辑中一致', async () => {
   const tokens = [{ index: 0, surface: '明日', reading: 'あした' }]
   const corrections = { 'test:0:0': '' }
-  const song = { id: 'test', title: '测试', artist: 'UTA', lines: [{ id: 0, text: '明日' }] }
+  // 原样本未声明语言；纯汉字样本现在需明确为日语，继续验证主动留空的旧行为。
+  // const song = { id: 'test', title: '测试', artist: 'UTA', lines: [{ id: 0, text: '明日' }] }
+  const song = { id: 'test', title: '测试', artist: 'UTA', language:'ja', lines: [{ id: 0, text: '明日' }] }
   for (const readingStyle of ['hiragana', 'romaji', 'both']) {
     for (const interactive of [true, false]) {
       const lesson = renderToStaticMarkup(createElement(AnnotatedLine, { tokens, corrections, songId: 'test', lineId: 0, mode: 'reading', readingStyle, interactive }))

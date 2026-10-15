@@ -23,6 +23,8 @@ const customRomajiMapping = {
 // corrections. Non-kana characters in mixed readings are left untouched.
 export function displayReading(value, style = 'hiragana', token = null, corrected = false) {
   const reading = String(value || '')
+  // “按原样保留”在显示阶段也不做假名转写，避免保存后内容再次发生变化。
+  if (token?.manual_reading_mode === 'literal') return reading
   // 同时显示时，短读音用于详情与无障碍提示；歌词整句另外分行。
   if (style === 'both') return reading ? `${reading} / ${displayReading(reading, 'romaji', token, corrected)}` : ''
   if (normalizeReadingStyle(style) !== 'romaji') return reading

@@ -114,6 +114,8 @@ export function mergeTransferredLearning(previous, incoming, selectedIds) {
     ...previous,
     progress: {
       ...previous.progress,
+      // 单曲下载也恢复对应的语种和标注显示偏好，不覆盖其他歌曲设置。
+      songSettings: { ...previous.progress.songSettings, ...chosenMap(incoming.progress?.songSettings) },
       learnedBySong: { ...previous.progress.learnedBySong, ...chosenMap(incoming.progress?.learnedBySong) },
       reviewItems: [...previous.progress.reviewItems, ...(incoming.progress?.reviewItems || []).filter((item) => selected.has(item.songId))],
       favoriteSongIds: [...new Set([...previous.progress.favoriteSongIds, ...(incoming.progress?.favoriteSongIds || []).filter((id) => selected.has(id))])],

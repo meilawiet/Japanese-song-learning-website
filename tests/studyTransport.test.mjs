@@ -13,3 +13,10 @@ test('连续模式下 AI 试听只播选中句',async()=>{const {t,advance}=fixt
 test('真实媒体读当前时间和真实时长，句末定位边界',async()=>{const audio={duration:9,readyState:1,currentTime:0,paused:true,pause(){this.paused=true},async play(){this.paused=false}};const {t}=fixture(audio);await t.start();assert.equal(t.state.duration,9);audio.currentTime=3.3;t.tick();assert.equal(t.state.time,3);assert.equal(audio.currentTime,3);assert.equal(audio.paused,true)})
 test('旧 play Promise 结束不会暂停新请求',async()=>{const resolves=[];const audio={duration:9,readyState:1,currentTime:0,pause(){this.paused=true},play(){this.paused=false;return new Promise(r=>resolves.push(r))}};const {t}=fixture(audio);t.setMode('continuous');const first=t.start();await Promise.resolve();const second=t.start(3);await Promise.resolve();resolves[1]();await second;resolves[0]();await first;assert.equal(t.state.playing,true);assert.equal(audio.paused,false);assert.equal(t.state.time,3)})
 test('元信息未载入时取消请求，不会被后续事件重新启动',async()=>{const events=new EventTarget();const audio={readyState:0,currentTime:0,pause(){},load(){},addEventListener:events.addEventListener.bind(events),removeEventListener:events.removeEventListener.bind(events)};const {t}=fixture(audio);const pending=t.start();t.pause();events.dispatchEvent(new Event('loadedmetadata'));await pending;assert.equal(t.state.busy,false);assert.equal(t.state.playing,false)})
+
+// 连续跳转不能暂停真实媒体或丢失后续时间；界面触摸事件顺序另由手机回归验证。
+test('连续播放多次前后跳转后，时间仍从真实媒体持续刷新',async()=>{
+ const audio={duration:9,readyState:1,currentTime:0,paused:true,pause(){this.paused=true},async play(){this.paused=false}}
+ const {t}=fixture(audio);t.setMode('continuous');await t.start()
+ for(const target of [2,6,1,5,3,7,2,4,1,6,3,5]){t.seek(target);audio.currentTime=target+.4;t.tick();assert.equal(t.state.time,target+.4);assert.equal(t.state.playing,true);assert.equal(audio.paused,false)}
+})

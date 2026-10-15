@@ -29,6 +29,11 @@ function checkState(manifest) {
     throw new Error('备份中的学习数据格式不正确。')
   }
   const progress = manifest.progress
+  // 按歌曲保存的语言与显示选项参与备份校验，兼容没有这些字段的旧备份。
+  if (progress.songSettings != null && (!isRecord(progress.songSettings) || Object.values(progress.songSettings).some(value =>
+    !isRecord(value) || value.language != null && !['zh','ja','ko','other'].includes(value.language)
+    || value.readingStyle != null && !['none','hiragana','romaji','both'].includes(value.readingStyle)
+    || ['showTranslation','showSourceReadings','showManualReadings'].some(key=>value[key]!=null&&typeof value[key]!=='boolean')))) throw new Error('备份中的歌曲语言或显示选项无效。')
   if (manifest.artworkOverrides != null && (!isRecord(manifest.artworkOverrides)
     || Object.values(manifest.artworkOverrides).some((item) => !isRecord(item)
       || (item.artworkUrl && !validArtworkUrl(item.artworkUrl))))) {

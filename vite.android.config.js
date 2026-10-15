@@ -3,6 +3,8 @@ import { copyFileSync, mkdirSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+// QQ 解码依赖的许可随正式 APK 保存，避免压缩时丢失版权声明。
+import {qqLyricLicenses} from './scripts/qqLyricLicenses.mjs'
 
 // Android 安装包仅包含仓库里的原创示例，不复制电脑本地的歌曲文件。
 const emptySongsFile = fileURLToPath(new URL('./src/data/androidSongs.js', import.meta.url))
@@ -13,7 +15,9 @@ const offlineTokenizer = fileURLToPath(new URL('./node_modules/@faanau/kuromoji/
 const browserDictionaryLoader = fileURLToPath(new URL('./src/lib/AndroidDictionaryLoader.cjs', import.meta.url))
 
 export default defineConfig({
-  plugins: [react(), {
+  // 原插件列表仅包含 React 和词典复制；增加歌词格式依赖许可复制。
+  // plugins: [react(), {
+  plugins: [react(), qqLyricLicenses(), {
     name: 'copy-offline-japanese-dictionary',
     writeBundle(options) {
       const target = join(options.dir, 'uta-dict')

@@ -1,6 +1,14 @@
 import { lyricSurface, prepareLyricReadings, tokenReading } from './lyricReadings.js'
+import {songLanguage,languageName,annotationForLanguage,literalReading} from './songLanguage.js'
 // 提问时重新取当前歌词与人工读音，避免编辑后仍沿用旧上下文；长歌优先保留当前句附近。
 export function buildLyricChatContext(song, lineId, annotations = [], corrections = {}) {
+  // 外语不传入日语词典结果；人工内容按原样作为上下文，歌词本身不变。
+  const language=songLanguage(song)
+  if(language!=='ja'){
+    const index=Math.max(0,song.lines.findIndex(line=>line.id===lineId))
+    const describe=line=>({id:line.id,text:line.text,translation:line.translation||'',source_reading:line.romaji||'',readings:annotationForLanguage(line,language,annotations.find(a=>a.id===line.id),corrections,song.id).tokens.map(token=>({word:token.surface,reading:literalReading(token,corrections,song.id,line.id)})).filter(item=>item.reading)})
+    return {language,language_name:languageName(language),title:song.title,artist:song.artist,current_line:describe(song.lines[index]),nearby_lines:song.lines.slice(Math.max(0,index-3),index+4).map(describe),lyrics:song.lines.map(line=>line.text).join('\n').slice(0,24000)}
+  }
   const index = Math.max(0, song.lines.findIndex(line => line.id === lineId))
   // 原来仅使用本地词典；问 AI 同样遵守人工 > 来源 > 本地的优先级。
   const describe = (line) => ({ id: line.id, text: line.text, readings: (prepareLyricReadings(annotations.find(a => a.id === line.id)?.tokens || [],line.romaji,corrections,song.id,line.id).tokens || []).filter(t => !t.is_symbol).map(t => ({ word: lyricSurface(t), reading: tokenReading(t,corrections,song.id,line.id) })) })

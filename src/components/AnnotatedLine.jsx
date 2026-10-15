@@ -3,6 +3,7 @@ import { displayReading } from '../lib/readingDisplay'
 import ReadingLyric from './ReadingLyric'
 import ReadingRuby from './ReadingRuby'
 import { plainLyric } from '../lib/lyricReadings'
+import LiteralLyric from './LiteralLyric'
 
 export default function AnnotatedLine({
   tokens,
@@ -22,7 +23,12 @@ export default function AnnotatedLine({
   onFinishSelection,
   onExplainSelection,
   interactive = true,
+  language = 'ja',
+  showSourceReadings = true,
+  showManualReadings = true,
 }) {
+  // 外语直接使用自然文字排版，避免日语 ruby、词间距和罗马音转换污染内容。
+  if (language !== 'ja') return <LiteralLyric {...{text,tokens,corrections,songId,lineId,readingStyle,importedRomaji,language,showSourceReadings,showManualReadings}} />
   // 原等待逻辑保留：if (!tokens?.length) return <span>正在生成自动读音…</span>
   // 字典尚未就绪时先显示原文，避免纯阅读界面空白。
   if (!tokens?.length) return <span className="auto-lyric">{plainLyric(text) || '正在生成自动读音…'}</span>

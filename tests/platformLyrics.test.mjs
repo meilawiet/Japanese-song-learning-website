@@ -66,7 +66,9 @@ test('取消后的平台响应不能继续导入，错误数据不能冒充空�
   await assert.rejects(fetchPlatformLyrics(record, controller.signal, async () => { controller.abort(); return { code: 200, lrc: { lyric: '[00:01]空を見よう' } } }), { name: 'AbortError' })
   await assert.rejects(searchPlatformSongs('netease', '原创', undefined, async () => ({ code: 403 })), /受限/)
   await assert.rejects(fetchPlatformLyrics({ provider: 'netease', platformId: '../x' }), /标识/)
-  assert.ok(LYRIC_SOURCES.find(source => source.id === 'qq').disabled)
+  // 原来 QQ 尚未接入：assert.ok(LYRIC_SOURCES.find(source => source.id === 'qq').disabled)
+  // 新接口已接通，配置可用性仍由用户保存的来源决定。
+  assert.ok(!LYRIC_SOURCES.find(source => source.id === 'qq').disabled)
 })
 
 // 酷我实际可能在同一时间混排原文和译文，界面数量必须使用最终预览结果。

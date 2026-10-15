@@ -1,6 +1,11 @@
 import {searchSyncedLyrics} from './onlineLyrics.js'
 import {fetchPlatformLyrics,searchPlatformSongs} from './platformLyrics.js'
 
+// 分享链接只优先选择已配置、可搜索的平台适配器；保留用户来源 ID，未配置时回到混合搜索。
+export function shareSearchSource(sources,provider){
+  return sources.find(source=>source.adapter===provider)?.id||'mixed'
+}
+
 // 已确认的假名/罗马音优先；未知状态不假称含注音，选用获取后重新排序。
 export function rankLyricResults(records){
   const score=row=>(row.hasAnnotation||row.trackSummary?.romaji>0||row.trackSummary?.kana>0||/\p{Script=Han}[（(][\p{Script=Hiragana}\p{Script=Katakana}]+[）)]/u.test(row.lyrics||''))?3:row.annotationHint?2:row.lyrics?0:1
@@ -27,5 +32,7 @@ export async function searchLyricsSources(sources,query,signal,handlers={}){
     while(cursor<tasks.length&&!signal?.aborted){const record=tasks[cursor++];try{ready.set(record.id,await read(record))}catch{/* 候选仍保留，选用时明确显示获取错误，不让单源故障取消全部结果。 */}}
   }))
   if(signal?.aborted)throw new DOMException('请求已取消','AbortError')
+  // 已预取的 QQ 辅助轨异常在搜索结果中提示，避免用户把缺失轨道误认为平台未提供。
+  for(const record of ready.values())for(const warning of record.sourceWarnings||[])if(!errors.includes(warning))errors.push(warning)
   return {records:rankLyricResults(records.map(row=>ready.get(row.id)||row)),errors}
 }

@@ -1051,3 +1051,14 @@ body[style*="overflow: hidden"] .unified-study-page .practice-layout{overflow:vi
 .word-han-layout>.word-han-kana,.word-han-layout>.word-han-original{display:contents}
 .word-han-kana>span{min-height:1.4em;font-size:11px;line-height:1.4;white-space:pre;align-self:end}
 .word-han-original>span{font-size:1em;line-height:1.4;white-space:pre-wrap}
+/* 多语言原文保留空格；无注音时不占额外高度，不采用日语词组之间的间距。 */
+.literal-lyric { white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; }
+.literal-source-reading { display: block; font-size: .52em; line-height: 1.7; margin-bottom: .55em; opacity: .8; }
+.literal-ruby { ruby-position: over; }
+.literal-ruby rt { font-size: .46em; font-weight: normal; line-height: 1.5; }
+.study-language-setting { display: grid; gap: 10px; padding: 12px 0 20px; }
+.study-language-setting select { width: 100%; min-height: 44px; border: 1px solid #dce0e5; border-radius: 12px; padding: 10px 12px; background: transparent; color: inherit; font: inherit; }
+.study-language-setting small { opacity: .75; }
+/* 更多弹窗原有 label 使用横排；语言选项单独纵排，避免小屏标题被挤成两行。 */
+.unified-study-options .study-language-setting { display:grid; grid-template-columns:minmax(0,1fr); gap:10px; }
+.unified-study-options .study-language-setting > span { white-space:nowrap; }

@@ -2,6 +2,8 @@ import { toHiragana } from 'wanakana'
 
 // 字母无法可靠区分英语与日语罗马音，因此提供明确的逐词输入方式。
 export function defaultManualReadingMode(token, reading) {
+  // 明确保存的输入方式优先于字符猜测，中文提示和假名提示也能按原样重新编辑。
+  if (['literal','romaji'].includes(token.manual_reading_mode)) return token.manual_reading_mode
   return /^[\p{Script=Latin}\d\s\p{P}]+$/u.test(token.surface || '')
     || /[a-z]/i.test(reading || '') ? 'literal' : 'romaji'
 }

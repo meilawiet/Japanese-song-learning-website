@@ -4,10 +4,13 @@ import { prepareLyricReadings } from './lyricReadings'
 // 原导入仅有整曲复核；新增问题调整结果合并，保留未选择的建议。
 import { mergeIssueAdjustment, reviewFingerprint, reviewLines } from './lyricAiReview'
 import { annotationMatchesLine } from './learningIdentity'
+import { literalAnnotation, songLanguage } from './songLanguage.js'
 
 const apiOrigin = import.meta.env.VITE_ANNOTATION_API_URL || 'http://127.0.0.1:8000'
 
-export async function annotateSongLines(lines) {
+// 原签名：annotateSongLines(lines)；非日语不加载日语词典或请求日语注音服务。
+export async function annotateSongLines(lines, language = 'ja') {
+  if (language !== 'ja') return lines.map(line => literalAnnotation(line,language))
   // 手机端直接使用随 APK 安装的日语词典；电脑网页仍沿用现有 Python 服务。
   if (Capacitor.isNativePlatform()) {
     const { annotateLinesOffline } = await import('./offlineAnnotation')
@@ -55,6 +58,8 @@ async function postAi(path, payload, settings, signal) {
 }
 
 export function reviewSongWithAi(song) {
+  // 旧入口同样限制语种，防止绕过学习页的日语复核开关。
+  if (songLanguage(song) !== 'ja') throw new Error('此歌曲不使用日语注音复核。')
   return postAi('/api/ai/review-song', {
     song_id: song.id,
     title: song.title,
@@ -66,6 +71,8 @@ export function reviewSongWithAi(song) {
 // 分批复核，整曲上下文保留；所有批次成功后才允许应用，取消不会改动歌曲。
 // 原签名五个参数；可选 selectedIssues 仅复核用户点选的问题所在句。
 export async function reviewImportedLyrics(song, cached, corrections, onProgress, signal, selectedIssues = null) {
+  // 日语复核规则仅服务日语，其他语种不发送到日语提示词和读音校验器。
+  if (songLanguage(song) !== 'ja') throw new Error('此歌曲不使用日语注音复核，可通过“问 AI”了解歌词。')
   const missing=song.lines.filter(line=>!cached.some(item=>annotationMatchesLine(item,line)))
   const generated=missing.length?await annotateSongLines(missing):[]
   const rawAnnotations=song.lines.map(line=>{
@@ -113,8 +120,9 @@ export function explainSelectionWithAi(payload) {
   return postAi('/api/ai/explain-selection', payload)
 }
 
-export function explainSentenceBatchWithAi(lines) {
-  return postAi('/api/ai/explain-sentences', { lines })
+// 原请求只有 {lines}；增加语种上下文，避免把外语解释成日语。
+export function explainSentenceBatchWithAi(lines, language = 'ja') {
+  return postAi('/api/ai/explain-sentences', { lines, language })
 }
 
 export async function getAiStatus(signal) {
