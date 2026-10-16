@@ -4,43 +4,63 @@
   "reminderThreshold": 10,
   "policy": {
     "countUnit": "已完成且验证通过的一项独立用户功能或修复",
-    "exclude": ["文档维护", "缓存清理", "构建安装", "重复测试", "同一问题的多文件修改"],
+    "exclude": [
+      "文档维护",
+      "缓存清理",
+      "构建安装",
+      "重复测试",
+      "同一问题的多文件修改"
+    ],
     "publicationRequiresExplicitApproval": true,
     "remoteUploadRequiresExplicitApproval": true,
     "localInstallIsPublicationApproval": false
   },
   "lastPublished": {
-    "version": "1.3.2",
-    "versionCode": 21,
-    "tag": "v1.3.2",
+    "version": "1.4.0",
+    "versionCode": 22,
+    "tag": "v1.4.0",
     "branch": "android-dev",
-    "commit": "d53c937080966f723aaec8bd21656efb8abae867",
-    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.3.2",
-    "asset": "UTA-Android-1.3.2.apk",
-    "sha256": "d2113338cf3042a0169bbd5e9ae429d85e0b559317913eaae790c16b4caeb0f3"
+    "commit": "926d5591d19a0ad5c1ef40028464eefbb6dcfc96",
+    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.4.0",
+    "asset": "UTA-Android-1.4.0.apk",
+    "size": 94578820,
+    "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
+    "publishedOn": "2026-10-16"
   },
   "currentLocalInstall": {
     "installedOn": "2026-10-16",
     "device": "Samsung SM_N9860 / Android 13",
     "package": "com.uta.songlearning",
-    "version": "1.3.2",
-    "versionCode": 21,
-    "path": ".tools/device-builds/UTA-custom-font-management-final.apk",
-    "sha256": "18b08492b8b77d9421bc85d19240c2f6541a088a8f8e0183ce375cc8cf819028",
+    "version": "1.4.0",
+    "versionCode": 22,
+    "path": ".tools/releases/UTA-Android-1.4.0.apk",
+    "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
     "method": "adb install -r，保留应用数据；手机内 base.apk SHA256 与本地包一致；冷启动成功",
-    "published": false
+    "published": true
   },
   "reminder": {
-    "lastRemindedItemIds": ["FIX-20261015-001", "FEAT-20261015-002", "FEAT-20261015-003", "FEAT-20261015-004", "FIX-20261015-005", "FEAT-20261015-006", "FEAT-20261016-007", "FEAT-20261016-008", "FEAT-20261016-009", "FEAT-20261016-010", "FEAT-20261016-011"],
+    "lastRemindedItemIds": [
+      "FIX-20261015-001",
+      "FEAT-20261015-002",
+      "FEAT-20261015-003",
+      "FEAT-20261015-004",
+      "FIX-20261015-005",
+      "FEAT-20261015-006",
+      "FEAT-20261016-007",
+      "FEAT-20261016-008",
+      "FEAT-20261016-009",
+      "FEAT-20261016-010",
+      "FEAT-20261016-011"
+    ],
     "lastRemindedOn": "2026-10-16",
-    "userDecision": null
+    "userDecision": "用户明确授权发布和上传 1.4.0，已完成"
   },
   "items": [
     {
       "id": "FIX-20261015-001",
       "type": "bugfix",
       "title": "修复复合副词“本当は”导致整句汉字来源注音缺失",
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-15",
       "summary": "在有完整词典证据时兼容复合副词词尾は的wa唱法，支持旧整词和新拆词，保留人工优先、完整唯一匹配及原始数据。",
       "files": [
@@ -60,13 +80,24 @@
         "versionCode": 21,
         "sha256": "5b2897b0ee889f49cbff6039efb72d15f613fa4a11bfabd467e87bc9d4f974b8"
       },
-      "release": null
+      "release": {
+        "version": "1.4.0",
+        "versionCode": 22,
+        "tag": "v1.4.0",
+        "branch": "android-dev",
+        "commit": "926d5591d19a0ad5c1ef40028464eefbb6dcfc96",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.4.0",
+        "asset": "UTA-Android-1.4.0.apk",
+        "size": 94578820,
+        "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
+        "publishedOn": "2026-10-16"
+      }
     },
     {
       "id": "FEAT-20261015-002",
       "type": "feature",
       "title": "蓝牙或有线耳机断开时自动暂停歌曲",
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-15",
       "summary": "Android 监听音频即将转为扬声器的系统广播，调用现有统一暂停入口，取消播放和加载中的请求。",
       "files": [
@@ -85,16 +116,32 @@
         "versionCode": 21,
         "sha256": "12fbc4fe9e103297f05994a6d02879482411818b2662efe2e7f15727aee89932"
       },
-      "release": null
+      "release": {
+        "version": "1.4.0",
+        "versionCode": 22,
+        "tag": "v1.4.0",
+        "branch": "android-dev",
+        "commit": "926d5591d19a0ad5c1ef40028464eefbb6dcfc96",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.4.0",
+        "asset": "UTA-Android-1.4.0.apk",
+        "size": 94578820,
+        "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
+        "publishedOn": "2026-10-16"
+      }
     },
     {
       "id": "FEAT-20261015-003",
       "type": "feature",
       "title": "学习播放器增加三横线选歌按钮",
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-15",
       "summary": "在播放键左侧增加三横线按钮，复用歌曲封面原有的选歌弹窗和换歌流程。",
-      "files": ["src/App.jsx", "src/components/AndroidStudyPlayer.jsx", "src/styles.css", "tests/readingComponents.test.mjs"],
+      "files": [
+        "src/App.jsx",
+        "src/components/AndroidStudyPlayer.jsx",
+        "src/styles.css",
+        "tests/readingComponents.test.mjs"
+      ],
       "verification": [
         "服务端渲染回归确认选歌按钮可见且有无障碍名称；原有选歌处理函数直接复用",
         "176项Node测试及Android前端、Release构建通过",
@@ -106,16 +153,31 @@
         "versionCode": 21,
         "sha256": "12fbc4fe9e103297f05994a6d02879482411818b2662efe2e7f15727aee89932"
       },
-      "release": null
+      "release": {
+        "version": "1.4.0",
+        "versionCode": 22,
+        "tag": "v1.4.0",
+        "branch": "android-dev",
+        "commit": "926d5591d19a0ad5c1ef40028464eefbb6dcfc96",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.4.0",
+        "asset": "UTA-Android-1.4.0.apk",
+        "size": 94578820,
+        "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
+        "publishedOn": "2026-10-16"
+      }
     },
     {
       "id": "FEAT-20261015-004",
       "type": "feature",
       "title": "练习模式按钮一键切换逐句与跟唱",
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-15",
       "summary": "取消练习模式下拉选单，按钮直接在逐句学习与跟唱练习之间切换，保留原有播放控制器的模式状态。",
-      "files": ["src/components/AndroidStudyPlayer.jsx", "src/styles.css", "tests/readingComponents.test.mjs"],
+      "files": [
+        "src/components/AndroidStudyPlayer.jsx",
+        "src/styles.css",
+        "tests/readingComponents.test.mjs"
+      ],
       "verification": [
         "服务端渲染回归确认两种模式的按钮文案与下一目标，原播放控制器的切换回归通过",
         "176项Node测试及Android前端、Release构建通过",
@@ -127,16 +189,31 @@
         "versionCode": 21,
         "sha256": "12fbc4fe9e103297f05994a6d02879482411818b2662efe2e7f15727aee89932"
       },
-      "release": null
+      "release": {
+        "version": "1.4.0",
+        "versionCode": 22,
+        "tag": "v1.4.0",
+        "branch": "android-dev",
+        "commit": "926d5591d19a0ad5c1ef40028464eefbb6dcfc96",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.4.0",
+        "asset": "UTA-Android-1.4.0.apk",
+        "size": 94578820,
+        "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
+        "publishedOn": "2026-10-16"
+      }
     },
     {
       "id": "FIX-20261015-005",
       "type": "bugfix",
       "title": "修复 Windows 发行版遮挡安卓自动更新检查",
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-15",
       "summary": "安卓改查 GitHub 发行版列表并筛选带有效摘要的正式 APK；电脑端标签和附件不会让检查失败，列表整页无 APK 时继续翻页。",
-      "files": ["src/lib/appUpdate.js", "src/components/AppUpdates.jsx", "tests/appUpdate.test.mjs"],
+      "files": [
+        "src/lib/appUpdate.js",
+        "src/components/AppUpdates.jsx",
+        "tests/appUpdate.test.mjs"
+      ],
       "verification": [
         "真实公开 GitHub 接口返回的全仓库 Latest 是 windows-v1.1.28；新列表筛选器选中 Android v1.3.2，已装1.3.2时显示当前已是最新版本",
         "新增 Windows 与 Android 混合发行版回归；全量177项Node测试通过",
@@ -149,17 +226,37 @@
         "versionCode": 21,
         "sha256": "66a1351c62c478fd84a2b8cd6912cb71fe07e34b28cb7e76f04511818cd4d57d"
       },
-      "release": null
+      "release": {
+        "version": "1.4.0",
+        "versionCode": 22,
+        "tag": "v1.4.0",
+        "branch": "android-dev",
+        "commit": "926d5591d19a0ad5c1ef40028464eefbb6dcfc96",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.4.0",
+        "asset": "UTA-Android-1.4.0.apk",
+        "size": 94578820,
+        "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
+        "publishedOn": "2026-10-16"
+      }
     },
     {
       "id": "FEAT-20261015-006",
       "type": "feature",
       "title": "安卓主题设置新增字体与思源宋体粗细选择",
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-15",
       "updatedOn": "2026-10-16",
       "summary": "当时主字体列表整理为颜真卿、飞花宋体、猫啃珠圆体、爱点风雅黑、京华老宋体、思源宋体六项，并为思源显示细、常规、中、粗四档；刻明朝移除。后续 FEAT-20261016-007 已恢复其他思源字重和原设置标识。",
-      "files": ["src/lib/appearance.js", "src/components/ThemePanel.jsx", "src/styles.css", "src/assets/fonts/*.woff", "src/assets/fonts/*.woff2", "tests/appearance.test.mjs", "tests/readingComponents.test.mjs", "README.md"],
+      "files": [
+        "src/lib/appearance.js",
+        "src/components/ThemePanel.jsx",
+        "src/styles.css",
+        "src/assets/fonts/*.woff",
+        "src/assets/fonts/*.woff2",
+        "tests/appearance.test.mjs",
+        "tests/readingComponents.test.mjs",
+        "README.md"
+      ],
       "verification": [
         "保留的四款思源 CN 字体与原文件字符映射一致；旧极细映射细，旧半粗/特粗映射粗，旧刻明朝映射默认颜真卿",
         "组件回归确认主列表六项、思源粗细二级四项及刻明朝缺席；全量179项Node测试通过",
@@ -173,16 +270,38 @@
         "versionCode": 21,
         "sha256": "089d47f3833b9cf54af6f68ec968591477a8960aa787569f79d8845b37ce4087"
       },
-      "release": null
+      "release": {
+        "version": "1.4.0",
+        "versionCode": 22,
+        "tag": "v1.4.0",
+        "branch": "android-dev",
+        "commit": "926d5591d19a0ad5c1ef40028464eefbb6dcfc96",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.4.0",
+        "asset": "UTA-Android-1.4.0.apk",
+        "size": 94578820,
+        "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
+        "publishedOn": "2026-10-16"
+      }
     },
     {
       "id": "FEAT-20261016-007",
       "type": "feature",
       "title": "恢复思源宋体全部字重并支持远程下载",
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-16",
       "summary": "在思源宋体粗细选单恢复极细、半粗、特粗 CN 和特粗 SC；四档通过公开 Gitee UTA 字体仓库分块按需下载，校验分块与整文件 SHA256 后应用并缓存，不增加正式 APK 的字体体积。原有四档继续内置。",
-      "files": ["src/lib/appearance.js", "src/lib/remoteFontManifest.json", "src/lib/remoteFonts.js", "src/App.jsx", "src/components/ThemePanel.jsx", "src/styles.css", "tests/appearance.test.mjs", "tests/remoteFonts.test.mjs", "tests/readingComponents.test.mjs", "README.md"],
+      "files": [
+        "src/lib/appearance.js",
+        "src/lib/remoteFontManifest.json",
+        "src/lib/remoteFonts.js",
+        "src/App.jsx",
+        "src/components/ThemePanel.jsx",
+        "src/styles.css",
+        "tests/appearance.test.mjs",
+        "tests/remoteFonts.test.mjs",
+        "tests/readingComponents.test.mjs",
+        "README.md"
+      ],
       "verification": [
         "公开仓库 https://gitee.com/git277992790/UTA 的匿名页面与分块地址可访问，抽检分块 SHA256 一致；大于约 10 MB 的原字体 raw 地址要求登录，因此应用使用 3 MiB 分块",
         "181 项 Node 测试、Android 前端及 Release 构建通过；正式包只含四档原有思源 WOFF2，不含新增 OTF",
@@ -196,16 +315,31 @@
         "versionCode": 21,
         "sha256": "18b08492b8b77d9421bc85d19240c2f6541a088a8f8e0183ce375cc8cf819028"
       },
-      "release": null
+      "release": {
+        "version": "1.4.0",
+        "versionCode": 22,
+        "tag": "v1.4.0",
+        "branch": "android-dev",
+        "commit": "926d5591d19a0ad5c1ef40028464eefbb6dcfc96",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.4.0",
+        "asset": "UTA-Android-1.4.0.apk",
+        "size": 94578820,
+        "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
+        "publishedOn": "2026-10-16"
+      }
     },
     {
       "id": "FEAT-20261016-008",
       "type": "feature",
       "title": "所有其他字体显示单一常规粗细选项",
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-16",
       "summary": "主题设置的粗细下拉框对所有主字体显示；除思源宋体外，颜真卿、飞花、猫啃、爱点、京华各只有“常规”一项。",
-      "files": ["src/components/ThemePanel.jsx", "tests/readingComponents.test.mjs", "README.md"],
+      "files": [
+        "src/components/ThemePanel.jsx",
+        "tests/readingComponents.test.mjs",
+        "README.md"
+      ],
       "verification": [
         "组件回归和 181 项全量 Node 测试通过",
         "三星 Android 13 真机逐一检查五种其他字体均只有“常规”；最大应用文字 130% 与歌词 160% 无横向溢出，原外观已恢复",
@@ -217,55 +351,131 @@
         "versionCode": 21,
         "sha256": "18b08492b8b77d9421bc85d19240c2f6541a088a8f8e0183ce375cc8cf819028"
       },
-      "release": null
+      "release": {
+        "version": "1.4.0",
+        "versionCode": 22,
+        "tag": "v1.4.0",
+        "branch": "android-dev",
+        "commit": "926d5591d19a0ad5c1ef40028464eefbb6dcfc96",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.4.0",
+        "asset": "UTA-Android-1.4.0.apk",
+        "size": 94578820,
+        "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
+        "publishedOn": "2026-10-16"
+      }
     },
     {
       "id": "FEAT-20261016-009",
       "type": "feature",
       "title": "用户从手机文件导入与管理自定义字体",
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-16",
       "summary": "主题设置支持导入不超过 50 MB 的 TTF、OTF、WOFF、WOFF2 单字体文件，校验扩展名和文件头并由 WebView 加载；字体文件与列表原子保存于本机 IndexedDB，重启后恢复，可选择和删除。删除当前字体时切回内置颜真卿；不上传用户文件。",
-      "files": ["src/lib/customFonts.js", "src/lib/appearance.js", "src/App.jsx", "src/components/ThemePanel.jsx", "src/styles.css", "tests/customFonts.test.mjs", "tests/readingComponents.test.mjs", "README.md"],
+      "files": [
+        "src/lib/customFonts.js",
+        "src/lib/appearance.js",
+        "src/App.jsx",
+        "src/components/ThemePanel.jsx",
+        "src/styles.css",
+        "tests/customFonts.test.mjs",
+        "tests/readingComponents.test.mjs",
+        "README.md"
+      ],
       "verification": [
         "183 项 Node 全量测试及 Android 前端、Release 构建通过，包含格式与标识校验",
         "三星 Android 13 真机经系统文件选择器从下载目录导入 13,817,696 字节的 TTF；字体加载、选中、重启恢复及 411 CSS 像素无横向溢出",
         "真机删除测试字体后列表和 IndexedDB 均无该文件，已加载 FontFace 移除且当前外观切回内置字体；测试文件从下载目录清理，用户原主题、字号及字重恢复",
         "最终关闭 WebView 调试的正式包已覆盖安装；手机内 base.apk SHA256 与本地包一致，冷启动成功，原有歌曲可见"
       ],
-      "localBuild": { "path": ".tools/device-builds/UTA-custom-font-management-final.apk", "version": "1.3.2", "versionCode": 21, "sha256": "18b08492b8b77d9421bc85d19240c2f6541a088a8f8e0183ce375cc8cf819028" },
-      "release": null
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-custom-font-management-final.apk",
+        "version": "1.3.2",
+        "versionCode": 21,
+        "sha256": "18b08492b8b77d9421bc85d19240c2f6541a088a8f8e0183ce375cc8cf819028"
+      },
+      "release": {
+        "version": "1.4.0",
+        "versionCode": 22,
+        "tag": "v1.4.0",
+        "branch": "android-dev",
+        "commit": "926d5591d19a0ad5c1ef40028464eefbb6dcfc96",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.4.0",
+        "asset": "UTA-Android-1.4.0.apk",
+        "size": 94578820,
+        "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
+        "publishedOn": "2026-10-16"
+      }
     },
     {
       "id": "FEAT-20261016-010",
       "type": "feature",
       "title": "已下载的仓库字体可在设置中删除",
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-16",
       "summary": "主题设置列出已下载的仓库字重，可逐个删除本机缓存和已加载 FontFace；删除当前字重时切回内置字体，之后恢复“下载并应用”。",
-      "files": ["src/lib/remoteFonts.js", "src/components/ThemePanel.jsx", "src/styles.css", "README.md"],
+      "files": [
+        "src/lib/remoteFonts.js",
+        "src/components/ThemePanel.jsx",
+        "src/styles.css",
+        "README.md"
+      ],
       "verification": [
         "三星 Android 13 真机下载原先未缓存的思源极细，再经设置删除；删除后对应 IndexedDB 键消失、下载按钮重新出现",
         "原有思源特粗（SC）用户缓存保留，测试新增的极细清理，原外观恢复",
         "与自定义字体功能同一正式签名包，已覆盖安装"
       ],
-      "localBuild": { "path": ".tools/device-builds/UTA-custom-font-management-final.apk", "version": "1.3.2", "versionCode": 21, "sha256": "18b08492b8b77d9421bc85d19240c2f6541a088a8f8e0183ce375cc8cf819028" },
-      "release": null
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-custom-font-management-final.apk",
+        "version": "1.3.2",
+        "versionCode": 21,
+        "sha256": "18b08492b8b77d9421bc85d19240c2f6541a088a8f8e0183ce375cc8cf819028"
+      },
+      "release": {
+        "version": "1.4.0",
+        "versionCode": 22,
+        "tag": "v1.4.0",
+        "branch": "android-dev",
+        "commit": "926d5591d19a0ad5c1ef40028464eefbb6dcfc96",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.4.0",
+        "asset": "UTA-Android-1.4.0.apk",
+        "size": 94578820,
+        "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
+        "publishedOn": "2026-10-16"
+      }
     },
     {
       "id": "FEAT-20261016-011",
       "type": "feature",
       "title": "设置子页面显示自身标题并去除说明小字",
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-16",
       "summary": "移除设置标题下的“管理学习数据，连接你的 AI 服务。”；安卓进入个人资料、数据管理、AI服务、主题设置、关于及数据管理二级页面时，顶部显示当前页面名称；主题页不再重复显示标题。",
-      "files": ["src/components/SettingsDialog.jsx", "src/components/ThemePanel.jsx"],
+      "files": [
+        "src/components/SettingsDialog.jsx",
+        "src/components/ThemePanel.jsx"
+      ],
       "verification": [
         "三星 Android 13 真机逐页核对设置目录、五个子页面和两个数据管理二级页面标题；原说明小字不再显示，主题页标题只出现一次",
         "真机截图核对目录与主题页面排版；最终正式包覆盖安装且冷启动成功"
       ],
-      "localBuild": { "path": ".tools/device-builds/UTA-custom-font-management-final.apk", "version": "1.3.2", "versionCode": 21, "sha256": "18b08492b8b77d9421bc85d19240c2f6541a088a8f8e0183ce375cc8cf819028" },
-      "release": null
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-custom-font-management-final.apk",
+        "version": "1.3.2",
+        "versionCode": 21,
+        "sha256": "18b08492b8b77d9421bc85d19240c2f6541a088a8f8e0183ce375cc8cf819028"
+      },
+      "release": {
+        "version": "1.4.0",
+        "versionCode": 22,
+        "tag": "v1.4.0",
+        "branch": "android-dev",
+        "commit": "926d5591d19a0ad5c1ef40028464eefbb6dcfc96",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.4.0",
+        "asset": "UTA-Android-1.4.0.apk",
+        "size": 94578820,
+        "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
+        "publishedOn": "2026-10-16"
+      }
     }
   ]
 }
