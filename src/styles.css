@@ -1,7 +1,52 @@
 :root { --ink:#1f2827; --muted:#707874; --paper:#f5f2eb; --orange:#e25c38; --yellow:#f0bd48; --teal:#c5ded6; --line:rgba(31,40,39,.15); --serif:"Noto Serif JP", Georgia, serif; --sans:"Noto Sans JP", Arial, sans-serif; --mono:"DM Mono", monospace; }
-/* 原网页字体变量保留；安卓端加载用户提供的颜真卿多宝塔碑字体。字体的 vhea 版本已修正为 WebView 可识别值，缺字仍回退到原字体。 */
-@font-face { font-family:"UTA YanZhenQing"; src:url('./assets/fonts/YanZhenQingDuoBaoTaBei.ttf') format('truetype'); font-style:normal; font-weight:400; font-display:swap; }
-:root.uta-android-font { --serif:"UTA YanZhenQing", "Noto Serif JP", Georgia, serif; --sans:"UTA YanZhenQing", "Noto Sans JP", Arial, sans-serif; --mono:"UTA YanZhenQing", "DM Mono", monospace; }
+/* 原网页字体变量保留；安卓端颜真卿的 vhea 版本已修正为 WebView 可识别值。 */
+/* 原颜真卿 TTF 声明保留对照：@font-face { font-family:"UTA YanZhenQing"; src:url('./assets/fonts/YanZhenQingDuoBaoTaBei.ttf') format('truetype'); font-style:normal; font-weight:400; font-display:swap; } */
+/* 字符映射、字形顺序和字宽核对一致后，用 WOFF2 降低安装包体积。 */
+@font-face { font-family:"UTA YanZhenQing"; src:url('./assets/fonts/YanZhenQingDuoBaoTaBei.woff2') format('woff2'); font-style:normal; font-weight:400; font-display:swap; }
+/* 原三款 WOFF 声明保留对照：
+@font-face { font-family:"UTA FlyFlower"; src:url('./assets/fonts/FlyFlowerSong.woff') format('woff'); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"UTA Maoken"; src:url('./assets/fonts/MaokenZhuyuanTi.woff') format('woff'); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"UTA Aidian"; src:url('./assets/fonts/AidianFengYaHei.woff') format('woff'); font-style:normal; font-weight:400; font-display:swap; }
+*/
+/* 原字库缺字时按下方思源宋体、颜真卿、系统字体顺序补字。 */
+@font-face { font-family:"UTA FlyFlower"; src:url('./assets/fonts/FlyFlowerSong.woff2') format('woff2'); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"UTA Maoken"; src:url('./assets/fonts/MaokenZhuyuanTi.woff2') format('woff2'); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"UTA Aidian"; src:url('./assets/fonts/AidianFengYaHei.woff2') format('woff2'); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"UTA KingHwa"; src:url('./assets/fonts/KingHwaOldSong.woff') format('woff'); font-style:normal; font-weight:400; font-display:swap; }
+/* 原思源宋体常规/粗体 WOFF 声明保留对照：
+@font-face { font-family:"UTA SourceHan"; src:url('./assets/fonts/SourceHanSerifCN-Regular.woff') format('woff'); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"UTA SourceHan"; src:url('./assets/fonts/SourceHanSerifCN-Bold.woff') format('woff'); font-style:normal; font-weight:700; font-display:swap; }
+*/
+/* 思源宋体只打包细、常规、中、粗四档；常规标识仍使用常规和粗体组合。 */
+@font-face { font-family:"UTA SourceHan"; src:url('./assets/fonts/SourceHanSerifCN-Regular.woff2') format('woff2'); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"UTA SourceHan"; src:url('./assets/fonts/SourceHanSerifCN-Bold.woff2') format('woff2'); font-style:normal; font-weight:700; font-display:swap; }
+/* 四档粗细继续使用原文件，旧字重标识由外观设置迁移。 */
+@font-face { font-family:"UTA SourceHan Light"; src:url('./assets/fonts/SourceHanSerifCN-Light.woff2') format('woff2'); font-style:normal; font-weight:300; font-display:swap; }
+@font-face { font-family:"UTA SourceHan Medium"; src:url('./assets/fonts/SourceHanSerifCN-Medium.woff2') format('woff2'); font-style:normal; font-weight:500; font-display:swap; }
+@font-face { font-family:"UTA SourceHan Bold"; src:url('./assets/fonts/SourceHanSerifCN-Bold.woff2') format('woff2'); font-style:normal; font-weight:700; font-display:swap; }
+/* 原规则保留对照：:root.uta-android-font { --serif:"UTA YanZhenQing", "Noto Serif JP", Georgia, serif; --sans:"UTA YanZhenQing", "Noto Sans JP", Arial, sans-serif; --mono:"UTA YanZhenQing", "DM Mono", monospace; } */
+/* 选择值只改一个变量，界面、表单和歌词原有的 serif/sans/mono 用法同步切换。 */
+/* 原缺字回退：:root.uta-android-font { --uta-selected-font:"UTA YanZhenQing"; --serif:var(--uta-selected-font),"UTA YanZhenQing","Noto Serif JP",Georgia,serif; --sans:var(--uta-selected-font),"UTA YanZhenQing","Noto Sans JP",Arial,sans-serif; --mono:var(--uta-selected-font),"UTA YanZhenQing","DM Mono",monospace; } */
+/* 对没有假名或简体字的字库，先用笔形较中性的思源宋体补字，再回退到原颜真卿和系统字库。 */
+:root.uta-android-font { --uta-selected-font:"UTA YanZhenQing"; --serif:var(--uta-selected-font),"UTA SourceHan","UTA YanZhenQing","Noto Serif JP",Georgia,serif; --sans:var(--uta-selected-font),"UTA SourceHan","UTA YanZhenQing","Noto Sans JP",Arial,sans-serif; --mono:var(--uta-selected-font),"UTA SourceHan","UTA YanZhenQing","DM Mono",monospace; }
+:root.uta-android-font[data-uta-font="flyflower"] { --uta-selected-font:"UTA FlyFlower"; }
+:root.uta-android-font[data-uta-font="maoken"] { --uta-selected-font:"UTA Maoken"; }
+:root.uta-android-font[data-uta-font="aidian"] { --uta-selected-font:"UTA Aidian"; }
+:root.uta-android-font[data-uta-font="kinghwa"] { --uta-selected-font:"UTA KingHwa"; }
+:root.uta-android-font[data-uta-font="sourcehan"] { --uta-selected-font:"UTA SourceHan"; }
+/* 旧 sourcehan 标识仍指常规版；保留的三个独立字重由第二层选择框切换。 */
+:root.uta-android-font[data-uta-font="sourcehan_light"] { --uta-selected-font:"UTA SourceHan Light"; }
+:root.uta-android-font[data-uta-font="sourcehan_medium"] { --uta-selected-font:"UTA SourceHan Medium"; }
+:root.uta-android-font[data-uta-font="sourcehan_bold"] { --uta-selected-font:"UTA SourceHan Bold"; }
+/* 新恢复的字重由 FontFace 在下载并校验后动态注册，APK 不内置这些 OTF 文件。 */
+:root.uta-android-font[data-uta-font="sourcehan_extralight"] { --uta-selected-font:"UTA SourceHan ExtraLight"; }
+:root.uta-android-font[data-uta-font="sourcehan_semibold"] { --uta-selected-font:"UTA SourceHan SemiBold"; }
+:root.uta-android-font[data-uta-font="sourcehan_heavy"] { --uta-selected-font:"UTA SourceHan Heavy"; }
+:root.uta-android-font[data-uta-font="sourcehan_sc_heavy"] { --uta-selected-font:"UTA SourceHan SC Heavy"; }
+/* 本机导入字体用摘要生成族名，避免把用户文件名拼入 CSS。 */
+:root.uta-android-font[data-uta-font^="custom_"] { --uta-selected-font:var(--uta-user-font-family); font-synthesis-weight:none; }
+/* 各独立字重按原字体笔画显示；旧 sourcehan 常规选项仍使用常规/粗体双字重。 */
+:root.uta-android-font[data-uta-font^="sourcehan_"] { font-synthesis-weight:none; }
 /* 表单控件有浏览器自带字体，需要单独继承安卓界面的字体。 */
 .uta-android-font button,.uta-android-font input,.uta-android-font select,.uta-android-font textarea { font-family:var(--sans); }
 * { box-sizing:border-box; }
@@ -935,6 +980,30 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .settings-subpage-back { display:flex; align-items:center; gap:8px; margin:0 20px 6px; padding:10px 0; border:0; background:transparent; color:#426550; font-size:16px; }
 .theme-panel > label { display:grid; grid-template-columns:1fr auto; gap:14px; margin:24px 0; font-size:16px; }
 .theme-panel input[type=range] { grid-column:1/-1; width:100%; min-height:40px; accent-color:#426550; }
+/* 字体选择与原字号控件同页，采用系统选择框便于手机上直接切换。 */
+.theme-panel .theme-font-label { grid-template-columns:1fr; gap:10px; }
+.theme-font-label select { width:100%; min-height:48px; padding:10px 13px; border:1px solid #dbe2d3; border-radius:12px; color:var(--ink); background:#fffdf8; font:inherit; }
+/* 第二层粗细控件紧接思源宋体主选项，窄屏仍占整行。 */
+.theme-panel .theme-weight-label { margin-top:-10px; }
+/* 未下载的思源字重展示独立操作和进度，避免在系统选择框内塞入不可点击的说明。 */
+.theme-font-download { margin:-14px 0 24px; padding:14px; border:1px solid #dbe2d3; border-radius:12px; background:#fffdf8; }
+.theme-font-download p { margin:0 0 10px; color:var(--muted); font-size:14px; }
+.theme-font-download button { min-height:44px; padding:9px 16px; border:1px solid #426550; border-radius:10px; background:#426550; color:#fff; font:inherit; }
+.theme-font-download button:disabled { opacity:.65; }
+/* 导入和删除入口与字体选择同页；长文件名换行，操作按钮保持可触达。 */
+.theme-font-tools { margin:-8px 0 24px; }
+.theme-font-tools > button { min-height:44px; padding:9px 16px; border:1px solid #426550; border-radius:10px; background:#fffdf8; color:#426550; font:inherit; }
+.theme-font-tools > button:disabled,.theme-stored-fonts button:disabled { opacity:.6; }
+.theme-font-tools > p { margin:8px 0 0; color:var(--muted); font-size:13px; line-height:1.5; }
+.theme-stored-fonts { margin:22px 0; }
+.theme-stored-fonts h4 { margin:14px 0 4px; font-size:15px; }
+.theme-stored-fonts ul { list-style:none; margin:0; padding:0; }
+.theme-stored-fonts li { display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid #dbe2d3; }
+.theme-stored-fonts li span { min-width:0; flex:1; overflow-wrap:anywhere; font-size:14px; }
+.theme-stored-fonts li small { display:block; color:var(--muted); font-size:12px; }
+.theme-stored-fonts li button { min-height:40px; padding:7px 12px; border:1px solid #c03932; border-radius:9px; background:#fffdf8; color:#a5312a; font:inherit; font-size:13px; white-space:nowrap; }
+/* 原启动页单独指定颜真卿字体；安卓端已选字体优先，网页规则仍保留。 */
+.uta-android-font .android-launch-title { font-family:var(--serif); }
 .theme-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:18px 0; }
 .theme-options button { padding:16px 8px; border:1px solid #dbe2d3; border-radius:14px; background:#fffdf8; color:#426550; font-size:16px; }
 .theme-options button[aria-pressed=true] { border:2px solid #426550; background:#e6ede3; }
@@ -982,6 +1051,10 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .study-player-right{display:grid;grid-template-columns:minmax(30px,1fr) minmax(44px,1.2fr) minmax(28px,.9fr);gap:3px;align-items:center;min-width:0}
 .study-player-left>button,.study-player-right>button{min-height:44px;border:1px solid #d7e2d3;border-radius:14px;color:#426550;background:#fffefa;font-size:12px;padding:4px 5px;white-space:nowrap}
 .study-player-left .study-mode-trigger{display:flex;gap:3px;align-items:center;max-width:100%;padding:7px 9px}
+/* 原左侧只有模式下拉按钮的规则保留在上方；现在并排放模式切换和选歌按钮。 */
+.study-player-left{display:grid;grid-template-columns:minmax(0,1fr) 40px;gap:4px;width:100%}
+.study-player-left .study-mode-trigger{justify-content:center;width:100%;min-width:0;padding:5px 3px;font-size:11px;letter-spacing:-.4px}
+.study-player-left .study-song-trigger{display:grid;place-items:center;width:40px;padding:0}
 .study-central-play{display:grid;place-items:center;justify-self:center;width:52px;height:52px;padding:0;border:0;border-radius:50%;color:white;background:#426550}
 .study-central-play:disabled{opacity:.45}
 .study-player-right>.study-floating-chat{position:static;z-index:auto;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2px;width:auto;min-height:44px;padding:3px 2px;box-shadow:none;font-size:11px}

@@ -5,7 +5,8 @@ import {Browser} from '@capacitor/browser'
 import {RefreshCw,ExternalLink,Users} from 'lucide-react'
 // 增加发布说明分段，避免把 Markdown 符号直接显示给手机用户。
 // import {UPDATE_API,selectAppRelease} from '../lib/appUpdate'
-import {UPDATE_API,selectAppRelease,parseUpdateNotes} from '../lib/appUpdate'
+// 原来只检查全仓库 Latest：import {UPDATE_API,selectAppRelease,parseUpdateNotes} from '../lib/appUpdate'
+import {UPDATE_API,selectLatestAppRelease,parseUpdateNotes} from '../lib/appUpdate'
 import {shouldPromptUpdate,ignoreUpdateVersion} from '../lib/updatePreference'
 const installer=registerPlugin('UtaAppUpdate')
 const PROJECT_URL='https://github.com/meilawiet/Japanese-song-learning-website/releases'
@@ -29,11 +30,24 @@ export function useAppUpdates(enabled) {
     running.current=true;setChecking(true);setError('')
     try{
       const info=await App.getInfo();setVersion(info.version)
-      const response=await CapacitorHttp.get({url:UPDATE_API,headers:{Accept:'application/vnd.github+json'},connectTimeout:10000,readTimeout:10000})
-      if(response.status===404){setRelease({available:false,message:'暂未发布可用的更新。'});return}
-      if(response.status===403||response.status===429)throw new Error('更新检查过于频繁，请稍后重试。')
-      if(response.status!==200)throw new Error('检测更新失败，请检查网络后重试。')
-      const result=selectAppRelease(typeof response.data==='string'?JSON.parse(response.data):response.data,info.version)
+      // 原来只读取全仓库 Latest，遇到 Windows 标签便停止：
+      // const response=await CapacitorHttp.get({url:UPDATE_API,headers:{Accept:'application/vnd.github+json'},connectTimeout:10000,readTimeout:10000})
+      // if(response.status===404){setRelease({available:false,message:'暂未发布可用的更新。'});return}
+      // if(response.status===403||response.status===429)throw new Error('更新检查过于频繁，请稍后重试。')
+      // if(response.status!==200)throw new Error('检测更新失败，请检查网络后重试。')
+      // const result=selectAppRelease(typeof response.data==='string'?JSON.parse(response.data):response.data,info.version)
+      let result={available:false,message:'暂未发布可下载安装的更新。'}
+      // 从最近发行版开始寻找有效 APK；若整页都是电脑版，再读下一页。
+      for(let page=1;page<=10;page++){
+        const url=page===1?UPDATE_API:`${UPDATE_API}&page=${page}`
+        const response=await CapacitorHttp.get({url,headers:{Accept:'application/vnd.github+json'},connectTimeout:10000,readTimeout:10000})
+        if(response.status===404){if(page===1)result={available:false,message:'暂未发布可用的更新。'};break}
+        if(response.status===403||response.status===429)throw new Error('更新检查过于频繁，请稍后重试。')
+        if(response.status!==200)throw new Error('检测更新失败，请检查网络后重试。')
+        const releases=typeof response.data==='string'?JSON.parse(response.data):response.data
+        result=selectLatestAppRelease(releases,info.version)
+        if(result.available||releases.length<100)break
+      }
       // 原来所有新版本每次启动均弹窗；仅自动检查尊重当前待更新版本的忽略设置。
       setRelease(result);if(result.newer&&shouldPromptUpdate(result.version,manual===true))setPrompt(true)
     }catch{setError('检测更新失败，请检查网络或稍后重试。')}

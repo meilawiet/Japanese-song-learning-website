@@ -24,5 +24,6 @@ dist
 # 本机附件、交接记录与签名材料不随仓库同步。
 .codex-remote-attachments/
 ANDROID_APP_HANDOFF.md
+TASK_HANDOFF.md
 *.p12
 *.idsig

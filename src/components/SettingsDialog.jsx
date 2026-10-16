@@ -28,6 +28,9 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
   const fileRef = useRef(null)
   const controllerRef = useRef(null)
   const isAndroid = Capacitor.isNativePlatform()
+  // 原弹窗标题固定为“设置”；安卓进入子页面后改用当前分类名称，数据管理的二级页也显示自身名称。
+  // const dialogTitle = '设置'
+  const dialogTitle = !isAndroid || !tab ? '设置' : tab === 'data' ? dataTab === 'webdav' ? 'WebDAV云备份' : dataTab === 'sources' ? '歌曲与歌词来源' : '数据管理' : ({ profile: '个人资料', ai: 'AI服务', theme: '主题设置', about: '关于' })[tab] || '设置'
   const closeRef = useRef(onClose)
   // 子页面返回设置目录，目录返回才关闭设置。
   // closeRef.current = onClose
@@ -105,7 +108,8 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
 
   return <div className="settings-backdrop" onClick={onClose}>
     <section className="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabIndex={-1} ref={dialogRef} onClick={(event) => event.stopPropagation()}>
-      <header className="settings-heading"><div><p className="eyebrow">MAKE IT YOURS</p><h2 id="settings-title">设置</h2><p>管理学习数据，连接你的 AI 服务。</p></div><button type="button" className="settings-close" onClick={onClose} aria-label="关闭设置"><X size={21} /></button></header>
+      {/* 用户要求移除“管理学习数据，连接你的 AI 服务。”说明行；分类标题取代固定“设置”。 */}
+      <header className="settings-heading"><div><p className="eyebrow">MAKE IT YOURS</p><h2 id="settings-title">{dialogTitle}</h2></div><button type="button" className="settings-close" onClick={onClose} aria-label="关闭设置"><X size={21} /></button></header>
       {/* 旧注音设置入口保留供电脑端使用；安卓将个人资料与其他分类放在同一行。 */}
       {/* 原横向分类栏保留供对照，安卓改为目录与子页面，网页继续使用旧分类栏。 */}
       {/* <div className="settings-tabs" aria-label="设置分类">{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}><UserRound size={17} /> 个人资料</button> : <button type="button" aria-pressed={tab === 'reading'} onClick={() => setTab('reading')}><Languages size={17} /> 注音显示</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => setTab('data')}><Database size={17} /> 数据管理</button><button type="button" aria-pressed={tab === 'ai'} onClick={() => setTab('ai')}><KeyRound size={17} /> AI 服务</button>{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>setTab('about')}>关于</button>}</div> */}

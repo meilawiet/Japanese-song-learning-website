@@ -17,6 +17,39 @@ before(async () => {
 })
 after(async () => { await server?.close() })
 
+// 主列表只列字体名称；各字体都有粗细框，思源宋体恢复八档且远程档显示下载入口。
+test('主题字体列表显示所有字体粗细并去除刻明朝', async () => {
+  const ThemePanel = (await server.ssrLoadModule('/src/components/ThemePanel.jsx')).default
+  const originalStorage = globalThis.localStorage
+  try {
+    for (const font of ['yan', 'flyflower', 'sourcehan_bold', 'sourcehan_sc_heavy']) {
+      globalThis.localStorage = { getItem: () => JSON.stringify({ font }) }
+      const html = renderToStaticMarkup(createElement(ThemePanel))
+      const main = html.match(/<select aria-label="应用字体"[^>]*>([\s\S]*?)<\/select>/)?.[1]
+      assert.ok(main)
+      assert.equal((main.match(/<option /g) || []).length, 6)
+      assert.ok(main.includes('思源宋体'))
+      assert.ok(!main.includes('刻明朝') && !main.includes('思源宋体·'))
+      const label = font.startsWith('sourcehan') ? '思源宋体' : font === 'yan' ? '颜真卿多宝塔碑' : '飞花宋体'
+      const weight = html.match(new RegExp(`<select aria-label="${label}粗细"[^>]*>([\\s\\S]*?)<\\/select>`))?.[1]
+      assert.ok(weight)
+      if (!font.startsWith('sourcehan')) {
+        assert.equal((weight.match(/<option /g) || []).length, 1)
+        assert.match(weight, />常规<\/option>/)
+      } else {
+        assert.equal((weight.match(/<option /g) || []).length, 8)
+        for (const name of ['极细', '细', '常规', '中', '半粗', '粗', '特粗（CN）', '特粗（SC）']) assert.ok(weight.includes(`>${name}</option>`))
+        assert.match(weight, new RegExp(`value="${font}" selected=""`))
+        assert.equal(html.includes('下载并应用'), font === 'sourcehan_sc_heavy')
+      }
+      // 导入入口始终可见；仓库字体未缓存时不显示删除按钮。
+      assert.match(html, /从文件导入字体/)
+      assert.match(html, /选择本机字体文件/)
+      assert.doesNotMatch(html, /删除已下载字体/)
+    }
+  } finally { globalThis.localStorage = originalStorage }
+})
+
 // 重新打开有效结果即可试听，不能因查看缓存而再次调用AI；无音频时禁用播放。
 test('AI复核缓存结果提供对应句试听和暂停，关闭重开无需重新复核',async()=>{
   const Review=(await server.ssrLoadModule('/src/components/LyricAiReview.jsx')).default
@@ -207,6 +240,22 @@ test('统一学习页的学习进度在歌曲封面下方独立成行',async()=>
   assert.match(html,/0 \/ 1 句已掌握/)
 })
 
+// 统一播放器两侧按钮要在两种模式都可见，当前模式的按钮直接提示下一次切换目标。
+test('学习播放器直接切换模式并显示三横线选歌入口',async()=>{
+  const Player=(await server.ssrLoadModule('/src/components/AndroidStudyPlayer.jsx')).default
+  const {StudyTransport}=await import('../src/lib/studyTransport.js')
+  const transport=new StudyTransport()
+  const props={transport,rate:1,song:{title:'原创测试',language:'ja',lines:[]},ready:0,total:0}
+  const sentence=renderToStaticMarkup(createElement(Player,props))
+  assert.match(sentence,/aria-label="切换到跟唱练习"/)
+  assert.match(sentence,/class="study-song-trigger" aria-label="选择其他歌曲"/)
+  assert.doesNotMatch(sentence,/aria-label="选择练习模式"/)
+  transport.setMode('continuous')
+  const continuous=renderToStaticMarkup(createElement(Player,props))
+  assert.match(continuous,/aria-label="切换到逐句学习"/)
+  assert.match(continuous,/>跟唱练习<\/button>/)
+})
+
 // 来源、字典、括号及人工读音先确定优先级，再映射汉字显示；保存数据不可被显示层改写。
 test('所有来源最终只在汉字上显示假名，来源和人工读音仍优先',async()=>{
   const Reading=(await server.ssrLoadModule('/src/components/ReadingLyric.jsx')).default
@@ -227,4 +276,21 @@ test('所有来源最终只在汉字上显示假名，来源和人工读音仍�
   const corrections={'test:0:0':'かかえ'},tokens=[{index:0,surface:'抱え',reading:'ほうえ'}],snapshot=JSON.stringify(corrections)
   const html=renderToStaticMarkup(createElement(Reading,{tokens,corrections,songId:'test',lineId:0,readingStyle:'both',stacked:true,importedRomaji:'houe'}))
   assert.ok(html.includes('>かか</span>'));assert.equal(JSON.stringify(corrections),snapshot)
+})
+
+// 使用手机同款词典验证真实分类，再校验最终汉字段显示，避免只靠手写助词标签掩盖问题。
+test('手机词典把本当は收作副词时，新旧分词的汉字假名均能显示',async()=>{
+  const {default:kuromoji}=await import('@faanau/kuromoji')
+  const {toHiragana}=await import('wanakana')
+  const {splitKanjiOkuriganaTokens}=await import('../src/lib/defaultSegmentation.js')
+  const tokenizer=await new Promise((resolve,reject)=>kuromoji.builder({dicPath:'node_modules/@faanau/kuromoji/dict/'}).build((error,result)=>error?reject(error):resolve(result)))
+  const raw=tokenizer.tokenize('本当は誰が救われたくて').map((token,index)=>({index,surface:token.surface_form,reading:toHiragana(token.reading||token.surface_form),dictionary_form:token.basic_form,part_of_speech:[token.pos,token.pos_detail_1].filter(value=>value&&value!=='*').join('・')}))
+  const Reading=(await server.ssrLoadModule('/src/components/ReadingLyric.jsx')).default
+  for(const input of [raw,splitKanjiOkuriganaTokens(raw)]){
+    const snapshot=JSON.stringify(input)
+    const html=renderToStaticMarkup(createElement(Reading,{tokens:input,corrections:{},songId:'test',lineId:13,readingStyle:'hiragana',stacked:true,importedRomaji:'ho n to u wa da re ga su ku wa re ta ku te'}))
+    for(const reading of ['ほんとう','だれ','すく'])assert.ok(html.includes(`>${reading}</span>`),`缺少汉字假名：${reading}`)
+    assert.ok(!html.includes('>ほんとうわ</span>')&&!html.includes('>ほんとうは</span>'))
+    assert.equal(JSON.stringify(input),snapshot)
+  }
 })

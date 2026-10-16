@@ -1,6 +1,7 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
-import {newerAppVersion,selectAppRelease,UPDATE_REPOSITORY} from '../src/lib/appUpdate.js'
+// 原测试导入保留对照：import {newerAppVersion,selectAppRelease,UPDATE_REPOSITORY} from '../src/lib/appUpdate.js'
+import {newerAppVersion,selectAppRelease,selectLatestAppRelease,UPDATE_REPOSITORY} from '../src/lib/appUpdate.js'
 const release={tag_name:'v1.10.0',body:'更新说明',assets:[{name:'UTA.apk',browser_download_url:`https://github.com/${UPDATE_REPOSITORY}/releases/download/v1.10.0/UTA.apk`}]}
 // 下载完整性校验必须来自合法 GitHub 附件摘要，不能接受截断或伪造格式。
 test('更新保留完整 SHA256 摘要，缺失或无效摘要不传入安装下载器',()=>{
@@ -22,6 +23,21 @@ test('只提示有正式APK的官方Release，拒绝外站、调试包和预发�
   assert.equal(selectAppRelease({...release,prerelease:true},'1.9').available,false)
   assert.equal(selectAppRelease({...release,assets:[{name:'UTA.apk',browser_download_url:'https://example.com/UTA.apk'}]},'1.9').available,false)
   assert.equal(selectAppRelease({...release,assets:[{...release.assets[0],name:'app-debug.apk'}]},'1.9').available,false)
+})
+
+// GitHub 的全仓库 Latest 可能是 Windows；列表顺序也不能代替安卓版本比较。
+test('电脑发行版成为 Latest 后仍找到安卓 APK，并识别已安装最新版',()=>{
+  const digest=`sha256:${'a'.repeat(64)}`
+  const android=version=>({tag_name:`v${version}`,draft:false,prerelease:false,assets:[{name:`UTA-Android-${version}.apk`,digest,browser_download_url:`https://github.com/${UPDATE_REPOSITORY}/releases/download/v${version}/UTA-Android-${version}.apk`}]})
+  const windows={tag_name:'windows-v1.1.28',draft:false,prerelease:false,assets:[{name:'UTA-Windows.zip',digest}]}
+  const releases=[android('1.3.1'),windows,android('1.3.2')]
+  const current=selectLatestAppRelease(releases,'1.3.2')
+  assert.equal(current.version,'v1.3.2')
+  assert.equal(current.newer,false)
+  assert.equal(current.message,'当前已是最新版本。')
+  assert.equal(selectLatestAppRelease(releases,'1.3.1').newer,true)
+  assert.equal(selectLatestAppRelease([windows,android('1.3.3')],'1.3.2').version,'v1.3.3')
+  assert.equal(selectLatestAppRelease([windows,{...android('1.3.4'),assets:[]}],'1.3.2').available,false)
 })
 
 // 发布说明的符号只按 Markdown 行首规则处理，正文中的井号或连字符仍保留。

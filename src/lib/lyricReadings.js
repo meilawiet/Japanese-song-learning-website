@@ -6,6 +6,12 @@ import { correctionKey, hasKanji } from './ruby.js'
 const inlinePattern = () => /([\u3400-\u9fff々]+)[ \t\u3000]*[（(]([\u3041-\u3096\u30a1-\u30faー\s]+)[）)]/gu
 export const lyricSurface = token => token.display_surface ?? token.surface
 export const plainLyric = text => String(text || '').replace(inlinePattern(), '$1')
+// 手机词典可能把“本当は”等整体收作副词；拆词后“は”仍继承该词的副词标签和词典形。
+// 仅凭完整词典形确认这种句尾“は”，避免给未知词或普通假名放宽发音匹配。
+const compoundAdverbParticle = (token, surface) => {
+  const form=token.dictionary_form || token.normalized_form || surface
+  return token.part_of_speech?.split('・')[0]==='副詞' && hasKanji(form) && form.endsWith('は') && (surface===form || surface==='は')
+}
 // 拉丁文字歌词默认按原文显示，不能把英语当作日语罗马音输入转换。
 // 允许重音字母、数字、标点与符号；混合日语句子仍按逐词规则处理。
 export const isLatinLyric = text => /\p{Script=Latin}/u.test(String(text || ''))
@@ -93,7 +99,10 @@ function align(units, source) {
       const reading=source.slice(start,end)
       if(!/^[\u3041-\u3096]+$/u.test(reading))break
       // 原候选仅保存 end；汉字来源音节不引入词典读音权重。
-      if(reading.startsWith(unit.prefix)&&reading.endsWith(unit.suffix))candidates.push({end,cost:0})
+      // 原约束：if(reading.startsWith(unit.prefix)&&reading.endsWith(unit.suffix))candidates.push({end,cost:0})
+      // 复合副词的词尾助词同样保留书写/发音候选；依然要求整句唯一匹配，优先书写原形。
+      const suffixCost=(unit.suffixes||[unit.suffix]).findIndex(suffix=>reading.endsWith(suffix))
+      if(reading.startsWith(unit.prefix)&&suffixCost>=0)candidates.push({end,cost:suffixCost})
     }
     // 原来发现两种切分立即拒绝；现在只拒绝同一最优优先级下的真实歧义。
     // for(const end of [...new Set(candidates)])for(const tail of walk(index+1,end)){
@@ -130,8 +139,12 @@ function prepare(input, importedRomaji = '', corrections = {}, songId, lineId) {
     if(token.source_reading!=null&&!hasKanji(surface)){units.push({members:[token],fixed:[phonetic(token.source_reading)]});continue}
     if(!hasKanji(surface)){
       const fixed=phonetic(surface),variants=[fixed]
-      if(token.part_of_speech?.startsWith('助詞')&&({は:'わ',へ:'え',を:'お'})[fixed])variants.push(({は:'わ',へ:'え',を:'お'})[fixed])
-      units.push({members:[token],fixed:variants});continue
+      // 原来只接受明确标为助词的 token，继承“副词”标签的“は”会使全句失败。
+      // if(token.part_of_speech?.startsWith('助詞')&&({は:'わ',へ:'え',を:'お'})[fixed])variants.push(({は:'わ',へ:'え',を:'お'})[fixed])
+      // units.push({members:[token],fixed:variants});continue
+      const compoundParticle=compoundAdverbParticle(token,surface)
+      if((token.part_of_speech?.startsWith('助詞')||compoundParticle)&&({は:'わ',へ:'え',を:'お'})[fixed])variants.push(({は:'わ',へ:'え',を:'お'})[fixed])
+      units.push({members:[token],fixed:variants,compoundParticle});continue
     }
     const members=[token]
     // 连续汉字无法可靠按词拆分时整组注音，不用错误词典读音决定分配边界。
@@ -143,7 +156,11 @@ function prepare(input, importedRomaji = '', corrections = {}, songId, lineId) {
       members.push(...tokens.slice(i+1,next+1));i=next
     }
     const visible=members.map(lyricSurface).join('')
-    units.push({members,prefix:phonetic(visible.match(/^[\u3040-\u30ff]+/u)?.[0]||''),suffix:phonetic(visible.match(/[\u3040-\u30ff]+$/u)?.[0]||'')})
+    // 原构建：units.push({members,prefix:phonetic(visible.match(/^[\u3040-\u30ff]+/u)?.[0]||''),suffix:phonetic(visible.match(/[\u3040-\u30ff]+$/u)?.[0]||'')})
+    // 兼容旧缓存未拆开的“本当は”，不重排 token 或改写已保存的词界和索引。
+    const suffix=phonetic(visible.match(/[\u3040-\u30ff]+$/u)?.[0]||'')
+    const compoundParticle=members.length===1&&suffix==='は'&&compoundAdverbParticle(token,visible)
+    units.push({members,prefix:phonetic(visible.match(/^[\u3040-\u30ff]+/u)?.[0]||''),suffix,...(compoundParticle?{suffixes:[suffix,'わ'],compoundParticle}: {})})
   }
   // 原来直接 align(units,sourceKana)，忽略已提取的括号假名；相邻汉字会产生多种分配。
   // 先用明确的括号读音作为锚点尝试完整匹配；若来源唱法不同，再按原逻辑匹配罗马音。
@@ -164,6 +181,8 @@ function prepare(input, importedRomaji = '', corrections = {}, songId, lineId) {
     const writtenSuffix=visible.match(/[\u3041-\u3096\u30a1-\u30faー]+$/u)?.[0] || ''
     if(writtenPrefix&&sourceReading.startsWith(phonetic(writtenPrefix)))sourceReading=toHiragana(writtenPrefix,{passRomaji:true})+sourceReading.slice(phonetic(writtenPrefix).length)
     if(writtenSuffix&&sourceReading.endsWith(phonetic(writtenSuffix)))sourceReading=sourceReading.slice(0,-phonetic(writtenSuffix).length)+toHiragana(writtenSuffix,{passRomaji:true})
+    // 匹配 wa 后假名行仍写“は”；上方捕获的 sourcePronunciation 保留真实唱法供罗马音使用。
+    if(unit.compoundParticle&&writtenSuffix==='は'&&sourceReading.endsWith('わ'))sourceReading=sourceReading.slice(0,-1)+'は'
     const merged={...first,surface,display_surface:visible,source_reading:sourceReading,source_pronunciation:sourcePronunciation,reading_source:'romaji'}
     if(members.length>1){
       merged.reading=members.filter(token=>!token.is_symbol).map(token=>token.reading||'').join('')

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Capacitor } from '@capacitor/core'
+// 原导入保留对照：import { Capacitor } from '@capacitor/core'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
 import { BookOpenCheck, Bot, Check, ChevronDown, ChevronRight, Circle, CircleAlert, Download, Heart, LoaderCircle, MousePointer2, Pause, Pencil, Play, Plus, Save, Search, Settings, Sparkles, Trash2, Upload, Volume2, WandSparkles, X } from 'lucide-react'
 import AnnotatedLine from './components/AnnotatedLine'
@@ -24,6 +25,8 @@ import LyricChat from './components/LyricChat'
 import { applyLyricEdits, commitEditedLine } from './lib/lyricEditing'
 import SettingsDialog from './components/SettingsDialog'
 import { applyAppearance, readAppearance } from './lib/appearance'
+import { restoreRemoteFont } from './lib/remoteFonts'
+import { isCustomFont, restoreCustomFont } from './lib/customFonts'
 import { importedSongs } from './data/songs.generated'
 import { demoSongs } from './data/demoSongs'
 import { songArtworkBySource } from './data/songArtwork'
@@ -50,6 +53,8 @@ import {readCloudSongAsset} from './lib/cloudSongBackup'
 import WebDavAutoSync from './components/WebDavAutoSync'
 import {useAppUpdates,AppUpdatePrompt} from './components/AppUpdates'
 
+// Android 原生耳机断开广播只在手机应用中监听；网页仍沿用浏览器音频行为。
+const audioRoute = registerPlugin('UtaAudioRoute')
 const PROGRESS_KEY = BACKUP_STORAGE_KEYS.progress
 const ANNOTATION_KEY = BACKUP_STORAGE_KEYS.annotations
 const AI_REVIEW_KEY = BACKUP_STORAGE_KEYS.aiReviews
@@ -172,7 +177,16 @@ export default function App() {
     if (!IS_ANDROID_APP) return undefined
     document.documentElement.classList.add('uta-android-font')
     // 冷启动恢复本机主题与字号，页面内容和读音不受影响。
-    applyAppearance(readAppearance())
+    const savedAppearance = readAppearance()
+    applyAppearance(savedAppearance)
+    // 已下载的远程字重从本机缓存恢复，冷启动无需再次联网。
+    restoreRemoteFont(savedAppearance.font).then(ready => {
+      if (ready) applyAppearance(readAppearance())
+    }).catch(() => { /* 缓存损坏时保留系统回退字形，设置页提供重新下载入口。 */ })
+    // 本机导入字体同样在冷启动时注册；文件缺失时保留内置字形回退和设置入口。
+    if (isCustomFont(savedAppearance.font)) restoreCustomFont(savedAppearance.font).then(ready => {
+      if (ready) applyAppearance(readAppearance())
+    }).catch(() => { /* 设置页可删除损坏字体并重新导入，不影响歌曲数据。 */ })
     return () => document.documentElement.classList.remove('uta-android-font')
   }, [])
   useEffect(() => {
@@ -442,6 +456,16 @@ export default function App() {
   // 安卓两种播放方式共用同页；无音频时由同一控制器按真实歌词时间轴计时。
   const unifiedStudy = IS_ANDROID_APP && activePage === 'lesson' && !practiceActive
   const study = useStudyPlayback({ enabled: unifiedStudy, song: activeSong, audioRef, audioUrl, rate: playbackRate, onSelect: setActiveLineId, onError: setAudioError })
+  useEffect(() => {
+    if (!IS_ANDROID_APP) return undefined
+    let active = true
+    let listener
+    // 与封面选歌、返回页面使用同一暂停入口，连加载中的播放也会取消。
+    audioRoute.addListener('audioBecomingNoisy', () => { if (active) stopLinePlayback() })
+      .then(handle => { if (active) listener = handle; else handle.remove() })
+      .catch(() => { /* 原生桥未就绪时不影响页面正常播放。 */ })
+    return () => { active = false; listener?.remove() }
+  }, [study.transport])
   // 进入学习或切歌时显示歌曲信息，避免沿用上一首的内部滚动位置。
   useEffect(() => { if (unifiedStudy) document.querySelector('.unified-study-page')?.scrollTo({ top: 0, behavior: 'instant' }) }, [unifiedStudy, activeSong.id])
   useEffect(() => { if (unifiedStudy) setPlayingLineId(study.playing ? activeLineId : null) }, [unifiedStudy, study.playing, activeLineId])
@@ -1884,7 +1908,11 @@ export default function App() {
       {/* 原独立界面实现保留供对照：
       {IS_ANDROID_APP && <LyricChat key={activeSong.id} song={activeSong} lineId={activeLine.id} annotations={annotations} corrections={corrections} />}
       */}
+      {/* 底部三横线与封面共用选歌弹窗，避免两处维护不同的选歌行为。 */}
+      {/* 原播放器传参保留对照：
       {unifiedStudy && <AndroidStudyPlayer song={activeSong} onLanguage={changeSongLanguage} readingOptions={activeSongSettings} onReadingOptions={updateSongSettings} transport={study.transport} rate={playbackRate} onRate={choosePlaybackRate} readingStyle={readingStyle} onReadingStyle={setReadingStyle} showTranslation={showStudyTranslation} onTranslation={setShowStudyTranslation} ready={readySentenceCount} total={activeSong.lines.length} generating={Boolean(sentenceExplanationJob)} onGenerate={generateCurrentSongExplanations} onReview={() => { stopLinePlayback(); setLyricAiReviewSong(activeSong) }} chat={<LyricChat key={activeSong.id} song={activeSong} lineId={activeLine.id} annotations={annotations} corrections={corrections} />} />}
+      */}
+      {unifiedStudy && <AndroidStudyPlayer song={activeSong} onChooseSong={openStudySongPicker} onLanguage={changeSongLanguage} readingOptions={activeSongSettings} onReadingOptions={updateSongSettings} transport={study.transport} rate={playbackRate} onRate={choosePlaybackRate} readingStyle={readingStyle} onReadingStyle={setReadingStyle} showTranslation={showStudyTranslation} onTranslation={setShowStudyTranslation} ready={readySentenceCount} total={activeSong.lines.length} generating={Boolean(sentenceExplanationJob)} onGenerate={generateCurrentSongExplanations} onReview={() => { stopLinePlayback(); setLyricAiReviewSong(activeSong) }} chat={<LyricChat key={activeSong.id} song={activeSong} lineId={activeLine.id} annotations={annotations} corrections={corrections} />} />}
       {/* 已按用户要求移除逐句页顶部返回按钮；系统返回手势和底部导航继续可用。 */}
       <section className="hero anime-hero" aria-labelledby="song-title" style={{ '--hero-art': `url(${twilightStation})` }}>
         <div className="hero-art" aria-hidden="true" />

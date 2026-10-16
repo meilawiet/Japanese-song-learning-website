@@ -1,3 +1,5 @@
+import { customFontFamily, isCustomFont } from './customFonts.js'
+
 // 外观只保存在本机；不改变歌词内容、人工读音或网页端的默认样式。
 export const APPEARANCE_KEY = 'uta-appearance-v1'
 export const THEMES = [
@@ -19,10 +21,44 @@ export const THEMES = [
   // 鲁迪：麦金发色、米白服装与旅行装备的棕色，深棕金按钮保证白字可读。
   { id: 'moon', name: '旅途麦金', hue: 39, ink: '#43372a', colors: ['#fcfaf6', '#806134', '#f0e8d9'] },
 ]
-export const DEFAULT_APPEARANCE = { theme: 'garden', textSize: 100, lyricSize: 100 }
+// 原默认设置：{ theme: 'garden', textSize: 100, lyricSize: 100 }；旧存储未含字体时继续选用颜真卿。
+export const FONTS = [
+  { id: 'yan', name: '颜真卿多宝塔碑' },
+  { id: 'flyflower', name: '飞花宋体' },
+  { id: 'maoken', name: '猫啃珠圆体' },
+  { id: 'aidian', name: '爱点风雅黑' },
+  { id: 'kinghwa', name: '京华老宋体' },
+  // 思源宋体在主字体列表只占一项，粗细由下方独立选择框管理。
+  { id: 'sourcehan', name: '思源宋体' },
+]
+export const SOURCE_HAN_WEIGHTS = [
+  // 原仅保留细、常规、中、粗四档；远程字体仓库启用后恢复其余四档。
+  { id: 'sourcehan_extralight', name: '极细' },
+  { id: 'sourcehan_light', name: '细' },
+  { id: 'sourcehan', name: '常规' },
+  { id: 'sourcehan_medium', name: '中' },
+  { id: 'sourcehan_semibold', name: '半粗' },
+  { id: 'sourcehan_bold', name: '粗' },
+  { id: 'sourcehan_heavy', name: '特粗（CN）' },
+  { id: 'sourcehan_sc_heavy', name: '特粗（SC）' },
+]
+// 原迁移把四种停用字重归并到细/粗；如今恢复原标识，仅刻明朝继续回退原默认字体。
+// sourcehan_extralight: 'sourcehan_light', sourcehan_semibold: 'sourcehan_bold', sourcehan_heavy: 'sourcehan_bold', sourcehan_sc_heavy: 'sourcehan_bold'
+const LEGACY_FONT_MIGRATION = {
+  koku: 'yan',
+}
+export const DEFAULT_APPEARANCE = { theme: 'garden', font: 'yan', textSize: 100, lyricSize: 100 }
 export function normalizeAppearance(value = {}) {
   const size = (input, max) => Number.isFinite(Number(input)) ? Math.max(80, Math.min(max, Math.round(Number(input) / 5) * 5)) : 100
-  return { theme: THEMES.some(theme => theme.id === value.theme) ? value.theme : 'garden', textSize: size(value.textSize ?? 100, 130), lyricSize: size(value.lyricSize ?? 100, 160) }
+  // 原返回值不含 font；新增字段只接受内置字体标识，损坏或旧版设置回退原字体。
+  // return { theme: THEMES.some(theme => theme.id === value.theme) ? value.theme : 'garden', textSize: size(value.textSize ?? 100, 130), lyricSize: size(value.lyricSize ?? 100, 160) }
+  // 原规则只检查主字体列表：font: FONTS.some(font => font.id === value.font) ? value.font : 'yan'。
+  const requestedFont = typeof value.font === 'string' ? value.font : ''
+  const font = Object.hasOwn(LEGACY_FONT_MIGRATION, requestedFont) ? LEGACY_FONT_MIGRATION[requestedFont] : requestedFont
+  // 原校验仅允许内置字体与思源字重；导入文件使用 SHA-256 标识，避免任意值注入字体变量。
+  // const validFont = FONTS.some(item => item.id === font) || SOURCE_HAN_WEIGHTS.some(item => item.id === font)
+  const validFont = FONTS.some(item => item.id === font) || SOURCE_HAN_WEIGHTS.some(item => item.id === font) || isCustomFont(font)
+  return { theme: THEMES.some(theme => theme.id === value.theme) ? value.theme : 'garden', font: validFont ? font : 'yan', textSize: size(value.textSize ?? 100, 130), lyricSize: size(value.lyricSize ?? 100, 160) }
 }
 export function readAppearance() {
   try { return normalizeAppearance(JSON.parse(localStorage.getItem(APPEARANCE_KEY) || '{}')) } catch { return { ...DEFAULT_APPEARANCE } }
@@ -59,6 +95,9 @@ export function applyAppearance(value) {
   const theme = THEMES.find(item => item.id === appearance.theme)
   const scoped = selector => selector.split(',').map(part => {
     const text = part.trim()
+    // 原替换规则会把已有 :root.uta-android-font 错写成 :root:root.uta-android-font，
+    // 使外观覆盖中的安卓字体变量失效；根节点已限定安卓时直接保留。
+    if (text.startsWith(':root.uta-android-font')) return text
     if (text.includes('.uta-android-font')) return text.replace(/\.uta-android-font/g, ':root.uta-android-font')
     if (/^(?:html|:root)(?=[\s.:#\[]|$)/.test(text)) return text.replace(/^(?:html|:root)/, ':root.uta-android-font')
     return `:root.uta-android-font ${text}`
@@ -102,6 +141,11 @@ export function applyAppearance(value) {
     try { return build(sheet.cssRules) } catch { return '' }
   }).join('\n')
   document.documentElement.dataset.utaTheme = appearance.theme
+  // 字体切换由安卓根节点控制；网页端没有该类名，继续使用原网页字体。
+  document.documentElement.dataset.utaFont = appearance.font
+  // 自定义字体的族名由本机文件摘要生成；CSS 仍统一通过 --uta-selected-font 作用于界面。
+  if (isCustomFont(appearance.font)) document.documentElement.style?.setProperty('--uta-user-font-family', `"${customFontFamily(appearance.font)}"`)
+  else document.documentElement.style?.removeProperty('--uta-user-font-family')
   // 正在跟唱的页面在文字大小改变后继续保持当前句居中。
   window.dispatchEvent(new Event('uta:appearance-changed'))
 }

@@ -1,0 +1,378 @@
+{
+  "schemaVersion": 2,
+  "repository": "https://gitee.com/git277992790/UTA",
+  "fonts": [
+    {
+      "id": "sourcehan_extralight",
+      "name": "思源宋体",
+      "weight": "极细",
+      "format": "otf",
+      "originalPath": "fonts/source-han-serif/SourceHanSerifCN-ExtraLight.otf",
+      "bytes": 10372344,
+      "sha256": "ce698f51e49dbe89bb8663ed02da541ce50b8cae4cd6bc3110ad52d969296db4",
+      "license": "OFL-1.1",
+      "parts": [
+        {
+          "path": "parts/sourcehan_extralight/part-01.bin",
+          "bytes": 3145728,
+          "sha256": "09508501037846b4623954f7df51648526faa5f409aaace86db1658df9ed8330",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_extralight/part-01.bin"
+        },
+        {
+          "path": "parts/sourcehan_extralight/part-02.bin",
+          "bytes": 3145728,
+          "sha256": "04b25e84ed54feb4f4ae18c7fdc97c6ed2357b10177c4df403ebb8c45799c613",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_extralight/part-02.bin"
+        },
+        {
+          "path": "parts/sourcehan_extralight/part-03.bin",
+          "bytes": 3145728,
+          "sha256": "36fd17185412900450dc1989a4a2e3a917cd02e53d03efae453319822fc0b4a4",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_extralight/part-03.bin"
+        },
+        {
+          "path": "parts/sourcehan_extralight/part-04.bin",
+          "bytes": 935160,
+          "sha256": "2f0ab8b3f0cbbd331832d19e652ebaba130bf6c1aebc2d519570c087302c06f6",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_extralight/part-04.bin"
+        }
+      ]
+    },
+    {
+      "id": "sourcehan_light",
+      "name": "思源宋体",
+      "weight": "细",
+      "format": "otf",
+      "originalPath": "fonts/source-han-serif/SourceHanSerifCN-Light.otf",
+      "bytes": 11090240,
+      "sha256": "bbcb3ec1b48cd3dd19b65bdba073c1723d7a41bdad0e3a6e449000bfbff3e615",
+      "license": "OFL-1.1",
+      "parts": [
+        {
+          "path": "parts/sourcehan_light/part-01.bin",
+          "bytes": 3145728,
+          "sha256": "c51c8471c7d564ae6cbff6c3aa72f6565f97a52561f9ae9c302eb0c8fa5369c6",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_light/part-01.bin"
+        },
+        {
+          "path": "parts/sourcehan_light/part-02.bin",
+          "bytes": 3145728,
+          "sha256": "517a6ad6a3ac33c7af3677266480ff922aa7d992a80978f673c2b6347a74f8ee",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_light/part-02.bin"
+        },
+        {
+          "path": "parts/sourcehan_light/part-03.bin",
+          "bytes": 3145728,
+          "sha256": "d116eb3b20da22f84421bfe4a701daaae11052c5a66433d75b6f5ec0fa92f84b",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_light/part-03.bin"
+        },
+        {
+          "path": "parts/sourcehan_light/part-04.bin",
+          "bytes": 1653056,
+          "sha256": "d9996315ec6d939d8cd5ae05a820f550de10f8a9f08a1b2b21bde331838ff00c",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_light/part-04.bin"
+        }
+      ]
+    },
+    {
+      "id": "sourcehan",
+      "name": "思源宋体",
+      "weight": "常规",
+      "format": "otf",
+      "originalPath": "fonts/source-han-serif/SourceHanSerifCN-Regular.otf",
+      "bytes": 11257480,
+      "sha256": "1ddaf8183212f81e5b9a5b8c87a24aab8b7d2ff8f05eb3f6eaab341a7a285e58",
+      "license": "OFL-1.1",
+      "parts": [
+        {
+          "path": "parts/sourcehan/part-01.bin",
+          "bytes": 3145728,
+          "sha256": "b0436dfa7038da7c8ccbf9ffd87061c2b8a5c69bae8541322e3c3db572d0ae5c",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan/part-01.bin"
+        },
+        {
+          "path": "parts/sourcehan/part-02.bin",
+          "bytes": 3145728,
+          "sha256": "d8892ecbda641b069c03e68a5e3aaf363bb5584012785c12466405a1d1e5ad7e",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan/part-02.bin"
+        },
+        {
+          "path": "parts/sourcehan/part-03.bin",
+          "bytes": 3145728,
+          "sha256": "4df8c165aebbfed23195f1f9bcb6e9a5d28cf324345b92348eeab9ef97c15b59",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan/part-03.bin"
+        },
+        {
+          "path": "parts/sourcehan/part-04.bin",
+          "bytes": 1820296,
+          "sha256": "452c20dbf40bf7148755ede2d5c529a12d6fbcb4a5e21c541e66084a1850fb6d",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan/part-04.bin"
+        }
+      ]
+    },
+    {
+      "id": "sourcehan_medium",
+      "name": "思源宋体",
+      "weight": "中",
+      "format": "otf",
+      "originalPath": "fonts/source-han-serif/SourceHanSerifCN-Medium.otf",
+      "bytes": 11373656,
+      "sha256": "c8009023d5233d982f6c84007e898496069e880167959643fcba5630b0742134",
+      "license": "OFL-1.1",
+      "parts": [
+        {
+          "path": "parts/sourcehan_medium/part-01.bin",
+          "bytes": 3145728,
+          "sha256": "6fc7cdae8d1e147dc03bbf1efc2657533a95fb1683fe518a28de115883c6603f",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_medium/part-01.bin"
+        },
+        {
+          "path": "parts/sourcehan_medium/part-02.bin",
+          "bytes": 3145728,
+          "sha256": "9f053198ae16f44dc71d14a2bc9e0bfe2e6ff8b89bd7e60e1f58e7571ef7ad57",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_medium/part-02.bin"
+        },
+        {
+          "path": "parts/sourcehan_medium/part-03.bin",
+          "bytes": 3145728,
+          "sha256": "aa119fa71b32ad9005a3d4ae62ca553b49ed9df7b7ef7e3a7f364db851636ed0",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_medium/part-03.bin"
+        },
+        {
+          "path": "parts/sourcehan_medium/part-04.bin",
+          "bytes": 1936472,
+          "sha256": "d2ad98517c784c1eca4178ced43385520e0aa670663b74282a578701089f9cff",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_medium/part-04.bin"
+        }
+      ]
+    },
+    {
+      "id": "sourcehan_semibold",
+      "name": "思源宋体",
+      "weight": "半粗",
+      "format": "otf",
+      "originalPath": "fonts/source-han-serif/SourceHanSerifCN-SemiBold.otf",
+      "bytes": 11453056,
+      "sha256": "c058c0bd712ff3d9e9176a22650de8d0dcdb15396235cb6e3e373e6dc455d7bc",
+      "license": "OFL-1.1",
+      "parts": [
+        {
+          "path": "parts/sourcehan_semibold/part-01.bin",
+          "bytes": 3145728,
+          "sha256": "430ab8ed64166b56a88f9a01cfbaf09b746b09f18938f83e5c610eb3d013f190",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_semibold/part-01.bin"
+        },
+        {
+          "path": "parts/sourcehan_semibold/part-02.bin",
+          "bytes": 3145728,
+          "sha256": "0498677460cdf5c2ffcb4fbf6e89babca3c96de5f2d81ada4a74308b6077e513",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_semibold/part-02.bin"
+        },
+        {
+          "path": "parts/sourcehan_semibold/part-03.bin",
+          "bytes": 3145728,
+          "sha256": "214ff6aed5554e711816077804b05558eabd9fcb0f821ad76f074af1ec3f16a8",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_semibold/part-03.bin"
+        },
+        {
+          "path": "parts/sourcehan_semibold/part-04.bin",
+          "bytes": 2015872,
+          "sha256": "92f07055e1a7873fe3a575650da11ef5df879e5d30908d877029d2564b478215",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_semibold/part-04.bin"
+        }
+      ]
+    },
+    {
+      "id": "sourcehan_bold",
+      "name": "思源宋体",
+      "weight": "粗",
+      "format": "otf",
+      "originalPath": "fonts/source-han-serif/SourceHanSerifCN-Bold.otf",
+      "bytes": 11772444,
+      "sha256": "90118f6c20e798e12ea9e5b476ce920de94de2f505fc83fe641989d32da38a65",
+      "license": "OFL-1.1",
+      "parts": [
+        {
+          "path": "parts/sourcehan_bold/part-01.bin",
+          "bytes": 3145728,
+          "sha256": "3fc47de14c6d5d01d68e20d78eb55143c050dd17336f8891cc64316cdc81d1c4",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_bold/part-01.bin"
+        },
+        {
+          "path": "parts/sourcehan_bold/part-02.bin",
+          "bytes": 3145728,
+          "sha256": "1f5fc1d7b2adf9151256c2fdbafea1578eb6bdfc935a66b8844149c12d47866d",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_bold/part-02.bin"
+        },
+        {
+          "path": "parts/sourcehan_bold/part-03.bin",
+          "bytes": 3145728,
+          "sha256": "9fc8eefba5f10d29dcc941c35fde01ce8b183e8be20525bb74291dfc552f37c2",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_bold/part-03.bin"
+        },
+        {
+          "path": "parts/sourcehan_bold/part-04.bin",
+          "bytes": 2335260,
+          "sha256": "cfca645fbb54def4344a90c4d61477b3f91b003e70b9f58a0737309cdcd94335",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_bold/part-04.bin"
+        }
+      ]
+    },
+    {
+      "id": "sourcehan_heavy",
+      "name": "思源宋体",
+      "weight": "特粗（CN）",
+      "format": "otf",
+      "originalPath": "fonts/source-han-serif/SourceHanSerifCN-Heavy.otf",
+      "bytes": 11304840,
+      "sha256": "78101f93fb76951da79728a7ece95a974fb8f95f2024fa50792bc79627951a07",
+      "license": "OFL-1.1",
+      "parts": [
+        {
+          "path": "parts/sourcehan_heavy/part-01.bin",
+          "bytes": 3145728,
+          "sha256": "630dc1c7db7c51cb1430d88ff7dfcaa2c5e78f7fe8879d0ead63ee3c8af15750",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_heavy/part-01.bin"
+        },
+        {
+          "path": "parts/sourcehan_heavy/part-02.bin",
+          "bytes": 3145728,
+          "sha256": "c5e05c7dd98913c1ffa57fafd89a9b6942b734158fe25b746208d6de00c9c4f0",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_heavy/part-02.bin"
+        },
+        {
+          "path": "parts/sourcehan_heavy/part-03.bin",
+          "bytes": 3145728,
+          "sha256": "067fbb717b124fe861142f02778c3c4d27b9d24e18af06db829365fa24a66a79",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_heavy/part-03.bin"
+        },
+        {
+          "path": "parts/sourcehan_heavy/part-04.bin",
+          "bytes": 1867656,
+          "sha256": "fb7ce86139d05882cdf154e5ba3e8ed7fa191dda3f2c7b0962e79c78107f1254",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_heavy/part-04.bin"
+        }
+      ]
+    },
+    {
+      "id": "sourcehan_sc_heavy",
+      "name": "思源宋体",
+      "weight": "特粗（SC）",
+      "format": "otf",
+      "originalPath": "fonts/source-han-serif/SourceHanSerifSC-Heavy.otf",
+      "bytes": 22915736,
+      "sha256": "143ccfcf27f4eb2cb4be1d39fb0c07a426d25c2ed7d61ac815c22523df80ba3c",
+      "license": "OFL-1.1",
+      "parts": [
+        {
+          "path": "parts/sourcehan_sc_heavy/part-01.bin",
+          "bytes": 3145728,
+          "sha256": "76a93cf9e3970713fdf8f4df8898cda6f09c6062f68b45dd590f84c11a1038a7",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_sc_heavy/part-01.bin"
+        },
+        {
+          "path": "parts/sourcehan_sc_heavy/part-02.bin",
+          "bytes": 3145728,
+          "sha256": "aeef7e40c002a06a720e1e90f4a54dbfeea446cf43bd84acdf4677e3a48a1540",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_sc_heavy/part-02.bin"
+        },
+        {
+          "path": "parts/sourcehan_sc_heavy/part-03.bin",
+          "bytes": 3145728,
+          "sha256": "6e555a088d9113fbaf7c3308c354cddfdd8de826f356c2e35f523f6ee28cce8a",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_sc_heavy/part-03.bin"
+        },
+        {
+          "path": "parts/sourcehan_sc_heavy/part-04.bin",
+          "bytes": 3145728,
+          "sha256": "4faa8354456a137075a96890ec7896b52b1140bee521734ca0952e21b2b7a88d",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_sc_heavy/part-04.bin"
+        },
+        {
+          "path": "parts/sourcehan_sc_heavy/part-05.bin",
+          "bytes": 3145728,
+          "sha256": "debead4c0f41f439460eb25928472d8a610de51ca19b287321b921633f0e25a2",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_sc_heavy/part-05.bin"
+        },
+        {
+          "path": "parts/sourcehan_sc_heavy/part-06.bin",
+          "bytes": 3145728,
+          "sha256": "f6a7f305fc87885a95bb67cc8ea90bcec0c0c60394bab55272e1632d37ff0fef",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_sc_heavy/part-06.bin"
+        },
+        {
+          "path": "parts/sourcehan_sc_heavy/part-07.bin",
+          "bytes": 3145728,
+          "sha256": "e34c8431928f83540f9a4604d218cfb0ab416368c7dd31c916970f68be9b3820",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_sc_heavy/part-07.bin"
+        },
+        {
+          "path": "parts/sourcehan_sc_heavy/part-08.bin",
+          "bytes": 895640,
+          "sha256": "4590c4c740870c2fc02bfb922117f6338990b20daeb001b04440136fe334cbbe",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/sourcehan_sc_heavy/part-08.bin"
+        }
+      ]
+    },
+    {
+      "id": "flyflower",
+      "name": "飞花宋体",
+      "weight": "常规",
+      "format": "ttf",
+      "originalPath": "fonts/fly-flower-song/FlyFlowerSong.ttf",
+      "bytes": 13817696,
+      "sha256": "309c6fd99f698f64fa29e8b857bcdfccd18c6978e74945e7f8d60ad7fe95efdf",
+      "license": "author-terms",
+      "parts": [
+        {
+          "path": "parts/flyflower/part-01.bin",
+          "bytes": 3145728,
+          "sha256": "b2fd3db232b741c67afd56bb560710edc7c87d7b7fac13f4831fe55da8b1b9d0",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/flyflower/part-01.bin"
+        },
+        {
+          "path": "parts/flyflower/part-02.bin",
+          "bytes": 3145728,
+          "sha256": "60579bee28c2b4561ff48dbcee48bccfeeb003dcbd7d9be913723242e8191a3c",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/flyflower/part-02.bin"
+        },
+        {
+          "path": "parts/flyflower/part-03.bin",
+          "bytes": 3145728,
+          "sha256": "2494121462295a3032fe42d93623509d2262135192e7804ff8f9dea20476d59b",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/flyflower/part-03.bin"
+        },
+        {
+          "path": "parts/flyflower/part-04.bin",
+          "bytes": 3145728,
+          "sha256": "9f97584430ad061bada65bd1d1865351b5fe4b29f060a3a3083e6f069fb8eab2",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/flyflower/part-04.bin"
+        },
+        {
+          "path": "parts/flyflower/part-05.bin",
+          "bytes": 1234784,
+          "sha256": "5d5eef52d0e535173dda50de909bdd589099e292f160588c397dd1a6310bcfa0",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/flyflower/part-05.bin"
+        }
+      ]
+    },
+    {
+      "id": "maoken",
+      "name": "猫啃珠圆体",
+      "weight": "常规",
+      "format": "ttf",
+      "originalPath": "fonts/maoken-zhuyuan/MaokenZhuyuanTi.ttf",
+      "bytes": 5708296,
+      "sha256": "221ce3d8e2fc52f982ce9be57de3c66726ed951c8d07b0208b726763fbf7e96a",
+      "license": "OFL-1.1",
+      "parts": [
+        {
+          "path": "fonts/maoken-zhuyuan/MaokenZhuyuanTi.ttf",
+          "bytes": 5708296,
+          "sha256": "221ce3d8e2fc52f982ce9be57de3c66726ed951c8d07b0208b726763fbf7e96a",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/fonts/maoken-zhuyuan/MaokenZhuyuanTi.ttf"
+        }
+      ]
+    }
+  ]
+}

@@ -4,8 +4,42 @@ import { lyricSurface, plainLyric, prepareLyricReadings, sourceRomajiKana, token
 import { lineReading } from '../src/lib/readingDisplay.js'
 import { annotationMatchesLine } from '../src/lib/learningIdentity.js'
 import { commitEditedLine } from '../src/lib/lyricEditing.js'
+// 同时验证旧整词缓存和当前默认汉字/送假名分词，复用手机端实际拆词规则。
+import {splitKanjiOkuriganaTokens} from '../src/lib/defaultSegmentation.js'
 
 const tokens=parts=>parts.map(([surface,reading,is_symbol=false],index)=>({index,surface,reading,is_symbol}))
+// 来自手机词典的分类结构：本当は/副词、誰/代名词、が/助词、救わ/动词。
+test('复合副词中は读wa时，旧缓存及新拆词均恢复汉字注音，不改来源和人工校正',()=>{
+  const source='ho n to u wa da re ga su ku wa re ta ku te'
+  const raw=[
+    {surface:'本当は',reading:'ほんとうは',part_of_speech:'副詞・一般',dictionary_form:'本当は',normalized_form:'本当は'},
+    {surface:'誰',reading:'だれ',part_of_speech:'名詞・代名詞'},
+    {surface:'が',reading:'が',part_of_speech:'助詞・格助詞'},
+    {surface:'救わ',reading:'すくわ',part_of_speech:'動詞・自立'},
+    {surface:'れ',reading:'れ',part_of_speech:'動詞・接尾'},
+    {surface:'たく',reading:'たく',part_of_speech:'助動詞'},
+    {surface:'て',reading:'て',part_of_speech:'助詞・接続助詞'},
+  ].map((token,index)=>({...token,index}))
+  for(const input of [raw,splitKanjiOkuriganaTokens(raw)]){
+    const before=JSON.stringify(input),result=prepareLyricReadings(input,source,{},'s',13)
+    assert.equal(result.aligned,true)
+    for(const token of result.tokens){if(/[本当誰救]/u.test(token.surface))assert.ok(token.source_reading)}
+    assert.equal(result.tokens.find(token=>token.surface==='誰').source_reading,'だれ')
+    assert.ok(lineReading(input,{},'s',13,'hiragana',source).includes('ほんとう'))
+    assert.equal(lineReading(input,{},'s',13,'romaji',source),source)
+    const first=result.tokens[0]
+    assert.ok(first.source_pronunciation==='ほんとうわ'||first.source_pronunciation==='ほんとう')
+    const manual={'s:13:0':''}
+    assert.equal(tokenReading(prepareLyricReadings(input,source,manual,'s',13).tokens[0],manual,'s',13),'')
+    assert.equal(JSON.stringify(input),before)
+  }
+  // 缺少完整复合副词依据时，不因词面为“は”就把无关来源强行匹配。
+  const unknown=tokens([['君','きみ'],['は','は'],['夢','ゆめ']])
+  assert.equal(prepareLyricReadings(unknown,'to ra wa re ta').aligned,false)
+  const unrelated=tokens([['本当','ほんとう'],['は','は'],['誰','だれ']]);unrelated[1].part_of_speech='副詞・一般';unrelated[1].dictionary_form='は'
+  assert.equal(prepareLyricReadings(unrelated,'ho n to u wa da re').aligned,false)
+})
+
 // 回归：を后的思い出す以お开头，不能把其音节误当成助词变体而隐藏全句注音。
 test('优先原文助词匹配，貴方日々思い出す均恢复来源注音',()=>{
   const input=tokens([['貴方','あなた'],['と','と'],['い','い'],['た','た'],['この','この'],['日々','ひび'],['を','を'],[' ','',true],['思い出す','おもいだす'],['でしょ','でしょ'],['う','う']])
