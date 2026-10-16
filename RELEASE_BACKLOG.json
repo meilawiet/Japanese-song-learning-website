@@ -476,6 +476,37 @@
         "sha256": "89b9e787f9fc88f1f1e07557f19a3d26f83a1aceaa49b80b2bbbf353fe5d9d61",
         "publishedOn": "2026-10-16"
       }
+    },
+    {
+      "id": "FEAT-20261016-012",
+      "type": "feature",
+      "title": "1.4.0 修正包仅内置颜真卿，其余字体从 Gitee 按需下载",
+      "status": "verified",
+      "completedOn": "2026-10-16",
+      "summary": "保留颜真卿多宝塔碑作为唯一随包字体；其余四种主字体和思源宋体八档统一从公开 Gitee UTA 仓库按需下载，逐片及完整文件核对 SHA256，支持缓存恢复和逐个删除。显示版本仍为 1.4.0，内部版本号升至 23，允许覆盖安装旧包。",
+      "files": [
+        "src/styles.css",
+        "src/lib/remoteFonts.js",
+        "src/lib/remoteFontManifest.json",
+        "src/components/ThemePanel.jsx",
+        "android/app/build.gradle",
+        "README.md",
+        "tests/remoteFonts.test.mjs",
+        "tests/readingComponents.test.mjs"
+      ],
+      "verification": [
+        "Gitee 字体仓库已含全部十二款按需字体；爱点、京华新分片已匿名下载核对长度和 SHA256",
+        "184 项 Node 全量测试及 Android 前端、Release 构建通过；正式 APK 31,315,298 字节，包内仅有颜真卿 WOFF2",
+        "三星 Android 13 真机从 Gitee 下载思源宋体细、爱点风雅黑、京华老宋体；校验加载、重启缓存恢复及删除；测试缓存已清理，用户原有思源特粗 SC 保留",
+        "正式包 versionName 1.4.0 / versionCode 23，v2/v3 验签、发行证书未变且 WebView 调试关闭；覆盖安装、冷启动与手机内 APK 摘要一致"
+      ],
+      "localBuild": {
+        "path": ".tools/releases/UTA-Android-1.4.0.apk",
+        "version": "1.4.0",
+        "versionCode": 23,
+        "size": 31315298,
+        "sha256": "88817b67f6c3b355ad51272c6acc861175d8bafc392076ef61527818ce6be4ef"
+      }
     }
   ]
 }

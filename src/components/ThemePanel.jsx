@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 // 原导入不含字体选项：import { DEFAULT_APPEARANCE, THEMES, readAppearance, saveAppearance } from '../lib/appearance'
 // 原字体列表导入：import { DEFAULT_APPEARANCE, FONTS, THEMES, readAppearance, saveAppearance } from '../lib/appearance'
 import { DEFAULT_APPEARANCE, FONTS, SOURCE_HAN_WEIGHTS, THEMES, applyAppearance, readAppearance, saveAppearance } from '../lib/appearance'
-import { deleteRemoteFont, downloadRemoteFont, isRemoteFont, listDownloadedRemoteFonts, restoreRemoteFont } from '../lib/remoteFonts'
+import { deleteRemoteFont, downloadRemoteFont, isRemoteFont, listDownloadedRemoteFonts, remoteFontBytes, restoreRemoteFont } from '../lib/remoteFonts'
 import { deleteCustomFont, importCustomFont, isCustomFont, listCustomFonts, restoreCustomFont } from '../lib/customFonts'
 
 // 即时预览并保存；失败时保留当前选择，明确提示用户。
@@ -89,7 +89,14 @@ export default function ThemePanel() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : '字体删除失败，请重试。') }
     finally { setDeleting('') }
   }
-  const downloadedWeights = SOURCE_HAN_WEIGHTS.filter(weight => downloadedFonts.includes(weight.id))
+  // 原列表只显示四档远程思源字重；现在所有按需字体都能在此单独删除。
+  // const downloadedWeights = SOURCE_HAN_WEIGHTS.filter(weight => downloadedFonts.includes(weight.id))
+  const downloadedEntries = downloadedFonts.filter(isRemoteFont).map(id => ({
+    id,
+    name: id.startsWith('sourcehan')
+      ? `思源宋体 · ${SOURCE_HAN_WEIGHTS.find(weight => weight.id === id)?.name || '常规'}`
+      : FONTS.find(font => font.id === id)?.name || id,
+  }))
   // 原内容区另有“主题设置”标题；弹窗顶部已显示当前子页名称，避免同屏重复。
   return <div className="settings-content theme-panel"><p className="settings-description">调整后立即生效，保存在当前设备。</p>
     <label>歌词大小 <output>{appearance.lyricSize}%</output><input aria-label="歌词大小" type="range" min="80" max="160" step="5" value={appearance.lyricSize} onChange={event => update({ ...appearance, lyricSize: Number(event.target.value) })} /></label>
@@ -98,10 +105,10 @@ export default function ThemePanel() {
     {/* 原第二层仅思源宋体显示；现在所有字体都有粗细框，其他字体只列常规。 */}
     <label className="theme-font-label">应用字体<select aria-label="应用字体" disabled={busy} value={fontGroup} onChange={event => update({ ...appearance, font: event.target.value })}>{FONTS.map(font => <option key={font.id} value={font.id}>{font.name}</option>)}{customFonts.length > 0 && <optgroup label="本机导入">{customFonts.map(font => <option key={font.id} value={font.id}>{font.name}</option>)}</optgroup>}{isCustomFont(appearance.font) && !customEntry && <option value={appearance.font}>自定义字体（文件缺失）</option>}</select></label>
     <label className="theme-font-label theme-weight-label">{fontName}粗细<select aria-label={`${fontName}粗细`} disabled={busy} value={appearance.font} onChange={event => update({ ...appearance, font: event.target.value })}>{weights.map(weight => <option key={weight.id} value={weight.id}>{weight.name}</option>)}</select></label>
-    {isRemoteFont(appearance.font) && !remoteReady && <div className="theme-font-download"><p>此字重需要下载；下载后保存在本机，约 {appearance.font === 'sourcehan_sc_heavy' ? '22' : '11'} MB。</p><button type="button" disabled={downloading} onClick={downloadSelectedFont}>{downloading ? `下载中 ${downloadProgress}%` : '下载并应用'}</button></div>}
+    {isRemoteFont(appearance.font) && !remoteReady && <div className="theme-font-download"><p>此字体需要下载；下载后保存在本机，约 {(remoteFontBytes(appearance.font) / 1024 / 1024).toFixed(1)} MB。</p><button type="button" disabled={downloading} onClick={downloadSelectedFont}>{downloading ? `下载中 ${downloadProgress}%` : '下载并应用'}</button></div>}
     <div className="theme-font-tools"><button type="button" disabled={busy} onClick={() => fileInput.current?.click()}>{importing ? '导入中…' : '从文件导入字体'}</button><input ref={fileInput} type="file" accept=".ttf,.otf,.woff,.woff2" aria-label="选择本机字体文件" hidden onChange={importSelectedFont} /><p>支持 TTF、OTF、WOFF、WOFF2，单个文件不超过 50 MB；仅保存在本机。</p></div>
-    {(downloadedWeights.length > 0 || customFonts.length > 0) && <section className="theme-stored-fonts" aria-label="已保存字体管理">
-      {downloadedWeights.length > 0 && <><h4>已下载的仓库字体</h4><ul>{downloadedWeights.map(weight => <li key={weight.id}><span>思源宋体 · {weight.name}</span><button type="button" disabled={busy} onClick={() => removeStoredFont(weight.id)}>{deleting === weight.id ? '删除中…' : '删除已下载字体'}</button></li>)}</ul></>}
+    {(downloadedEntries.length > 0 || customFonts.length > 0) && <section className="theme-stored-fonts" aria-label="已保存字体管理">
+      {downloadedEntries.length > 0 && <><h4>已下载的仓库字体</h4><ul>{downloadedEntries.map(font => <li key={font.id}><span>{font.name}</span><button type="button" disabled={busy} onClick={() => removeStoredFont(font.id)}>{deleting === font.id ? '删除中…' : '删除已下载字体'}</button></li>)}</ul></>}
       {customFonts.length > 0 && <><h4>本机导入的字体</h4><ul>{customFonts.map(font => <li key={font.id}><span>{font.name}<small>{font.format.toUpperCase()} · {(font.bytes / 1024 / 1024).toFixed(1)} MB</small></span><button type="button" disabled={busy} onClick={() => removeStoredFont(font.id)}>{deleting === font.id ? '删除中…' : '删除自定义字体'}</button></li>)}</ul></>}
     </section>}
     <p className="theme-preview" lang="ja">好きな歌で、日本語を学ぶ<small>用喜欢的歌，练习日语。</small></p>

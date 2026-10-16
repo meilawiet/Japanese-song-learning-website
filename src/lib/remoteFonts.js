@@ -1,10 +1,19 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core'
 import manifest from './remoteFontManifest.json' with { type: 'json' }
 
-// 原四档思源宋体仍随 APK 提供；恢复的四档从公开 Gitee 仓库按需下载。
+// 旧版四档思源宋体随 APK 提供；以下新版清单改为从公开 Gitee 仓库按需下载。
+// 1.4.0 修正包只内置颜真卿，其余主字体及思源八档都在用户点击后下载。
 const REMOTE_FACES = {
+  flyflower: { family: 'UTA FlyFlower', weight: '400' },
+  maoken: { family: 'UTA Maoken', weight: '400' },
+  aidian: { family: 'UTA Aidian', weight: '400' },
+  kinghwa: { family: 'UTA KingHwa', weight: '400' },
   sourcehan_extralight: { family: 'UTA SourceHan ExtraLight', weight: '200' },
+  sourcehan_light: { family: 'UTA SourceHan Light', weight: '300' },
+  sourcehan: { family: 'UTA SourceHan', weight: '400' },
+  sourcehan_medium: { family: 'UTA SourceHan Medium', weight: '500' },
   sourcehan_semibold: { family: 'UTA SourceHan SemiBold', weight: '600' },
+  sourcehan_bold: { family: 'UTA SourceHan Bold', weight: '700' },
   sourcehan_heavy: { family: 'UTA SourceHan Heavy', weight: '900' },
   sourcehan_sc_heavy: { family: 'UTA SourceHan SC Heavy', weight: '900' },
 }
@@ -17,6 +26,8 @@ const DB_NAME = 'uta-remote-fonts-v1'
 const STORE_NAME = 'fonts'
 
 export function isRemoteFont(id) { return Object.hasOwn(REMOTE_FACES, id) }
+// 设置页按实际清单显示字体大小，不再把不同字库都估作 11 MB。
+export function remoteFontBytes(id) { return FONT_SPECS.get(id)?.bytes || 0 }
 
 function openFontDatabase() {
   return new Promise((resolve, reject) => {
@@ -135,6 +146,7 @@ export async function downloadRemoteFont(id, onProgress = () => {}) {
     const parts = []
     let completed = 0
     for (const part of spec.parts) {
+      // 所有字体只请求 Gitee 上可匿名下载的文件或分片，逐片核对摘要。
       const response = await CapacitorHttp.get({ url: part.url, responseType: 'arraybuffer', connectTimeout: 15000, readTimeout: 30000 })
       if (response.status !== 200 || typeof response.data !== 'string') throw new Error('字体下载失败，请检查网络后重试。')
       const bytes = await verifyFontBytes(decodeBase64(response.data), part)

@@ -373,6 +373,84 @@
           "url": "https://gitee.com/git277992790/UTA/raw/master/fonts/maoken-zhuyuan/MaokenZhuyuanTi.ttf"
         }
       ]
+    },
+    {
+      "id": "aidian",
+      "name": "爱点风雅黑",
+      "weight": "常规",
+      "format": "woff2",
+      "originalPath": "src/assets/fonts/AidianFengYaHei.woff2",
+      "bytes": 1539068,
+      "sha256": "bae1296efa9f0dc624b67aec1f3f4be1d5a5cc502efd007a6c29d7676ca1a5b5",
+      "license": "再分发授权待核实",
+      "parts": [
+        {
+          "path": "parts/aidian/part-01.bin",
+          "bytes": 1539068,
+          "sha256": "bae1296efa9f0dc624b67aec1f3f4be1d5a5cc502efd007a6c29d7676ca1a5b5",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/aidian/part-01.bin"
+        }
+      ]
+    },
+    {
+      "id": "kinghwa",
+      "name": "京华老宋体",
+      "weight": "常规",
+      "format": "woff",
+      "originalPath": "src/assets/fonts/KingHwaOldSong.woff",
+      "bytes": 24663828,
+      "sha256": "f4af6fdd3f0453a213fd210a78e5f974ce626b766571f2cc0458815747755b1c",
+      "license": "再分发授权待核实",
+      "parts": [
+        {
+          "path": "parts/kinghwa/part-01.bin",
+          "bytes": 3145728,
+          "sha256": "9b84b4fbab268778df7ab5e871841076be3b767ebdb204d1dccd3001396a6ac2",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/kinghwa/part-01.bin"
+        },
+        {
+          "path": "parts/kinghwa/part-02.bin",
+          "bytes": 3145728,
+          "sha256": "efee8189a3f56890ed559c1836477113fb3fe3f0be8ada5eccbcc99d8aa9b6fb",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/kinghwa/part-02.bin"
+        },
+        {
+          "path": "parts/kinghwa/part-03.bin",
+          "bytes": 3145728,
+          "sha256": "b749dfe89db07f2f74acce6b55df425e251ba419069e7a76f89347ce41e10c3e",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/kinghwa/part-03.bin"
+        },
+        {
+          "path": "parts/kinghwa/part-04.bin",
+          "bytes": 3145728,
+          "sha256": "1bb4c3ffdc6db1f7c439a2c35a4099e0aa8e084ade127073686c9331e2373c26",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/kinghwa/part-04.bin"
+        },
+        {
+          "path": "parts/kinghwa/part-05.bin",
+          "bytes": 3145728,
+          "sha256": "4f8fc433fdd8cccec94a96c8ec54ffd5e44c4829ad65311d90ebbfcff472f0fc",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/kinghwa/part-05.bin"
+        },
+        {
+          "path": "parts/kinghwa/part-06.bin",
+          "bytes": 3145728,
+          "sha256": "2de1778450ed568bfa594f4326e9ff9004d78c946417384b79239ed3892c25c9",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/kinghwa/part-06.bin"
+        },
+        {
+          "path": "parts/kinghwa/part-07.bin",
+          "bytes": 3145728,
+          "sha256": "cc23b04de4e8fafd11e546fa9e4f39900fb545eba374233f026c1f63066e5598",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/kinghwa/part-07.bin"
+        },
+        {
+          "path": "parts/kinghwa/part-08.bin",
+          "bytes": 2643732,
+          "sha256": "f2ff6a77d2d40dc239bd6fe65c3c13ebfc4374cabfe2550cc610c98f0aef8894",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/kinghwa/part-08.bin"
+        }
+      ]
     }
   ]
 }

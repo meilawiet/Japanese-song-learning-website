@@ -17,12 +17,12 @@ before(async () => {
 })
 after(async () => { await server?.close() })
 
-// 主列表只列字体名称；各字体都有粗细框，思源宋体恢复八档且远程档显示下载入口。
+// 主列表只列字体名称；颜真卿内置，其余字体及思源八档都显示按需下载入口。
 test('主题字体列表显示所有字体粗细并去除刻明朝', async () => {
   const ThemePanel = (await server.ssrLoadModule('/src/components/ThemePanel.jsx')).default
   const originalStorage = globalThis.localStorage
   try {
-    for (const font of ['yan', 'flyflower', 'sourcehan_bold', 'sourcehan_sc_heavy']) {
+    for (const font of ['yan', 'flyflower', 'kinghwa', 'sourcehan', 'sourcehan_bold', 'sourcehan_sc_heavy']) {
       globalThis.localStorage = { getItem: () => JSON.stringify({ font }) }
       const html = renderToStaticMarkup(createElement(ThemePanel))
       const main = html.match(/<select aria-label="应用字体"[^>]*>([\s\S]*?)<\/select>/)?.[1]
@@ -30,7 +30,7 @@ test('主题字体列表显示所有字体粗细并去除刻明朝', async () =>
       assert.equal((main.match(/<option /g) || []).length, 6)
       assert.ok(main.includes('思源宋体'))
       assert.ok(!main.includes('刻明朝') && !main.includes('思源宋体·'))
-      const label = font.startsWith('sourcehan') ? '思源宋体' : font === 'yan' ? '颜真卿多宝塔碑' : '飞花宋体'
+      const label = font.startsWith('sourcehan') ? '思源宋体' : font === 'yan' ? '颜真卿多宝塔碑' : font === 'kinghwa' ? '京华老宋体' : '飞花宋体'
       const weight = html.match(new RegExp(`<select aria-label="${label}粗细"[^>]*>([\\s\\S]*?)<\\/select>`))?.[1]
       assert.ok(weight)
       if (!font.startsWith('sourcehan')) {
@@ -40,8 +40,10 @@ test('主题字体列表显示所有字体粗细并去除刻明朝', async () =>
         assert.equal((weight.match(/<option /g) || []).length, 8)
         for (const name of ['极细', '细', '常规', '中', '半粗', '粗', '特粗（CN）', '特粗（SC）']) assert.ok(weight.includes(`>${name}</option>`))
         assert.match(weight, new RegExp(`value="${font}" selected=""`))
-        assert.equal(html.includes('下载并应用'), font === 'sourcehan_sc_heavy')
       }
+      // 旧断言仅四档远程字重需要下载；修正包除颜真卿外都从仓库按需获取。
+      // assert.equal(html.includes('下载并应用'), font === 'sourcehan_sc_heavy')
+      assert.equal(html.includes('下载并应用'), font !== 'yan')
       // 导入入口始终可见；仓库字体未缓存时不显示删除按钮。
       assert.match(html, /从文件导入字体/)
       assert.match(html, /选择本机字体文件/)

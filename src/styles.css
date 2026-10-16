@@ -9,21 +9,23 @@
 @font-face { font-family:"UTA Aidian"; src:url('./assets/fonts/AidianFengYaHei.woff') format('woff'); font-style:normal; font-weight:400; font-display:swap; }
 */
 /* 原字库缺字时按下方思源宋体、颜真卿、系统字体顺序补字。 */
+/* 1.4.0 重发包只内置颜真卿；以下旧声明保留对照，避免 Vite 把其他字库打进 APK。
 @font-face { font-family:"UTA FlyFlower"; src:url('./assets/fonts/FlyFlowerSong.woff2') format('woff2'); font-style:normal; font-weight:400; font-display:swap; }
 @font-face { font-family:"UTA Maoken"; src:url('./assets/fonts/MaokenZhuyuanTi.woff2') format('woff2'); font-style:normal; font-weight:400; font-display:swap; }
 @font-face { font-family:"UTA Aidian"; src:url('./assets/fonts/AidianFengYaHei.woff2') format('woff2'); font-style:normal; font-weight:400; font-display:swap; }
 @font-face { font-family:"UTA KingHwa"; src:url('./assets/fonts/KingHwaOldSong.woff') format('woff'); font-style:normal; font-weight:400; font-display:swap; }
+*/
 /* 原思源宋体常规/粗体 WOFF 声明保留对照：
 @font-face { font-family:"UTA SourceHan"; src:url('./assets/fonts/SourceHanSerifCN-Regular.woff') format('woff'); font-style:normal; font-weight:400; font-display:swap; }
 @font-face { font-family:"UTA SourceHan"; src:url('./assets/fonts/SourceHanSerifCN-Bold.woff') format('woff'); font-style:normal; font-weight:700; font-display:swap; }
 */
-/* 思源宋体只打包细、常规、中、粗四档；常规标识仍使用常规和粗体组合。 */
+/* 原思源宋体四档随包安装；现在八档统一在用户选择后下载。原资源声明留在注释中。
 @font-face { font-family:"UTA SourceHan"; src:url('./assets/fonts/SourceHanSerifCN-Regular.woff2') format('woff2'); font-style:normal; font-weight:400; font-display:swap; }
 @font-face { font-family:"UTA SourceHan"; src:url('./assets/fonts/SourceHanSerifCN-Bold.woff2') format('woff2'); font-style:normal; font-weight:700; font-display:swap; }
-/* 四档粗细继续使用原文件，旧字重标识由外观设置迁移。 */
 @font-face { font-family:"UTA SourceHan Light"; src:url('./assets/fonts/SourceHanSerifCN-Light.woff2') format('woff2'); font-style:normal; font-weight:300; font-display:swap; }
 @font-face { font-family:"UTA SourceHan Medium"; src:url('./assets/fonts/SourceHanSerifCN-Medium.woff2') format('woff2'); font-style:normal; font-weight:500; font-display:swap; }
 @font-face { font-family:"UTA SourceHan Bold"; src:url('./assets/fonts/SourceHanSerifCN-Bold.woff2') format('woff2'); font-style:normal; font-weight:700; font-display:swap; }
+*/
 /* 原规则保留对照：:root.uta-android-font { --serif:"UTA YanZhenQing", "Noto Serif JP", Georgia, serif; --sans:"UTA YanZhenQing", "Noto Sans JP", Arial, sans-serif; --mono:"UTA YanZhenQing", "DM Mono", monospace; } */
 /* 选择值只改一个变量，界面、表单和歌词原有的 serif/sans/mono 用法同步切换。 */
 /* 原缺字回退：:root.uta-android-font { --uta-selected-font:"UTA YanZhenQing"; --serif:var(--uta-selected-font),"UTA YanZhenQing","Noto Serif JP",Georgia,serif; --sans:var(--uta-selected-font),"UTA YanZhenQing","Noto Sans JP",Arial,sans-serif; --mono:var(--uta-selected-font),"UTA YanZhenQing","DM Mono",monospace; } */
