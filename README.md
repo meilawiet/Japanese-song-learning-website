@@ -510,7 +510,7 @@ scripts/sync-lyrics.mjs
 
 - 日语分词与读音：SudachiPy / SudachiDict Core。
 <!-- 原说明只有四档思源宋体；首次 1.4.0 曾将四档内置。 -->
-- 安卓字体由用户提供：APK 仅内置颜真卿多宝塔碑；其余字体按需下载。公开字体仓库提供其余字体的下载分片，并逐项说明许可状态。颜真卿字体内嵌名称标注“非商业使用”；各字体原有授权不随项目代码许可改变。颜真卿、爱点风雅黑和京华老宋体的再分发授权文件尚未取得，仍需与权利人核对。
+- 安卓字体由用户提供：APK 仅内置颜真卿多宝塔碑；其余字体按需下载。公开 Gitee 字体仓库保存全部字体资源，颜真卿作为存档，其余字体供应用下载，并逐项说明许可状态。颜真卿字体内嵌名称标注“非商业使用”；各字体原有授权不随项目代码许可改变。颜真卿、爱点风雅黑和京华老宋体的再分发授权文件尚未取得，仍需与权利人核对。
 - Android 离线日语分词：[@faanau/kuromoji](https://github.com/faanau/kuromoji-js) 及其 Kuromoji 词典，Apache License 2.0。
 <!-- 原简写只列 MIT；补充 pako 底层端口的 zlib 许可。 -->
 - QQ 歌词格式解码：qrc-decoder、原 LyricDecoder（MIT），pako（MIT 和 Zlib）；构建内附 `licenses/qq-lyrics.txt`，相关说明见 [第三方声明](THIRD_PARTY_DATA_NOTICES.md)。
