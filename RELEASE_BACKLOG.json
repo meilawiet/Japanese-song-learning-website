@@ -13,19 +13,25 @@
     ],
     "publicationRequiresExplicitApproval": true,
     "remoteUploadRequiresExplicitApproval": true,
-    "localInstallIsPublicationApproval": false
+    "localInstallIsPublicationApproval": false,
+    "distribution": {
+      "github": "meilawiet/Japanese-song-learning-website：android-dev源码和正式APK",
+      "gitee": "git277992790/UTA：仅正式APK，原字体资源保留",
+      "fixedUnlessUserOverrides": true
+    }
   },
   "lastPublished": {
-    "version": "1.4.0",
-    "versionCode": 23,
-    "tag": "v1.4.0",
+    "version": "1.5.0",
+    "versionCode": 24,
+    "tag": "v1.5.0",
     "branch": "android-dev",
-    "commit": "95d2e08fd874a855e4285dba563d56fdb73db5ad",
-    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.4.0",
-    "asset": "UTA-Android-1.4.0.apk",
-    "size": 31315298,
-    "sha256": "88817b67f6c3b355ad51272c6acc861175d8bafc392076ef61527818ce6be4ef",
-    "publishedOn": "2026-10-16"
+    "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
+    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
+    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
+    "asset": "UTA-Android-1.5.0.apk",
+    "size": 31331739,
+    "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+    "publishedOn": "2026-10-17"
   },
   "currentLocalInstall": {
     "installedOn": "2026-10-17",
@@ -55,7 +61,7 @@
       "FIX-20261017-024"
     ],
     "lastRemindedOn": "2026-10-17",
-    "userDecision": "2026-10-17用户明确授权本批打包发布并上传代码：GitHub发布源码和APK，Gitee仅发布APK；准备1.5.0，待两端发布及附件/提交全部验证后结转"
+    "userDecision": "用户2026-10-17授权本批发布及上传，1.5.0双平台正式发布与附件核验成功，12项已结转；源码及发布维护记录只推送GitHub android-dev，Gitee仅APK"
   },
   "items": [
     {
@@ -537,7 +543,7 @@
         "三星 Android 13 真机逐页确认品牌栏不存在，标签左距 24 CSS 像素、上距 30、中心高度约 37.8，与原品牌位置对应；411 CSS 像素下无横向溢出，截图已核对",
         "关闭 WebView 调试的正式签名包已覆盖安装，冷启动实际屏幕正常且手机内 APK SHA256 与本地一致"
       ],
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-16",
       "localBuild": {
         "path": ".tools/device-builds/UTA-home-black-lyrics-final.apk",
@@ -545,6 +551,19 @@
         "versionCode": 23,
         "size": 31315298,
         "sha256": "ec2d9d6e140f23745a17c184aaa8e4dea7a01356b571ed274fb86b1c43ea20c9"
+      },
+      "release": {
+        "version": "1.5.0",
+        "versionCode": 24,
+        "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
+        "tag": "v1.5.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
+        "asset": "UTA-Android-1.5.0.apk",
+        "size": 31331739,
+        "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+        "publishedOn": "2026-10-17",
+        "verification": "GitHub正式附件digest与本地一致；Gitee正式附件匿名完整下载31331739字节验SHA256一致，两端版本/目标提交核验通过，Gitee master资源提交未改变"
       }
     },
     {
@@ -559,7 +578,7 @@
         "三星 Android 13 真机进入个人资料页，仅有一个个人资料标题；头像、上传控件与昵称输入框正常，未修改个人资料数据",
         "184 项 Node 测试通过，与另外两项改动同一正式包覆盖安装"
       ],
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-16",
       "localBuild": {
         "path": ".tools/device-builds/UTA-home-black-lyrics-final.apk",
@@ -567,6 +586,19 @@
         "versionCode": 23,
         "size": 31315298,
         "sha256": "ec2d9d6e140f23745a17c184aaa8e4dea7a01356b571ed274fb86b1c43ea20c9"
+      },
+      "release": {
+        "version": "1.5.0",
+        "versionCode": 24,
+        "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
+        "tag": "v1.5.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
+        "asset": "UTA-Android-1.5.0.apk",
+        "size": 31331739,
+        "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+        "publishedOn": "2026-10-17",
+        "verification": "GitHub正式附件digest与本地一致；Gitee正式附件匿名完整下载31331739字节验SHA256一致，两端版本/目标提交核验通过，Gitee master资源提交未改变"
       }
     },
     {
@@ -583,7 +615,7 @@
         "平假名、罗马音、双注音、不注音均检查通过，411 CSS 像素无横向溢出；已查看主题截图，测试后恢复用户外观及单曲显示偏好",
         "184 项 Node 测试及 Android 前端、Release 构建通过；正式包 v2/v3 验签、证书未变、WebView 调试关闭，已覆盖安装并冷启动"
       ],
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-16",
       "localBuild": {
         "path": ".tools/device-builds/UTA-home-black-lyrics-final.apk",
@@ -591,6 +623,19 @@
         "versionCode": 23,
         "size": 31315298,
         "sha256": "ec2d9d6e140f23745a17c184aaa8e4dea7a01356b571ed274fb86b1c43ea20c9"
+      },
+      "release": {
+        "version": "1.5.0",
+        "versionCode": 24,
+        "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
+        "tag": "v1.5.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
+        "asset": "UTA-Android-1.5.0.apk",
+        "size": 31331739,
+        "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+        "publishedOn": "2026-10-17",
+        "verification": "GitHub正式附件digest与本地一致；Gitee正式附件匿名完整下载31331739字节验SHA256一致，两端版本/目标提交核验通过，Gitee master资源提交未改变"
       }
     },
     {
@@ -618,7 +663,7 @@
         "Gitee 尚未有 APK 发行版，本轮未执行真实双平台上传或 Gitee 完整 APK 正向下载；下一次获准发布时必须由脚本完成匿名完整下载与摘要核验，成功后才结转",
         "关闭 WebView 调试的正式签名包已覆盖安装并冷启动，手机内 APK SHA256 与本地一致"
       ],
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-16",
       "localBuild": {
         "path": ".tools/device-builds/UTA-dual-update-delete-final.apk",
@@ -626,6 +671,19 @@
         "versionCode": 23,
         "size": 31315298,
         "sha256": "1f25efb0a8205bcece04c8805c9d03ce760a62c1ec99d563cfc875e3ae4f8990"
+      },
+      "release": {
+        "version": "1.5.0",
+        "versionCode": 24,
+        "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
+        "tag": "v1.5.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
+        "asset": "UTA-Android-1.5.0.apk",
+        "size": 31331739,
+        "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+        "publishedOn": "2026-10-17",
+        "verification": "GitHub正式附件digest与本地一致；Gitee正式附件匿名完整下载31331739字节验SHA256一致，两端版本/目标提交核验通过，Gitee master资源提交未改变"
       }
     },
     {
@@ -645,7 +703,7 @@
         "实测文案无浏览器称呼、按钮为取消/删除、圆角 24px，411 CSS 像素无横向溢出；截图已查看，临时记录已清理，歌曲库展示偏好恢复",
         "正式签名包关闭 WebView 调试，已覆盖安装、核验手机 APK 摘要并查看冷启动屏幕"
       ],
-      "status": "verified",
+      "status": "released",
       "completedOn": "2026-10-16",
       "localBuild": {
         "path": ".tools/device-builds/UTA-dual-update-delete-final.apk",
@@ -653,13 +711,26 @@
         "versionCode": 23,
         "size": 31315298,
         "sha256": "1f25efb0a8205bcece04c8805c9d03ce760a62c1ec99d563cfc875e3ae4f8990"
+      },
+      "release": {
+        "version": "1.5.0",
+        "versionCode": 24,
+        "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
+        "tag": "v1.5.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
+        "asset": "UTA-Android-1.5.0.apk",
+        "size": 31331739,
+        "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+        "publishedOn": "2026-10-17",
+        "verification": "GitHub正式附件digest与本地一致；Gitee正式附件匿名完整下载31331739字节验SHA256一致，两端版本/目标提交核验通过，Gitee master资源提交未改变"
       }
     },
     {
       "id": "FEAT-20261016-018",
       "type": "feature",
       "title": "应用内兔小巢文字图片反馈及系统相册选图",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-16",
       "summary": "关于页进入独立原生 WebView，通过官方 HTTPS POST 传递每次安装独立的随机访客标识与默认昵称头像，无需 QQ 登录或浏览器跳转。图片优先从系统照片/相册选择器选择，可取消和附加多图，不需要相册全量权限或相机权限。用户取消视频需求。",
       "files": [
@@ -693,13 +764,26 @@
         "未公开提交测试帖子；验证了文字编辑、附件成功上传和发布按钮状态，公开提交由用户主动执行",
         "本次实测 Android15 系统相册；旧系统 ACTION_PICK 相册兼容分支仅编译验证，未连接旧设备实测",
         "旧 QQ/浏览器路径曾上传失败，新访客路径已成功；未进一步确定旧失败的唯一原因"
-      ]
+      ],
+      "release": {
+        "version": "1.5.0",
+        "versionCode": 24,
+        "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
+        "tag": "v1.5.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
+        "asset": "UTA-Android-1.5.0.apk",
+        "size": 31331739,
+        "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+        "publishedOn": "2026-10-17",
+        "verification": "GitHub正式附件digest与本地一致；Gitee正式附件匿名完整下载31331739字节验SHA256一致，两端版本/目标提交核验通过，Gitee master资源提交未改变"
+      }
     },
     {
       "id": "FEAT-20261016-019",
       "type": "feature",
       "title": "首页低频交流群邀请与内置反馈快捷入口",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-16",
       "completedOn": "2026-10-16",
       "summary": "从首次启动带此功能的版本计时，满3天后才提醒，之后每30天最多一次；只在三个主页前台连续空闲10秒且没有播放、导入、编辑、更新或其他对话框时显示。提供复制群号、内置建议与反馈、暂时不用和立即持久化的不再提醒。本机保存频率，写入失败不弹窗，时间回拨保守等待。",
@@ -729,13 +813,26 @@
       },
       "knownLimitations": [
         "3天与30天验证使用仅此功能的本机偏好模拟时间，未等待自然周期，不更改手机系统时间；既有用户从启用本功能的版本首次启动开始三天宽限"
-      ]
+      ],
+      "release": {
+        "version": "1.5.0",
+        "versionCode": 24,
+        "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
+        "tag": "v1.5.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
+        "asset": "UTA-Android-1.5.0.apk",
+        "size": 31331739,
+        "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+        "publishedOn": "2026-10-17",
+        "verification": "GitHub正式附件digest与本地一致；Gitee正式附件匿名完整下载31331739字节验SHA256一致，两端版本/目标提交核验通过，Gitee master资源提交未改变"
+      }
     },
     {
       "id": "FEAT-20261017-020",
       "type": "feature",
       "title": "双击起止句选段，段内单击播放一次或暂停",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-17",
       "completedOn": "2026-10-17",
       "summary": "安卓统一学习页300毫秒内双击一句选择起点，滚动后双击另一句确认含两端的范围，支持反向选择。用户明确要求确认后不自动播放；段内单击从段首播放一次、播放中再点暂停、暂停或播完后再点重播，句尾停下且不无限循环。段内禁止长按编辑/掌握/逐句AI解析；段外单击仅退出并暂停，不跳转或播放被点句，下一次单击才恢复普通播放，段内再次双击退出并暂停。选段仅为临时播放状态，不改写歌曲或掌握记录。",
@@ -786,7 +883,20 @@
             "正式包原签名v2/v3、调试关闭，保留数据覆盖安装，手机base.apk摘要一致，冷启动屏幕已查看，9226转发移除；未发布或上传代码"
           ]
         }
-      ]
+      ],
+      "release": {
+        "version": "1.5.0",
+        "versionCode": 24,
+        "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
+        "tag": "v1.5.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
+        "asset": "UTA-Android-1.5.0.apk",
+        "size": 31331739,
+        "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+        "publishedOn": "2026-10-17",
+        "verification": "GitHub正式附件digest与本地一致；Gitee正式附件匿名完整下载31331739字节验SHA256一致，两端版本/目标提交核验通过，Gitee master资源提交未改变"
+      }
     },
     {
       "id": "FIX-20261017-021",
@@ -812,7 +922,7 @@
       "knownLimitations": [
         "测试用模拟供应商响应，未调用用户付费AI；结构绑定和词汇原文校验不能证明所有释义、语法语义正确，真实模型内容仍需核对"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-17",
       "completedOn": "2026-10-17",
       "localBuild": {
@@ -821,6 +931,19 @@
         "versionCode": 23,
         "size": 31331739,
         "sha256": "b6e7787676b6b581611a69a7216801bb80462c8e2fe2cc84698942eecbf292ca"
+      },
+      "release": {
+        "version": "1.5.0",
+        "versionCode": 24,
+        "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
+        "tag": "v1.5.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
+        "asset": "UTA-Android-1.5.0.apk",
+        "size": 31331739,
+        "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+        "publishedOn": "2026-10-17",
+        "verification": "GitHub正式附件digest与本地一致；Gitee正式附件匿名完整下载31331739字节验SHA256一致，两端版本/目标提交核验通过，Gitee master资源提交未改变"
       }
     },
     {
@@ -848,7 +971,7 @@
       "knownLimitations": [
         "原生HTTP已发送的在途调用无法撤回费用；取消会停止后续批次并拒绝晚到结果，不自动重新生成旧缓存"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-17",
       "completedOn": "2026-10-17",
       "localBuild": {
@@ -857,6 +980,19 @@
         "versionCode": 23,
         "size": 31331739,
         "sha256": "b6e7787676b6b581611a69a7216801bb80462c8e2fe2cc84698942eecbf292ca"
+      },
+      "release": {
+        "version": "1.5.0",
+        "versionCode": 24,
+        "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
+        "tag": "v1.5.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
+        "asset": "UTA-Android-1.5.0.apk",
+        "size": 31331739,
+        "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+        "publishedOn": "2026-10-17",
+        "verification": "GitHub正式附件digest与本地一致；Gitee正式附件匿名完整下载31331739字节验SHA256一致，两端版本/目标提交核验通过，Gitee master资源提交未改变"
       }
     },
     {
@@ -886,7 +1022,7 @@
       "knownLimitations": [
         "按等级个性化范围为日语整句/整曲解析，不改变用户人工注音、原歌词或其他语言规则；真实模型教学质量未通过付费调用测评"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-17",
       "completedOn": "2026-10-17",
       "localBuild": {
@@ -895,13 +1031,26 @@
         "versionCode": 23,
         "size": 31331739,
         "sha256": "b6e7787676b6b581611a69a7216801bb80462c8e2fe2cc84698942eecbf292ca"
+      },
+      "release": {
+        "version": "1.5.0",
+        "versionCode": 24,
+        "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
+        "tag": "v1.5.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
+        "asset": "UTA-Android-1.5.0.apk",
+        "size": 31331739,
+        "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+        "publishedOn": "2026-10-17",
+        "verification": "GitHub正式附件digest与本地一致；Gitee正式附件匿名完整下载31331739字节验SHA256一致，两端版本/目标提交核验通过，Gitee master资源提交未改变"
       }
     },
     {
       "id": "FIX-20261017-024",
       "type": "bugfix",
       "title": "整曲AI解析三个按钮统一白字并两端对齐留间距",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-17",
       "completedOn": "2026-10-17",
       "summary": "整曲解析管理按钮增加独立flex容器，三个按钮等宽分配整行、左右两端对齐、保留10px间隔，删除按钮与生成/重新生成按钮统一白色字；大字号可换行，原逻辑及旧源码注释保留。",
@@ -921,6 +1070,19 @@
         "versionCode": 23,
         "size": 31331739,
         "sha256": "da654bc0f4cdf6272b8b1f94c242e635c059ca901547ed691f1327ca8d1ecad8"
+      },
+      "release": {
+        "version": "1.5.0",
+        "versionCode": 24,
+        "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
+        "tag": "v1.5.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
+        "asset": "UTA-Android-1.5.0.apk",
+        "size": 31331739,
+        "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+        "publishedOn": "2026-10-17",
+        "verification": "GitHub正式附件digest与本地一致；Gitee正式附件匿名完整下载31331739字节验SHA256一致，两端版本/目标提交核验通过，Gitee master资源提交未改变"
       }
     }
   ]

@@ -74,7 +74,12 @@ function publicationFixture({badMirror=false,badCredential=false}={}) {
       states[source].assets=release(source).assets
       return response(states[source].assets[0])
     }
-    if(method==='PATCH')Object.assign(states[source],JSON.parse(options.body))
+    // Gitee实际接口要求这三个字段必填，不能让模拟接口接受线上会HTTP400的精简请求。
+    if(method==='PATCH'){
+      const body=JSON.parse(options.body)
+      if(source==='gitee')for(const field of ['name','tag_name','body'])assert.ok(body[field],`Gitee PATCH缺少${field}`)
+      Object.assign(states[source],body)
+    }
     return response(states[source])
   }
   return {request,events,states}

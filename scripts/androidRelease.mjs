@@ -75,7 +75,9 @@ export async function publishAndroidRelease({artifact,commit,giteeCommit,githubT
 
   // 两端完整验证后转为正式发行；无摘要附件，不自动清空累计清单。
   await api('github',`/releases/${releases.github.id}`,{method:'PATCH',json:{draft:false,make_latest:'true'}})
-  await api('gitee',`/releases/${releases.gitee.id}`,{method:'PATCH',json:{prerelease:false}})
+  // 旧请求仅传prerelease：Gitee要求正文、名称及标签必填，会返回HTTP400。
+  // await api('gitee',`/releases/${releases.gitee.id}`,{method:'PATCH',json:{prerelease:false}})
+  await api('gitee',`/releases/${releases.gitee.id}`,{method:'PATCH',json:{name:`UTA Android ${artifact.version}`,tag_name:artifact.tag,body:artifact.body,prerelease:false}})
   for(const source of ['github','gitee']) {
     const published=await api(source,`/releases/tags/${artifact.tag}`)
     const selected=selectAppRelease(published,'0.0.0',source)
