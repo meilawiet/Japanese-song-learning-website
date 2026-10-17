@@ -560,6 +560,9 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .android-main { min-height:calc(100dvh - 74px); padding-bottom:calc(89px + env(safe-area-inset-bottom, 0px)); background:#f5f2eb; }
 .android-home { max-width:560px; min-height:calc(100dvh - 163px - env(safe-area-inset-bottom, 0px)); margin:0 auto; padding:40px 24px 30px; }
 .android-home-eyebrow { margin:0 0 13px; color:#718079; font:12px var(--mono); letter-spacing:.15em; }
+/* 三个安卓主页取消品牌栏后，页签标签上移到原品牌中心的高度；原首页样式保留在上方供对照。 */
+.android-main.android-home-main { min-height:100dvh; }
+.android-home-main .android-home { min-height:calc(100dvh - 89px - env(safe-area-inset-bottom, 0px)); padding-top:30px; }
 .android-home h1,.android-review-detail h1 { margin:0; color:#1f2827; font:700 clamp(28px,7vw,36px)/1.25 var(--serif); }
 .android-home-intro,.android-review-detail > p:not(.android-home-eyebrow) { margin:15px 0 0; color:#718079; font-size:14px; line-height:1.7; }
 .android-mode-card { display:flex; width:100%; min-height:190px; flex-direction:column; align-items:flex-start; margin-top:36px; padding:19px 18px 0; border:1px solid #c2d7ca; border-radius:17px; color:#1f2827; background:#dcebe4; text-align:left; }
@@ -1137,3 +1140,79 @@ body[style*="overflow: hidden"] .unified-study-page .practice-layout{overflow:vi
 /* 更多弹窗原有 label 使用横排；语言选项单独纵排，避免小屏标题被挤成两行。 */
 .unified-study-options .study-language-setting { display:grid; grid-template-columns:minmax(0,1fr); gap:10px; }
 .unified-study-options .study-language-setting > span { white-space:nowrap; }
+
+/* 安卓歌词正文、假名/罗马音和译文固定纯黑；保留前方旧主题色声明供对照。
+   纯黑不会被外观生成器转换成主题色，覆盖同时适用于逐句学习与跟唱。 */
+:root.uta-android-font .android-lesson-page :is(.japanese,.reading,.translation),
+:root.uta-android-font .android-lesson-page :is(.japanese,.reading,.translation) *,
+:root.uta-android-font .android-sing-text,
+:root.uta-android-font .android-sing-text * { color:#000; }
+
+/* 安卓删除提示使用居中圆角卡片与中文操作，外观颜色仍随当前主题生成。 */
+.song-delete-backdrop { position:fixed; inset:0; z-index:90; display:grid; place-items:center; padding:24px; background:#17221e88; }
+.song-delete-dialog { width:min(100%,420px); padding:24px; border:1px solid #dbe2d3; border-radius:24px; background:#fffdf8; color:#1f2827; box-shadow:0 16px 52px #17221e33; }
+.song-delete-dialog h2 { margin:0 0 14px; font:700 23px/1.4 var(--serif); }
+.song-delete-dialog p { margin:0; font-size:16px; line-height:1.8; overflow-wrap:anywhere; }
+.song-delete-actions { display:flex; gap:12px; margin-top:24px; }
+.song-delete-actions button { flex:1; min-width:0; min-height:48px; padding:12px; border:1px solid #dbe2d3; border-radius:14px; background:#fffdf8; color:#426550; font:600 16px var(--sans); }
+.song-delete-actions .danger { border-color:#b54b42; color:#fff; background:#b54b42; }
+
+/* 低频交流邀请延续应用圆角与当前主题；大字号和横屏时卡片可独立滚动。 */
+.community-invite-backdrop { position:fixed; inset:0; z-index:2100; display:grid; place-items:center; padding:20px; background:#17221e88; }
+.community-invite-dialog { width:min(100%,420px); max-height:calc(100dvh - 40px); overflow-y:auto; overscroll-behavior:contain; padding:24px; border:1px solid var(--line); border-radius:24px; background:#fffdf8; color:var(--ink); box-shadow:0 16px 52px #17221e33; }
+.community-invite-dialog h2 { margin:0 0 18px; font:700 24px/1.4 var(--serif); }
+.community-invite-dialog p { margin:0 0 14px; font-size:16px; line-height:1.8; overflow-wrap:anywhere; }
+.community-invite-dialog .community-invite-group { font-weight:700; }
+.community-invite-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:22px; }
+.community-invite-actions button { flex:1 1 120px; min-width:0; min-height:48px; padding:12px; border:1px solid #426550; border-radius:14px; color:#426550; background:#fffdf8; font:600 16px/1.5 var(--sans); }
+.community-invite-actions button:last-child { background:#426550; color:#fff; }
+.community-invite-actions button:disabled { opacity:.65; }
+.community-invite-dialog .community-invite-notice { margin:12px 0 0; color:var(--muted); font-size:14px; }
+.community-invite-notice:empty { display:none; }
+.community-invite-bottom { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-top:14px; }
+.community-invite-bottom label { display:flex; align-items:center; gap:8px; min-height:44px; font-size:14px; }
+.community-invite-bottom input { width:20px; height:20px; margin:0; accent-color:#426550; }
+.community-invite-bottom button { min-height:44px; padding:8px 4px; border:0; color:var(--muted); background:transparent; font:inherit; font-size:14px; }
+
+/* 双击只交给应用识别；保留纵向滚动及双指缩放，禁止浏览器双击放大。 */
+.unified-study-page .lyric-row { touch-action:pan-y pinch-zoom; }
+/* 连续底色和首尾圆角将多句连成一个播放单位，不改变原文字排版、颜色与学习记录。 */
+.unified-study-page .lyric-row.lyric-range-selected { border-bottom-color:transparent; background:#e0ebda; box-shadow:inset 3px 0 #426550; }
+.unified-study-page .lyric-row.lyric-range-selected.range-start { border-radius:14px 14px 0 0; }
+.unified-study-page .lyric-row.lyric-range-selected.range-end { border-radius:0 0 14px 14px; border-bottom-color:#adc9a9; }
+.unified-study-page .lyric-row.lyric-range-anchor { background:#eaf3e7; outline:1px dashed #426550; outline-offset:-1px; border-radius:14px; }
+.unified-study-page .lyric-range-selected .line-actions { visibility:hidden; pointer-events:none; }
+/* 选段色条和正文留出间距，换行后的每行文字也不会贴在左侧色条上。 */
+.unified-study-page .lyric-range-selected .line-number,
+.unified-study-page .lyric-range-selected .auto-line-wrap { padding-left:10px; }
+
+/* 解析原文、等级及管理按钮随主题配色；长文字和大字号允许换行。 */
+.sentence-inline-analysis .sentence-analysis-source { margin:12px 0; padding:10px 12px; border-radius:10px; background:#eaf3e7; color:#1f2827; font-size:15px; line-height:1.7; overflow-wrap:anywhere; }
+.sentence-inline-analysis .sentence-analysis-level { margin:8px 0; color:#707874; font-size:13px; line-height:1.6; }
+.sentence-inline-analysis .sentence-analysis-warning { padding:10px 12px; border:1px solid #c5a452; border-radius:10px; color:#73521b; font-size:14px; line-height:1.7; }
+.sentence-analysis-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+.sentence-analysis-actions button { flex:1 1 130px; min-height:44px; padding:10px 12px; border:1px solid #426550; border-radius:12px; background:#fffdf8; color:#426550; font:inherit; font-size:14px; }
+.sentence-analysis-actions button:first-child { border-color:#b54b42; color:#b54b42; }
+.sentence-analysis-actions button:disabled { opacity:.6; }
+.sentence-delete-backdrop { z-index:2400; }
+/* 原整曲删除按钮使用红字：.study-ai .sentence-delete-all { border-color:#b54b42; color:#b54b42; } */
+/* 整曲解析三个按钮等宽分配整行，两端对齐；字色统一白色，大字号可自然换行。 */
+.study-analysis-actions { display:flex; justify-content:space-between; align-items:stretch; gap:10px; width:100%; }
+.study-analysis-actions > button { flex:1 1 0; min-width:0; padding:10px 6px; color:white; text-align:center; line-height:1.6; overflow-wrap:anywhere; }
+.profile-japanese-level { display:grid; gap:10px; margin:24px 0; color:var(--ink); font-size:16px; }
+.profile-japanese-level select { width:100%; min-height:48px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:#fffdf8; color:inherit; font:inherit; }
+.profile-japanese-level small { font-size:13px; line-height:1.6; }
+/* 首次等级询问可跳过，不挡在学习中间；只在首页空闲且无其他弹窗时打开。 */
+.japanese-level-backdrop { position:fixed; inset:0; z-index:2150; display:grid; place-items:center; padding:20px; background:#17221e88; }
+.japanese-level-dialog { width:min(100%,420px); max-height:calc(100dvh - 40px); overflow:auto; padding:24px; border-radius:24px; background:#fffdf8; color:var(--ink); }
+.japanese-level-dialog h2 { margin:0 0 14px; font:700 24px/1.5 var(--serif); }
+.japanese-level-dialog p { margin:0 0 16px; font-size:15px; line-height:1.7; }
+.japanese-level-dialog fieldset { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:0; border:0; margin:18px 0; }
+.japanese-level-dialog legend { margin-bottom:12px; font-size:15px; }
+.japanese-level-dialog label { display:flex; align-items:center; gap:8px; min-height:48px; padding:10px; border:1px solid #dbe2d3; border-radius:12px; font-size:15px; }
+.japanese-level-dialog input { margin:0; width:18px; height:18px; flex-shrink:0; accent-color:#426550; }
+.japanese-level-dialog>div { display:flex; flex-wrap:wrap; gap:10px; }
+.japanese-level-dialog button { flex:1 1 120px; min-height:46px; padding:10px 12px; border:1px solid #426550; border-radius:12px; color:#426550; background:#fffdf8; font:inherit; font-size:15px; }
+.japanese-level-dialog button:last-child { color:#fff; background:#426550; }
+.japanese-level-dialog button:disabled { opacity:.55; }
+.japanese-level-dialog>small { display:block; margin-top:14px; color:var(--muted); font-size:13px; line-height:1.6; }

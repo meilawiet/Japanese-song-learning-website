@@ -26,6 +26,25 @@
 
         </activity>
 
+        <!-- 原独立 WebView 接入保留作对照；QQ 授权结果进入系统浏览器，现改用 Browser Custom Tab，不注册以下 Activity 或外部回调。 -->
+        <!--
+        <activity android:name=".FeedbackActivity" android:exported="true" android:launchMode="singleTask"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|uiMode|density"
+            android:theme="@style/AppTheme.NoActionBar" android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="utafeedback" android:host="return" />
+            </intent-filter>
+        </activity>
+        -->
+
+        <!-- 新反馈页通过随机访客身份内嵌，禁止其他应用启动；不再接收 QQ 授权回调。 -->
+        <activity android:name=".FeedbackActivity" android:exported="false"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|uiMode|density"
+            android:theme="@style/AppTheme.NoActionBar" android:windowSoftInputMode="adjustResize" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

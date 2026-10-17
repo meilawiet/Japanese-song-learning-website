@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedOn": "2026-10-16",
+  "updatedOn": "2026-10-17",
   "reminderThreshold": 10,
   "policy": {
     "countUnit": "已完成且验证通过的一项独立用户功能或修复",
@@ -28,32 +28,34 @@
     "publishedOn": "2026-10-16"
   },
   "currentLocalInstall": {
-    "installedOn": "2026-10-16",
-    "device": "Samsung SM_N9860 / Android 13",
+    "installedOn": "2026-10-17",
+    "device": "Xiaomi 23049RAD8C / Android 15",
     "package": "com.uta.songlearning",
+    "path": ".tools/device-builds/UTA-analysis-buttons-final.apk",
     "version": "1.4.0",
     "versionCode": 23,
-    "path": ".tools/releases/UTA-Android-1.4.0.apk",
-    "sha256": "88817b67f6c3b355ad51272c6acc861175d8bafc392076ef61527818ce6be4ef",
-    "method": "adb install -r，保留应用数据；手机内 base.apk SHA256 与本地包一致；冷启动成功",
-    "published": true
+    "size": 31331739,
+    "sha256": "da654bc0f4cdf6272b8b1f94c242e635c059ca901547ed691f1327ca8d1ecad8",
+    "method": "adb install --no-incremental -r保留数据覆盖，冷启动，手机base.apk摘要一致；原证书v2/v3、WebView调试关闭，隔离测试应用卸载、9226移除",
+    "published": false
   },
   "reminder": {
     "lastRemindedItemIds": [
-      "FIX-20261015-001",
-      "FEAT-20261015-002",
-      "FEAT-20261015-003",
-      "FEAT-20261015-004",
-      "FIX-20261015-005",
-      "FEAT-20261015-006",
-      "FEAT-20261016-007",
-      "FEAT-20261016-008",
-      "FEAT-20261016-009",
-      "FEAT-20261016-010",
-      "FEAT-20261016-011"
+      "FEAT-20261016-013",
+      "FIX-20261016-014",
+      "FEAT-20261016-015",
+      "FEAT-20261016-016",
+      "FIX-20261016-017",
+      "FEAT-20261016-018",
+      "FEAT-20261016-019",
+      "FEAT-20261017-020",
+      "FIX-20261017-021",
+      "FEAT-20261017-022",
+      "FEAT-20261017-023",
+      "FIX-20261017-024"
     ],
-    "lastRemindedOn": "2026-10-16",
-    "userDecision": "用户明确授权发布和上传 1.4.0，已完成"
+    "lastRemindedOn": "2026-10-17",
+    "userDecision": "2026-10-17用户明确授权本批打包发布并上传代码：GitHub发布源码和APK，Gitee仅发布APK；准备1.5.0，待两端发布及附件/提交全部验证后结转"
   },
   "items": [
     {
@@ -518,6 +520,407 @@
         "size": 31315298,
         "sha256": "88817b67f6c3b355ad51272c6acc861175d8bafc392076ef61527818ce6be4ef",
         "publishedOn": "2026-10-16"
+      }
+    },
+    {
+      "id": "FEAT-20261016-013",
+      "type": "feature",
+      "title": "三个安卓主页取消 UTA 品牌栏并上移页面标签",
+      "summary": "学习、复习、我的主页直接显示 LEARN / 学习、REVIEW / 复习、ME / 我的；移除品牌栏占位并调整主页高度。",
+      "files": [
+        "src/App.jsx",
+        "src/styles.css",
+        "README.md"
+      ],
+      "verification": [
+        "184 项 Node 测试及 Android 前端、Release 构建通过",
+        "三星 Android 13 真机逐页确认品牌栏不存在，标签左距 24 CSS 像素、上距 30、中心高度约 37.8，与原品牌位置对应；411 CSS 像素下无横向溢出，截图已核对",
+        "关闭 WebView 调试的正式签名包已覆盖安装，冷启动实际屏幕正常且手机内 APK SHA256 与本地一致"
+      ],
+      "status": "verified",
+      "completedOn": "2026-10-16",
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-home-black-lyrics-final.apk",
+        "version": "1.4.0",
+        "versionCode": 23,
+        "size": 31315298,
+        "sha256": "ec2d9d6e140f23745a17c184aaa8e4dea7a01356b571ed274fb86b1c43ea20c9"
+      }
+    },
+    {
+      "id": "FIX-20261016-014",
+      "type": "bugfix",
+      "title": "删除个人资料内容区重复标题",
+      "summary": "个人资料页仅保留设置弹窗顶部的个人资料标题，删除头像上方重复的同名小标题。",
+      "files": [
+        "src/components/ProfilePanel.jsx"
+      ],
+      "verification": [
+        "三星 Android 13 真机进入个人资料页，仅有一个个人资料标题；头像、上传控件与昵称输入框正常，未修改个人资料数据",
+        "184 项 Node 测试通过，与另外两项改动同一正式包覆盖安装"
+      ],
+      "status": "verified",
+      "completedOn": "2026-10-16",
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-home-black-lyrics-final.apk",
+        "version": "1.4.0",
+        "versionCode": 23,
+        "size": 31315298,
+        "sha256": "ec2d9d6e140f23745a17c184aaa8e4dea7a01356b571ed274fb86b1c43ea20c9"
+      }
+    },
+    {
+      "id": "FEAT-20261016-015",
+      "type": "feature",
+      "title": "歌词正文、注音和译文固定黑色",
+      "summary": "安卓学习页歌词、假名、罗马音和译文固定使用纯黑色；主题继续为背景和操作控件配色，逐句与跟唱共用该显示。",
+      "files": [
+        "src/styles.css",
+        "README.md"
+      ],
+      "verification": [
+        "三星 Android 13 真机在四套主题、逐句和跟唱两种模式逐一检查，全部歌词及注音和译文元素计算颜色均为 rgb(0, 0, 0)",
+        "平假名、罗马音、双注音、不注音均检查通过，411 CSS 像素无横向溢出；已查看主题截图，测试后恢复用户外观及单曲显示偏好",
+        "184 项 Node 测试及 Android 前端、Release 构建通过；正式包 v2/v3 验签、证书未变、WebView 调试关闭，已覆盖安装并冷启动"
+      ],
+      "status": "verified",
+      "completedOn": "2026-10-16",
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-home-black-lyrics-final.apk",
+        "version": "1.4.0",
+        "versionCode": 23,
+        "size": 31315298,
+        "sha256": "ec2d9d6e140f23745a17c184aaa8e4dea7a01356b571ed274fb86b1c43ea20c9"
+      }
+    },
+    {
+      "id": "FEAT-20261016-016",
+      "type": "feature",
+      "title": "Gitee 优先更新与 GitHub/Gitee 同包发布流程",
+      "summary": "优先检查 Gitee UTA 的正式 APK，来源不可用或元数据不完整时回退 GitHub；下载 Gitee 失败时重新下载同版本同摘要的 GitHub 附件，取消后不换源。原生端验证 SHA256、包名、发行签名和预期版本；发布工具暂存双平台同一 APK 并匿名核对 Gitee 文件后转为正式发行。",
+      "files": [
+        "src/lib/appUpdate.js",
+        "src/lib/appUpdateTransport.js",
+        "src/components/AppUpdates.jsx",
+        "android/app/src/main/java/com/uta/songlearning/AppUpdatePlugin.java",
+        "scripts/androidRelease.mjs",
+        "scripts/publish-android.mjs",
+        "tests/appUpdateSources.test.mjs",
+        "ANDROID_RELEASE.md",
+        "AGENTS.md",
+        "README.md"
+      ],
+      "verification": [
+        "190 项 Node 全量测试通过；新增来源优先、元数据失败回退、同摘要下载回退、取消阻断、双平台暂存/校验及异常不正式发布的隔离测试",
+        "Android 前端与原生 Release 构建、v2/v3 验签通过；发布脚本仅执行本地计划模式，核对包名、真实版本及发行证书，未执行远端写入",
+        "三星 Android 13 真机记录到 Gitee 发行版接口先于 GitHub；Gitee 尚无 APK 发行版时回退成功，关于页面显示当前已是最新版本",
+        "真机原生拒绝其他 Gitee 仓库；官方 Gitee 与 GitHub 的不存在附件均进入网络后按下载失败返回，连续请求均释放 busy 状态",
+        "Gitee 尚未有 APK 发行版，本轮未执行真实双平台上传或 Gitee 完整 APK 正向下载；下一次获准发布时必须由脚本完成匿名完整下载与摘要核验，成功后才结转",
+        "关闭 WebView 调试的正式签名包已覆盖安装并冷启动，手机内 APK SHA256 与本地一致"
+      ],
+      "status": "verified",
+      "completedOn": "2026-10-16",
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-dual-update-delete-final.apk",
+        "version": "1.4.0",
+        "versionCode": 23,
+        "size": 31315298,
+        "sha256": "1f25efb0a8205bcece04c8805c9d03ce760a62c1ec99d563cfc875e3ae4f8990"
+      }
+    },
+    {
+      "id": "FIX-20261016-017",
+      "type": "bugfix",
+      "title": "安卓歌曲删除提示使用本机文案和圆角确认框",
+      "summary": "删除确认改为中文取消/删除按钮及 24px 圆角应用内弹窗，提示歌词、音频和该歌曲学习进度从本机移除；取消、遮罩与系统返回不执行删除，确认后复用原有删除流程。网页保留原确认逻辑。",
+      "files": [
+        "src/components/DeleteSongDialog.jsx",
+        "src/App.jsx",
+        "src/styles.css",
+        "README.md"
+      ],
+      "verification": [
+        "190 项 Node 测试、Android 前端与原生 Release 构建通过",
+        "三星 Android 13 真机以临时原创歌曲测试：取消与系统返回保留记录，确认删除后只移除测试记录，原有 13 首歌曲键集合一致",
+        "实测文案无浏览器称呼、按钮为取消/删除、圆角 24px，411 CSS 像素无横向溢出；截图已查看，临时记录已清理，歌曲库展示偏好恢复",
+        "正式签名包关闭 WebView 调试，已覆盖安装、核验手机 APK 摘要并查看冷启动屏幕"
+      ],
+      "status": "verified",
+      "completedOn": "2026-10-16",
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-dual-update-delete-final.apk",
+        "version": "1.4.0",
+        "versionCode": 23,
+        "size": 31315298,
+        "sha256": "1f25efb0a8205bcece04c8805c9d03ce760a62c1ec99d563cfc875e3ae4f8990"
+      }
+    },
+    {
+      "id": "FEAT-20261016-018",
+      "type": "feature",
+      "title": "应用内兔小巢文字图片反馈及系统相册选图",
+      "status": "verified",
+      "startedOn": "2026-10-16",
+      "summary": "关于页进入独立原生 WebView，通过官方 HTTPS POST 传递每次安装独立的随机访客标识与默认昵称头像，无需 QQ 登录或浏览器跳转。图片优先从系统照片/相册选择器选择，可取消和附加多图，不需要相册全量权限或相机权限。用户取消视频需求。",
+      "files": [
+        "src/components/AppUpdates.jsx",
+        "android/app/src/main/java/com/uta/songlearning/FeedbackActivity.java",
+        "android/app/src/main/java/com/uta/songlearning/FeedbackPlugin.java",
+        "android/app/src/main/java/com/uta/songlearning/MainActivity.java",
+        "android/app/src/main/AndroidManifest.xml",
+        "android/app/src/main/res/layout/activity_feedback.xml",
+        "tests/updateAndEditorUi.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "190/190 全量 Node 测试、Android 前端及原生 Release 构建通过，正式包同一证书 v2/v3 验签通过",
+        "用户按官方说明允许第三方明文登录态后，公开配置不再禁用 other；隔离访客预检查可直接进入发言页，JPG 上传接口 HTTP200 / 业务 status0",
+        "小米 Android15 真机从关于进入独立 FeedbackActivity，无浏览器或 QQ 跳转；访客发言页没有 window.Capacitor，392 CSS 像素无横向溢出",
+        "真机验证调用 Android 系统 PhotoPickerActivity，界面显示照片/相册；取消保留草稿和已有附件，原生选择原创 PNG 后实际请求 HTTP200 / status0，多张图片预览并存且发布按钮可用；用户手动上传手机图片也确认成功",
+        "原生返回可由编辑页回社区，关闭可回 UTA 关于；再次进入仍无需 QQ，原有12首歌曲键集合一致。QA草稿及未发布附件预览已清空，没有提交公开测试帖子",
+        "正式包关闭调试并保留数据覆盖安装，手机 base.apk 摘要与本地一致，冷启动截图已检查；没有发布 APK 或推送代码"
+      ],
+      "remaining": [],
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-embedded-feedback-final.apk",
+        "version": "1.4.0",
+        "versionCode": 23,
+        "size": 31323547,
+        "sha256": "7b378b9bbc023f52b44025c0e6b499dfbd6303ac421657ed242331825d92e7a3"
+      },
+      "completedOn": "2026-10-16",
+      "knownLimitations": [
+        "未公开提交测试帖子；验证了文字编辑、附件成功上传和发布按钮状态，公开提交由用户主动执行",
+        "本次实测 Android15 系统相册；旧系统 ACTION_PICK 相册兼容分支仅编译验证，未连接旧设备实测",
+        "旧 QQ/浏览器路径曾上传失败，新访客路径已成功；未进一步确定旧失败的唯一原因"
+      ]
+    },
+    {
+      "id": "FEAT-20261016-019",
+      "type": "feature",
+      "title": "首页低频交流群邀请与内置反馈快捷入口",
+      "status": "verified",
+      "startedOn": "2026-10-16",
+      "completedOn": "2026-10-16",
+      "summary": "从首次启动带此功能的版本计时，满3天后才提醒，之后每30天最多一次；只在三个主页前台连续空闲10秒且没有播放、导入、编辑、更新或其他对话框时显示。提供复制群号、内置建议与反馈、暂时不用和立即持久化的不再提醒。本机保存频率，写入失败不弹窗，时间回拨保守等待。",
+      "files": [
+        "src/components/CommunityInvite.jsx",
+        "src/lib/communityInvite.js",
+        "src/App.jsx",
+        "src/styles.css",
+        "tests/communityInvite.test.mjs",
+        "tests/updateAndEditorUi.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "196/196 Node测试通过，包含三天与三十天精确边界、重启频率、永久忽略、时钟回拨、损坏数据及存储失败；Android前端和原生Release构建、同证书v2/v3验签通过",
+        "小米Android15真机以独立提醒偏好模拟日期：未满三天不弹，已到期时设置与学习页不弹且不消耗次数；首页点击重新计时，连续空闲十秒后才弹；关闭重启后不足三十天不再弹",
+        "真机系统返回仅关闭弹窗，切到手机桌面不消耗提醒、回前台重新等待；满三十天回首页可提醒，反馈按钮进入内置兔小巢且无主应用原生桥",
+        "复制群号得到系统剪贴板写入成功回执及应用成功提示；WebView未授予剪贴板读回权限，未宣称读回验证。红色主题/130%字号适配正确，392 CSS像素无横向溢出，24px圆角与截图已查看",
+        "不再提醒勾选后立即存储，模拟两个月及重启仍静默；QA日期、永久关闭与外观已恢复，原有12首歌曲键集合一致，未提交公开反馈",
+        "正式包保留数据覆盖安装，手机base.apk摘要一致、调试关闭、转发移除，冷启动屏幕已查看；没有发布APK或上传代码"
+      ],
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-community-invite-final.apk",
+        "version": "1.4.0",
+        "versionCode": 23,
+        "size": 31327643,
+        "sha256": "60978ac5d4263f4ed3c50dba147e5db35c23e15d0a0333e75961be677fab9dcb"
+      },
+      "knownLimitations": [
+        "3天与30天验证使用仅此功能的本机偏好模拟时间，未等待自然周期，不更改手机系统时间；既有用户从启用本功能的版本首次启动开始三天宽限"
+      ]
+    },
+    {
+      "id": "FEAT-20261017-020",
+      "type": "feature",
+      "title": "双击起止句选段，段内单击播放一次或暂停",
+      "status": "verified",
+      "startedOn": "2026-10-17",
+      "completedOn": "2026-10-17",
+      "summary": "安卓统一学习页300毫秒内双击一句选择起点，滚动后双击另一句确认含两端的范围，支持反向选择。用户明确要求确认后不自动播放；段内单击从段首播放一次、播放中再点暂停、暂停或播完后再点重播，句尾停下且不无限循环。段内禁止长按编辑/掌握/逐句AI解析；段外单击仅退出并暂停，不跳转或播放被点句，下一次单击才恢复普通播放，段内再次双击退出并暂停。选段仅为临时播放状态，不改写歌曲或掌握记录。",
+      "files": [
+        "src/App.jsx",
+        "src/lib/studyTransport.js",
+        "src/lib/useStudyPlayback.js",
+        "src/lib/lyricTapGesture.js",
+        "src/components/AndroidStudyPlayer.jsx",
+        "src/styles.css",
+        "tests/lyricRangePlayback.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "207/207 Node测试通过；新增11项覆盖延迟单击/双击互斥、取消、反向/不连续ID、选段不自动播放、段尾/重播、真实媒体末句、缺失/相同时间戳、异步载入取消与模式/离页清理",
+        "Android前端及原生Release构建通过，修复真机首次发现的浏览器定时器Illegal invocation：默认setTimeout/clearTimeout使用包装函数保持正确调用语义，已增加针对该问题的回归测试",
+        "小米Android15 WebView真实触摸输入：跨屏双击第2～17句能保留起点并选择范围，确认后音频保持暂停；段内长按不进入编辑，掌握和逐句AI按钮隐藏并禁用，双击退出无误播",
+        "原创48秒WAV与22句临时歌词真机验证：单击段内任一句从段首开始，播放中单击暂停、暂停再点重播；第2～4句在真实媒体8秒处暂停，之后不自动重启；初版段外单击曾直接播放普通单句（现依用户要求改为仅退出，见revisions最新209项回归），反向选择与跟唱模式一次播放通过",
+        "纯歌词静音计时选段到尾停止，缺时间戳时不建立播放范围，退出或离页后普通长按编辑恢复；392 CSS像素无横向溢出、歌词仍黑色、选段连续底色/首尾圆角随主题，截图已查看",
+        "三条原创QA记录已删除，原有12首歌曲键集合一致；学习记录/缓存/最近歌曲/外观/歌曲库偏好与测试前深比较一致，未调用付费AI、未上传用户歌曲",
+        "正式包1.4.0/code23、原证书v2/v3，未开启WebView调试；保留数据覆盖安装、拉取手机base.apk验摘要一致，启动后屏幕已查看，9226转发已移除；本轮未发布或上传代码"
+      ],
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-range-exit-final.apk",
+        "version": "1.4.0",
+        "versionCode": 23,
+        "size": 31327643,
+        "sha256": "9926c54bb847af7e0e4944a063f38b27ff3d1143c2b4909448c0e1a8194b96a1"
+      },
+      "knownLimitations": [
+        "本轮真机为Android15；没有连接其他Android版本重复实测。选段不持久化，切歌/离开学习页/切换练习模式清除。"
+      ],
+      "revisions": [
+        {
+          "on": "2026-10-17",
+          "summary": "用户纠正段外单击：仅退出并暂停，不跳转或播放被点句；下一次单击才恢复普通播放。待选起点也遵守此规则。",
+          "previousLocalBuild": {
+            "path": ".tools/device-builds/UTA-lyric-range-final.apk",
+            "version": "1.4.0",
+            "versionCode": 23,
+            "size": 31327643,
+            "sha256": "ae0c0bcefd4ef72fb14286234dca6457e272baf2a8a40afe3a134b5c8cfe4299"
+          },
+          "verification": [
+            "209/209 Node测试通过；逐句/跟唱×待选/未播/播放中/暂停/播完状态与载入中取消回归通过",
+            "小米Android15真实触摸实测逐句/跟唱的未播放、播放中及暂停状态，段外单击均仅退出且不跳到被点句，退出后再点才播放；整段播完、待选终点及段内双击也通过",
+            "三条原创QA歌曲已清理，原有13首歌曲键集合一致，学习记录/缓存/最近歌曲/外观/列表偏好深比较一致",
+            "正式包原签名v2/v3、调试关闭，保留数据覆盖安装，手机base.apk摘要一致，冷启动屏幕已查看，9226转发移除；未发布或上传代码"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FIX-20261017-021",
+      "type": "bugfix",
+      "title": "重复歌词后AI解析错位防护及原文绑定校验",
+      "summary": "逐句保留重复歌词，为每次请求分配独立标识，严格核对编号、原文回显和关键表达是否出自本句；拒绝错位结果，旧缓存可查看但标注待重新生成。日语每批4句并扩充输出预算。",
+      "files": [
+        "src/lib/sentenceAnalysis.js",
+        "src/lib/mobileAi.js",
+        "src/lib/annotationApi.js",
+        "src/App.jsx",
+        "src/components/SentenceAnalysis.jsx",
+        "tests/sentenceAnalysis.test.mjs"
+      ],
+      "verification": [
+        "录屏中可见第35句展示下一句词汇与释义；用户歌词解析为42句、19句重复原文。未取得当时供应商原始响应，不能唯一确定模型错误原因",
+        "自动回归确定性重现旧规则接受合法编号的错位结果；新版拒绝错编号、错原文、错请求标识、重复返回编号，以及正确回显包着别句词汇的结果",
+        "真机模拟AI整曲重新生成42句，重复段之后每句原编号/原文匹配，42个请求标识独立；错位响应不写缓存",
+        "219/219项Node测试通过，Android前端及原生Release构建成功；正式包原证书v2/v3签名、WebView调试关闭、仅内置颜真卿字库、不包含歌曲音视频或歌词文件",
+        "小米Android15独立隔离测试包验证，实际用户提供的FLAC及42句歌词仅用于本机；原主应用未注入测试歌曲或模拟AI配置；隔离测试应用已卸载、9226转发已移除",
+        "正式主应用adb install --no-incremental -r成功，保留数据覆盖并冷启动；手机base.apk摘要与本地一致，原外观及最近歌曲可见，首次日语水平询问留给用户选择；未发布APK或上传代码"
+      ],
+      "knownLimitations": [
+        "测试用模拟供应商响应，未调用用户付费AI；结构绑定和词汇原文校验不能证明所有释义、语法语义正确，真实模型内容仍需核对"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-17",
+      "completedOn": "2026-10-17",
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-analysis-features-final.apk",
+        "version": "1.4.0",
+        "versionCode": 23,
+        "size": 31331739,
+        "sha256": "b6e7787676b6b581611a69a7216801bb80462c8e2fe2cc84698942eecbf292ca"
+      }
+    },
+    {
+      "id": "FEAT-20261017-022",
+      "type": "feature",
+      "title": "删除单句或整曲AI解析并主动重新生成",
+      "summary": "解析卡可删除或重新生成本句，更多中可补全、删除或重新生成整曲；确认删除只处理解析。删除、重开任务、歌词变化及日语等级变化使旧响应失效，避免记录复活或旧任务清理新任务。",
+      "files": [
+        "src/App.jsx",
+        "src/components/SentenceAnalysis.jsx",
+        "src/components/SentenceDeleteDialog.jsx",
+        "src/components/AndroidStudyPlayer.jsx",
+        "src/lib/sentenceAnalysis.js",
+        "src/styles.css",
+        "tests/sentenceAnalysis.test.mjs"
+      ],
+      "verification": [
+        "真机旧版错位缓存可展开提示；删除取消不改变记录，确认只移除本句，其他歌曲解析始终保留；单句重新获取与强制重新生成都通过",
+        "整曲42句强制重生成及整曲删除通过；生成中删除后放行旧响应无记录写回；删除后立即重开任务，再放行旧响应，不抢占或清理新任务，新任务可继续完成",
+        "392 CSS像素屏宽无横向溢出，首次询问、旧解析卡、新解析卡及整曲管理截图已查看",
+        "219/219项Node测试通过，Android前端及原生Release构建成功；正式包原证书v2/v3签名、WebView调试关闭、仅内置颜真卿字库、不包含歌曲音视频或歌词文件",
+        "小米Android15独立隔离测试包验证，实际用户提供的FLAC及42句歌词仅用于本机；原主应用未注入测试歌曲或模拟AI配置；隔离测试应用已卸载、9226转发已移除",
+        "正式主应用adb install --no-incremental -r成功，保留数据覆盖并冷启动；手机base.apk摘要与本地一致，原外观及最近歌曲可见，首次日语水平询问留给用户选择；未发布APK或上传代码"
+      ],
+      "knownLimitations": [
+        "原生HTTP已发送的在途调用无法撤回费用；取消会停止后续批次并拒绝晚到结果，不自动重新生成旧缓存"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-17",
+      "completedOn": "2026-10-17",
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-analysis-features-final.apk",
+        "version": "1.4.0",
+        "versionCode": 23,
+        "size": 31331739,
+        "sha256": "b6e7787676b6b581611a69a7216801bb80462c8e2fe2cc84698942eecbf292ca"
+      }
+    },
+    {
+      "id": "FEAT-20261017-023",
+      "type": "feature",
+      "title": "首次询问日语水平及按等级个性化整句AI解析",
+      "summary": "首页首次询问没学过日语、N5至N1六档，可稍后设置；个人资料可修改。新日语整句解析按水平调整讲解深度并保存生成等级；旧结果不自动收费替换，其他语言不套用日语等级。",
+      "files": [
+        "src/lib/japaneseLevel.js",
+        "src/lib/localProfile.js",
+        "src/components/JapaneseLevelOnboarding.jsx",
+        "src/components/ProfilePanel.jsx",
+        "src/components/SentenceAnalysis.jsx",
+        "src/lib/mobileAi.js",
+        "src/App.jsx",
+        "src/styles.css",
+        "tests/sentenceAnalysis.test.mjs"
+      ],
+      "verification": [
+        "六个等级实际进入手机AI入口请求，六套教学提示不同；其他语言不携带日语等级或日语发音提示，等级变化不使其他语言缓存失效",
+        "真机首次六选一、未选保存禁用、保存后重启不再询问；个人资料六项选择及保存N3成功，既有零基础解析保留并提示，可主动重生成N3",
+        "生成中离开学习去个人资料改N1，旧N3任务晚到响应不替换已有缓存，任务占用释放；正式主应用首次询问未代替用户选择",
+        "219/219项Node测试通过，Android前端及原生Release构建成功；正式包原证书v2/v3签名、WebView调试关闭、仅内置颜真卿字库、不包含歌曲音视频或歌词文件",
+        "小米Android15独立隔离测试包验证，实际用户提供的FLAC及42句歌词仅用于本机；原主应用未注入测试歌曲或模拟AI配置；隔离测试应用已卸载、9226转发已移除",
+        "正式主应用adb install --no-incremental -r成功，保留数据覆盖并冷启动；手机base.apk摘要与本地一致，原外观及最近歌曲可见，首次日语水平询问留给用户选择；未发布APK或上传代码"
+      ],
+      "knownLimitations": [
+        "按等级个性化范围为日语整句/整曲解析，不改变用户人工注音、原歌词或其他语言规则；真实模型教学质量未通过付费调用测评"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-17",
+      "completedOn": "2026-10-17",
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-analysis-features-final.apk",
+        "version": "1.4.0",
+        "versionCode": 23,
+        "size": 31331739,
+        "sha256": "b6e7787676b6b581611a69a7216801bb80462c8e2fe2cc84698942eecbf292ca"
+      }
+    },
+    {
+      "id": "FIX-20261017-024",
+      "type": "bugfix",
+      "title": "整曲AI解析三个按钮统一白字并两端对齐留间距",
+      "status": "verified",
+      "startedOn": "2026-10-17",
+      "completedOn": "2026-10-17",
+      "summary": "整曲解析管理按钮增加独立flex容器，三个按钮等宽分配整行、左右两端对齐、保留10px间隔，删除按钮与生成/重新生成按钮统一白色字；大字号可换行，原逻辑及旧源码注释保留。",
+      "files": [
+        "src/components/AndroidStudyPlayer.jsx",
+        "src/styles.css"
+      ],
+      "verification": [
+        "Android前端及原生Release构建成功；此轮仅样式与按钮容器调整，没有新增镜像实现的单元测试，上一轮219项自动检查记录保留",
+        "小米Android15独立隔离包检查四主题garden/sea/sakura/moon各100%和130%字号，共8种组合；三个按钮计算字色均rgb(255,255,255)、等宽、间距10px、首尾紧贴行边缘、文字居中且392 CSS像素无横向溢出；100%与130%靛蓝主题截图已查看",
+        "正式包原证书v2/v3签名、1.4.0/code23、WebView调试关闭；install --no-incremental -r保留数据覆盖成功并冷启动，手机base.apk摘要与本地一致",
+        "测试使用独立原创歌词与模拟缓存，没有调用AI、没有改写主应用歌曲或配置；独立测试包已卸载，9226已移除；未公开发包或上传代码"
+      ],
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-analysis-buttons-final.apk",
+        "version": "1.4.0",
+        "versionCode": 23,
+        "size": 31331739,
+        "sha256": "da654bc0f4cdf6272b8b1f94c242e635c059ca901547ed691f1327ca8d1ecad8"
       }
     }
   ]

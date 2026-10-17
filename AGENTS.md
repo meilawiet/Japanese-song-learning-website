@@ -15,5 +15,8 @@
 
 # Android release presentation
 
+- 用户固定发布分工（2026-10-17）：GitHub `meilawiet/Japanese-song-learning-website` 同时发布 Android 源码和正式 APK，源码只推送 `android-dev`；Gitee `git277992790/UTA` 只发布正式 APK，不上传 Android 源码。除非用户特别要求，后续不再重新询问发布目标分工；每一批是否发布/上传仍依照当次授权。
+- 后续获准发版时，同一正式 APK 必须同时发布到 GitHub `meilawiet/Japanese-song-learning-website` 和 Gitee `git277992790/UTA` 的 Release。应用优先检查、下载 Gitee，失败才回退 GitHub；两个来源必须对应同版本、同 APK SHA256，原生签名校验继续保留。
+- 使用 `scripts/publish-android.mjs` 先生成发布计划，用户明确授权当次发布和上传后才执行 `--publish`。Gitee 附件必须匿名完整下载验摘要；两平台均成功核验后，才将本批待发布项结转。Gitee 为资源与发行仓库，不向其推送安卓源码或覆盖字体文件。
 - 后续 GitHub Release 保留简洁的更新内容，不添加“升级说明”章节。
 - 发布附件只上传正式 APK，不上传独立的 `.sha256` 文件。本地校验及应用更新使用的 GitHub APK asset digest、发行签名校验继续保留。

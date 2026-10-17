@@ -37,6 +37,17 @@ public final class AppUpdatePlugin extends Plugin {
         for (byte b : MessageDigest.getInstance("SHA-256").digest(data)) out.append(String.format("%02x", b & 255));
         return out.toString();
     }
+    // 流式核对缓存摘要，双源下载与同版本修正包都只能复用完全相同的文件。
+    private String fileDigest(File file) throws Exception {
+        MessageDigest hash = MessageDigest.getInstance("SHA-256");
+        try (InputStream input = new FileInputStream(file)) {
+            byte[] buffer = new byte[64 * 1024]; int count;
+            while ((count = input.read(buffer)) != -1) hash.update(buffer, 0, count);
+        }
+        StringBuilder out = new StringBuilder();
+        for (byte b : hash.digest()) out.append(String.format("%02x", b & 255));
+        return out.toString();
+    }
     private PackageInfo verify(File file) throws Exception {
         int flags = Build.VERSION.SDK_INT >= 28 ? PackageManager.GET_SIGNING_CERTIFICATES : PackageManager.GET_SIGNATURES;
         PackageInfo info = getContext().getPackageManager().getPackageArchiveInfo(file.getAbsolutePath(), flags);
@@ -52,22 +63,32 @@ public final class AppUpdatePlugin extends Plugin {
     }
     @PluginMethod public void status(PluginCall call) {
         JSObject result = new JSObject(); result.put("busy", downloading); result.put("progress", progress);
-        try { PackageInfo info = verify(apk()); result.put("ready", true); result.put("version", info.versionName); }
+        // 原结果没有摘要：try { PackageInfo info = verify(apk()); result.put("ready", true); result.put("version", info.versionName); }
+        try { PackageInfo info = verify(apk()); result.put("sha256", fileDigest(apk())); result.put("ready", true); result.put("version", info.versionName); }
         catch (Exception error) { result.put("ready", false); }
         call.resolve(result);
     }
     @PluginMethod public synchronized void download(PluginCall call) {
         if (downloading) { call.reject("正在下载，请稍候。"); return; }
         String address = call.getString("url", ""), expected = call.getString("sha256", "");
+        String expectedVersion = call.getString("version", "");
         HttpUrl url = HttpUrl.parse(address);
-        if (url == null || !url.isHttps() || !"github.com".equals(url.host()) || !url.username().isEmpty() || !url.password().isEmpty() || url.query() != null || url.fragment() != null || !url.encodedPath().startsWith("/meilawiet/Japanese-song-learning-website/releases/download/") || !url.encodedPath().endsWith(".apk") || !expected.matches("[0-9a-f]{64}")) {
+        // 旧版仅允许 GitHub 的官方目录；新增同一账号的 Gitee UTA 发行版目录。
+        // boolean official = url != null && "github.com".equals(url.host()) && url.encodedPath().startsWith("/meilawiet/Japanese-song-learning-website/releases/download/");
+        boolean official = url != null && (("github.com".equals(url.host()) && url.encodedPath().startsWith("/meilawiet/Japanese-song-learning-website/releases/download/"))
+            || ("gitee.com".equals(url.host()) && url.encodedPath().startsWith("/git277992790/UTA/releases/download/")));
+        // 原条件供对照：if (url == null || !url.isHttps() || !"github.com".equals(url.host()) || !url.username().isEmpty() || !url.password().isEmpty() || url.query() != null || url.fragment() != null || !url.encodedPath().startsWith("/meilawiet/Japanese-song-learning-website/releases/download/") || !url.encodedPath().endsWith(".apk") || !expected.matches("[0-9a-f]{64}")) {
+        if (!official || !url.isHttps() || url.port() != 443 || !url.username().isEmpty() || !url.password().isEmpty() || url.query() != null || url.fragment() != null || !url.encodedPath().endsWith(".apk") || !expected.matches("[0-9a-f]{64}") || (!expectedVersion.isEmpty() && !expectedVersion.matches("[0-9]+(\\.[0-9]+){1,3}"))) {
             call.reject("更新下载地址或校验信息无效，请重新检测更新。"); return;
         }
         downloading = true; progress = 0; cancelled = false;
         worker.execute(() -> {
             File temporary = new File(getContext().getCacheDir(), "uta-update.part");
+            JSObject outcome = null; String failure = null;
             try {
-                OkHttpClient client = new OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).readTimeout(120, TimeUnit.SECONDS).callTimeout(10, TimeUnit.MINUTES).build();
+                // 附件可以跳转平台 CDN，但不允许 HTTPS 降级为明文 HTTP。
+                // OkHttpClient client = new OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).readTimeout(120, TimeUnit.SECONDS).callTimeout(10, TimeUnit.MINUTES).build();
+                OkHttpClient client = new OkHttpClient.Builder().followSslRedirects(false).connectTimeout(20, TimeUnit.SECONDS).readTimeout(120, TimeUnit.SECONDS).callTimeout(10, TimeUnit.MINUTES).build();
                 MessageDigest hash = MessageDigest.getInstance("SHA-256");
                 transfer = client.newCall(new Request.Builder().url(url).build());
                 // 兼容点击取消恰好发生在后台线程创建网络请求之前的情况。
@@ -90,14 +111,22 @@ public final class AppUpdatePlugin extends Plugin {
                 StringBuilder actual = new StringBuilder(); for (byte b : hash.digest()) actual.append(String.format("%02x", b & 255));
                 if (!expected.equals(actual.toString())) throw new IOException("安装包校验失败，请重新下载。");
                 PackageInfo info = verify(temporary);
+                // 同时核对发行说明版本，不能将镜像中错误的旧文件当成新版本安装。
+                if (!expectedVersion.isEmpty() && !expectedVersion.equals(info.versionName)) throw new IOException("安装包版本与发行说明不一致，请重新检测更新。");
                 // 只在完整性与签名验证都通过后替换旧缓存，下载失败仍可安装上次完整文件。
                 if (!temporary.renameTo(apk())) throw new IOException("无法保存安装包，请清理空间后重试。");
-                progress = 100; JSObject result = new JSObject(); result.put("ready", true); result.put("version", info.versionName); call.resolve(result);
+                // 原来在 finally 清理前返回结果；自动回退要求前一次请求先完全释放状态。
+                // progress = 100; JSObject result = new JSObject(); result.put("ready", true); result.put("version", info.versionName); call.resolve(result);
+                progress = 100; outcome = new JSObject(); outcome.put("ready", true); outcome.put("version", info.versionName); outcome.put("sha256", expected);
             } catch (Exception error) {
-                if(cancelled){ JSObject result = new JSObject(); result.put("cancelled", true); call.resolve(result); }
-                else call.reject(error instanceof IOException ? error.getMessage() : "下载或校验失败，请重试。");
+                // 旧版此处直接 resolve/reject；现在先清理临时文件与下载状态，再通知前端重试另一来源。
+                // if(cancelled){ JSObject result = new JSObject(); result.put("cancelled", true); call.resolve(result); }
+                // else call.reject(error instanceof IOException ? error.getMessage() : "下载或校验失败，请重试。");
+                if(cancelled){ outcome = new JSObject(); outcome.put("cancelled", true); }
+                else failure = error instanceof IOException ? error.getMessage() : "下载或校验失败，请重试。";
             }
             finally { temporary.delete(); transfer = null; downloading = false; }
+            if (failure != null) call.reject(failure); else call.resolve(outcome);
         });
     }
     @PluginMethod public void cancel(PluginCall call) {

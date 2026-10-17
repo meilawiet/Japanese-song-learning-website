@@ -5,7 +5,8 @@ import { StudyTransport } from './studyTransport.js'
 export default function useStudyPlayback({ enabled, song, audioRef, audioUrl, rate, onSelect, onError }) {
   const latest = useRef({ onSelect, onError })
   latest.current = { onSelect, onError }
-  const [status, setStatus] = useState({ playing: false, busy: false, mode: 'sentence' })
+  // 原父层状态：{ playing: false, busy: false, mode: 'sentence' }；选段变化也需更新歌词区域。
+  const [status, setStatus] = useState({ playing: false, busy: false, mode: 'sentence', range: null, rangeAnchorId: null })
   const statusRef = useRef(status)
   const ref = useRef(null)
   if (!ref.current) ref.current = new StudyTransport({

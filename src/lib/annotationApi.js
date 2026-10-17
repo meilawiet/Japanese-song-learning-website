@@ -5,6 +5,8 @@ import { prepareLyricReadings } from './lyricReadings'
 import { mergeIssueAdjustment, reviewFingerprint, reviewLines } from './lyricAiReview'
 import { annotationMatchesLine } from './learningIdentity'
 import { literalAnnotation, songLanguage } from './songLanguage.js'
+// 安卓逐句解析请求携带原文绑定标识，不能靠返回数组位置猜测歌词对应关系。
+import {prepareSentenceRequest} from './sentenceAnalysis.js'
 
 const apiOrigin = import.meta.env.VITE_ANNOTATION_API_URL || 'http://127.0.0.1:8000'
 
@@ -121,8 +123,10 @@ export function explainSelectionWithAi(payload) {
 }
 
 // 原请求只有 {lines}；增加语种上下文，避免把外语解释成日语。
-export function explainSentenceBatchWithAi(lines, language = 'ja') {
-  return postAi('/api/ai/explain-sentences', { lines, language })
+// 原签名仅接收 lines/language：return postAi('/api/ai/explain-sentences', { lines, language })
+export function explainSentenceBatchWithAi(lines, language = 'ja', options = {}) {
+  const payload=Capacitor.isNativePlatform()?prepareSentenceRequest(lines,language,options.japaneseLevel):{lines,language}
+  return postAi('/api/ai/explain-sentences', payload, undefined, options.signal)
 }
 
 export async function getAiStatus(signal) {

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 反馈页保留明确的返回与关闭入口，外部网页自己处理内容与投稿。 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/feedback_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="#FFFFFF">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="56dp" android:gravity="center_vertical" android:orientation="horizontal">
+        <Button android:id="@+id/feedback_back" style="?android:attr/borderlessButtonStyle"
+            android:layout_width="56dp" android:layout_height="match_parent" android:text="‹" android:textSize="30sp"
+            android:textColor="#202124" android:contentDescription="返回上一页" />
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:text="建议与反馈" android:textSize="18sp" android:textStyle="bold" android:textColor="#202124" />
+        <Button android:id="@+id/feedback_close" style="?android:attr/borderlessButtonStyle"
+            android:layout_width="72dp" android:layout_height="match_parent" android:text="关闭" android:textColor="#202124"
+            android:contentDescription="关闭反馈" />
+    </LinearLayout>
+    <ProgressBar android:id="@+id/feedback_progress" style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent" android:layout_height="2dp" android:progressTint="#426550" android:max="100" />
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <WebView android:id="@+id/feedback_webview" android:layout_width="match_parent" android:layout_height="match_parent" />
+        <LinearLayout android:id="@+id/feedback_error" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:orientation="vertical" android:gravity="center" android:padding="24dp" android:visibility="gone">
+            <!-- 原 TextView 没有 id；新增 id 以便展示登录失效或网络失败的具体提示。 -->
+            <TextView android:id="@+id/feedback_error_text" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center"
+                android:text="反馈页面暂时无法加载，请检查网络后重试。" android:textColor="#202124" android:textSize="16sp" />
+            <Button android:id="@+id/feedback_retry" android:layout_width="wrap_content" android:layout_height="48dp"
+                android:layout_marginTop="20dp" android:text="重新加载" />
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout>

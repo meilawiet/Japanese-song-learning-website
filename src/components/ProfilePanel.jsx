@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { UserRound, X } from 'lucide-react'
 import { avatarImageStyle, loadAvatarBlob, MAX_AVATAR_BYTES, readLocalProfile, saveLocalProfile } from '../lib/localProfile'
+// 日语等级与昵称/头像一同保存在个人资料，供首次询问及解析请求复用。
+import {JAPANESE_LEVELS,normalizeJapaneseLevel} from '../lib/japaneseLevel'
 
 // 展示页只放大查看；设置页提供上传、裁剪和昵称编辑。GIF 保留原文件，使用裁剪窗口保留动画。
 export default function ProfilePanel({ editable = false }) {
@@ -8,6 +10,7 @@ export default function ProfilePanel({ editable = false }) {
   const [url, setUrl] = useState(profile.avatar || '')
   const [view, setView] = useState(false)
   const [nickname, setNickname] = useState(profile.nickname || 'UTA 学习者')
+  const [japaneseLevel,setJapaneseLevel]=useState(()=>normalizeJapaneseLevel(profile.japaneseLevel))
   const [image, setImage] = useState(null)
   const [crop, setCrop] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -80,7 +83,8 @@ export default function ProfilePanel({ editable = false }) {
     if (!nickname.trim()) { setError('请填写昵称。'); return }
     setBusy(true); setError(''); setNotice('')
     try {
-      let blob, value = { ...profile, nickname:nickname.trim() }
+      // 原资料仅保存昵称：let blob, value = { ...profile, nickname:nickname.trim() }
+      let blob, value = { ...profile, nickname:nickname.trim(),japaneseLevel,japaneseLevelPrompted:true }
       if (image) {
         if (image.gif) { blob = image.file; value.avatarCrop = crop }
         else {
@@ -99,6 +103,8 @@ export default function ProfilePanel({ editable = false }) {
     finally { setBusy(false) }
   }
   const avatar = (source, region) => source ? <img src={source} alt="个人头像" style={avatarImageStyle(region)} /> : <UserRound size={58} />
-  if (editable) return <form className="profile-settings" onSubmit={save}><h3>个人资料</h3><div className="profile-crop-window">{avatar(image?.url || url, crop || profile.avatarCrop)}</div><label className="profile-upload-control">上传头像<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={busy} onChange={async event => { const input=event.target; const file=input.files?.[0]; await upload(file); input.value = '' }} /></label><small>JPG、PNG、WebP、GIF，每个文件不超过 10 MB</small>{image && <div className="profile-crop-controls"><p>调整头像显示范围{image.gif ? '（保留 GIF 动画）' : ''}</p>{[['zoom','缩放',1,3],['x','左右',0,1],['y','上下',0,1]].map(([key,label,min,max]) => <label key={key}>{label}<input type="range" aria-label={label} min={min} max={max} step="0.01" value={crop[key]} onChange={event => setCrop({ ...crop, [key]:Number(event.target.value) })} /></label>)}</div>}<label className="profile-nickname">昵称<input maxLength={24} value={nickname} onChange={event => setNickname(event.target.value)} /></label>{error && <p role="alert" className="profile-error">{error}</p>}{notice && <p role="status">{notice}</p>}<button className="profile-save" disabled={busy} type="submit">{busy ? '处理中…' : '保存个人资料'}</button><small>仅保存在当前设备</small></form>
+  // 原个人资料表单保留对照：
+//   if (editable) return <form className="profile-settings" onSubmit={save}>{/* 弹窗顶部已显示个人资料，按要求删除内容区重复标题。 */}<div className="profile-crop-window">{avatar(image?.url || url, crop || profile.avatarCrop)}</div><label className="profile-upload-control">上传头像<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={busy} onChange={async event => { const input=event.target; const file=input.files?.[0]; await upload(file); input.value = '' }} /></label><small>JPG、PNG、WebP、GIF，每个文件不超过 10 MB</small>{image && <div className="profile-crop-controls"><p>调整头像显示范围{image.gif ? '（保留 GIF 动画）' : ''}</p>{[['zoom','缩放',1,3],['x','左右',0,1],['y','上下',0,1]].map(([key,label,min,max]) => <label key={key}>{label}<input type="range" aria-label={label} min={min} max={max} step="0.01" value={crop[key]} onChange={event => setCrop({ ...crop, [key]:Number(event.target.value) })} /></label>)}</div>}<label className="profile-nickname">昵称<input maxLength={24} value={nickname} onChange={event => setNickname(event.target.value)} /></label>{error && <p role="alert" className="profile-error">{error}</p>}{notice && <p role="status">{notice}</p>}<button className="profile-save" disabled={busy} type="submit">{busy ? '处理中…' : '保存个人资料'}</button><small>仅保存在当前设备</small></form>
+  if (editable) return <form className="profile-settings" onSubmit={save}>{/* 弹窗顶部已显示个人资料，按要求删除内容区重复标题。 */}<div className="profile-crop-window">{avatar(image?.url || url, crop || profile.avatarCrop)}</div><label className="profile-upload-control">上传头像<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={busy} onChange={async event => { const input=event.target; const file=input.files?.[0]; await upload(file); input.value = '' }} /></label><small>JPG、PNG、WebP、GIF，每个文件不超过 10 MB</small>{image && <div className="profile-crop-controls"><p>调整头像显示范围{image.gif ? '（保留 GIF 动画）' : ''}</p>{[['zoom','缩放',1,3],['x','左右',0,1],['y','上下',0,1]].map(([key,label,min,max]) => <label key={key}>{label}<input type="range" aria-label={label} min={min} max={max} step="0.01" value={crop[key]} onChange={event => setCrop({ ...crop, [key]:Number(event.target.value) })} /></label>)}</div>}<label className="profile-nickname">昵称<input maxLength={24} value={nickname} onChange={event => setNickname(event.target.value)} /></label><label className="profile-japanese-level">日语水平<select aria-label="日语水平" value={japaneseLevel} disabled={busy} onChange={event=>setJapaneseLevel(event.target.value)}>{JAPANESE_LEVELS.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select><small>保存后用于新的日语AI解析；已有解析可手动重新生成。</small></label>{error && <p role="alert" className="profile-error">{error}</p>}{notice && <p role="status">{notice}</p>}<button className="profile-save" disabled={busy} type="submit">{busy ? '处理中…' : '保存个人资料'}</button><small>仅保存在当前设备</small></form>
   return <><div className="local-profile-centered"><button className="local-profile-view" type="button" aria-label="查看头像" onClick={() => setView(true)}>{avatar(url, profile.avatarCrop)}</button><strong>{profile.nickname || 'UTA 学习者'}</strong></div>{view && <div className="profile-view-backdrop" role="dialog" aria-modal="true" aria-label="查看头像" onClick={() => setView(false)}><button type="button" aria-label="关闭头像预览"><X size={26} /></button><div className="profile-large-avatar">{avatar(url, profile.avatarCrop)}</div></div>}</>
 }

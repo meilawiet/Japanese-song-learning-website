@@ -1,7 +1,10 @@
 // 头像用 IndexedDB 保存 Blob，避免 10 MB 动图超出 localStorage 容量；旧资料可继续读取。
+import {normalizeJapaneseLevel} from './japaneseLevel.js'
 export const PROFILE_KEY = 'uta-local-profile-v1'
 export const MAX_AVATAR_BYTES = 10 * 1024 * 1024
 export function readLocalProfile() { try { return JSON.parse(localStorage.getItem(PROFILE_KEY)) || {} } catch { return {} } }
+// 未选择时以零基础讲解，但不伪造用户已完成首次询问。
+export const readJapaneseLevel = () => normalizeJapaneseLevel(readLocalProfile().japaneseLevel)
 async function avatarStore(action) {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('uta-profile-assets', 1)

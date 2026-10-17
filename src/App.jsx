@@ -8,6 +8,7 @@ import ComputerImportDialog from './components/ComputerImportDialog'
 import ArtworkPicker from './components/ArtworkPicker'
 import AndroidHome, { AndroidBottomNav } from './components/AndroidHome'
 import AndroidSongLibrary from './components/AndroidSongLibrary'
+import DeleteSongDialog from './components/DeleteSongDialog'
 import AndroidSingAlong from './components/AndroidSingAlong'
 import AndroidLessonHeader, { FloatingPlaybackSpeed } from './components/AndroidLessonHeader'
 // 合并学习页保留旧组件，新增统一播放器与共享静音时间轴。
@@ -15,6 +16,8 @@ import { songLanguage, songReadingStyle, annotationForLanguage } from './lib/son
 import SongLanguageSelect from './components/SongLanguageSelect'
 import AndroidStudyPlayer, { AndroidStudyHeader } from './components/AndroidStudyPlayer'
 import useStudyPlayback from './lib/useStudyPlayback'
+// 安卓整句单击与双击互斥，滚动、长按或离页时可取消尚未确认的单击。
+import { LyricTapGesture } from './lib/lyricTapGesture'
 import OnlineSongSearch from './components/OnlineSongSearch'
 import SongDetailsEditor from './components/SongDetailsEditor'
 import LyricLineEditor from './components/LyricLineEditor'
@@ -24,6 +27,15 @@ import { applyLyricReview, reviewFingerprint } from './lib/lyricAiReview'
 import LyricChat from './components/LyricChat'
 import { applyLyricEdits, commitEditedLine } from './lib/lyricEditing'
 import SettingsDialog from './components/SettingsDialog'
+// 首页低频邀请，复用内置反馈，不打断学习和其他操作。
+import CommunityInvite from './components/CommunityInvite'
+// 逐句解析独立展示/删除，日语水平与原文绑定校验共用纯策略。
+import SentenceAnalysis from './components/SentenceAnalysis'
+import SentenceDeleteDialog from './components/SentenceDeleteDialog'
+import JapaneseLevelOnboarding from './components/JapaneseLevelOnboarding'
+import {readLocalProfile,readJapaneseLevel} from './lib/localProfile'
+import {validJapaneseLevel} from './lib/japaneseLevel'
+import {currentSentenceEntry,visibleSentenceEntry,sentenceEntry,removeSentenceEntries,SentenceTaskGate,sentenceSongFingerprint} from './lib/sentenceAnalysis'
 import { applyAppearance, readAppearance } from './lib/appearance'
 import { restoreRemoteFont } from './lib/remoteFonts'
 import { isCustomFont, restoreCustomFont } from './lib/customFonts'
@@ -104,21 +116,27 @@ function cleanSelectedText(value) {
   return value.replace(/\s+/g, '').trim().slice(0, 100)
 }
 
-function hasCachedSentenceExplanation(cache, line, language='ja') {
-  const entry = cache?.[line.id]
-  // 切换语言后原解析仍留在缓存，但不当作新语言下的有效结果。
-  return (entry?.language || 'ja') === language && entry?.text === line.text && typeof entry.explanation?.meaning === 'string' && Boolean(entry.explanation.meaning.trim())
-}
-
-function SentenceAnalysis({ explanation, id }) {
-  return <section className="sentence-inline-analysis" id={id} aria-label="整句解析" onClick={(event) => event.stopPropagation()}>
-    <h3><Sparkles size={14} /> 整句解析</h3>
-    <div className="sentence-analysis-section"><h4>整句意思</h4><p>{explanation.meaning}</p></div>
-    {explanation.vocabulary?.length > 0 && <div className="sentence-analysis-section"><h4>关键表达</h4><dl>{explanation.vocabulary.map((item, index) => <div key={`${item.surface}-${index}`}><dt lang="ja">{item.surface}</dt><dd>{item.meaning}</dd></div>)}</dl></div>}
-    {explanation.grammar?.length > 0 && <div className="sentence-analysis-section"><h4>语法与语境</h4><ul>{explanation.grammar.map((point, index) => <li key={`${point}-${index}`}>{point}</li>)}</ul></div>}
-    {explanation.pronunciation_tip && <div className="sentence-analysis-section"><h4>发音提示</h4><p>{explanation.pronunciation_tip}</p></div>}
-    <p className="sentence-analysis-footnote">AI 解析仅供学习参考；想了解具体词句，仍可在歌词中选中后单独提问。</p>
-  </section>
+// 原仅按缓存text和编号检查的解析展示保留对照；新组件额外展示原文及缓存状态。
+// function hasCachedSentenceExplanation(cache, line, language='ja') {
+//   const entry = cache?.[line.id]
+//   // 切换语言后原解析仍留在缓存，但不当作新语言下的有效结果。
+//   return (entry?.language || 'ja') === language && entry?.text === line.text && typeof entry.explanation?.meaning === 'string' && Boolean(entry.explanation.meaning.trim())
+// }
+//
+// function SentenceAnalysis({ explanation, id }) {
+//   return <section className="sentence-inline-analysis" id={id} aria-label="整句解析" onClick={(event) => event.stopPropagation()}>
+//     <h3><Sparkles size={14} /> 整句解析</h3>
+//     <div className="sentence-analysis-section"><h4>整句意思</h4><p>{explanation.meaning}</p></div>
+//     {explanation.vocabulary?.length > 0 && <div className="sentence-analysis-section"><h4>关键表达</h4><dl>{explanation.vocabulary.map((item, index) => <div key={`${item.surface}-${index}`}><dt lang="ja">{item.surface}</dt><dd>{item.meaning}</dd></div>)}</dl></div>}
+//     {explanation.grammar?.length > 0 && <div className="sentence-analysis-section"><h4>语法与语境</h4><ul>{explanation.grammar.map((point, index) => <li key={`${point}-${index}`}>{point}</li>)}</ul></div>}
+//     {explanation.pronunciation_tip && <div className="sentence-analysis-section"><h4>发音提示</h4><p>{explanation.pronunciation_tip}</p></div>}
+//     <p className="sentence-analysis-footnote">AI 解析仅供学习参考；想了解具体词句，仍可在歌词中选中后单独提问。</p>
+//   </section>
+// }
+//
+//
+function hasCachedSentenceExplanation(cache,line,language='ja') {
+  return currentSentenceEntry(cache?.[line.id],line,language,readJapaneseLevel(),IS_ANDROID_APP)
 }
 
 function formatLrcTimestamp(seconds) {
@@ -138,6 +156,14 @@ function parseLrcTimestamp(value) {
 export default function App() {
   // 安卓每次启动检查官方版本，只提示更新，不自动下载安装。
   const appUpdates=useAppUpdates(IS_ANDROID_APP)
+  // 未设置等级的既有用户也会在升级后首次询问；选择后不再重复打扰。
+  const [japaneseLevel,setJapaneseLevel]=useState(readJapaneseLevel)
+  const [needsJapaneseLevel,setNeedsJapaneseLevel]=useState(()=>{const profile=readLocalProfile();return !validJapaneseLevel(profile.japaneseLevel)&&profile.japaneseLevelPrompted!==true})
+  useEffect(()=>{
+    const changed=()=>{const profile=readLocalProfile();setJapaneseLevel(readJapaneseLevel());setNeedsJapaneseLevel(!validJapaneseLevel(profile.japaneseLevel)&&profile.japaneseLevelPrompted!==true)}
+    window.addEventListener('uta:profile-changed',changed)
+    return()=>window.removeEventListener('uta:profile-changed',changed)
+  },[])
   // 旧初始化只读原歌词；先应用当前设备的人工歌词，避免重开时丢失对应的读音校对。
   // [...importedSongs, ...demoSongs].map(withoutSongHeadingLines)
   const initialLearning = useMemo(() => reconcileLearningState(
@@ -208,6 +234,8 @@ export default function App() {
   const [sentenceExplanationOpen, setSentenceExplanationOpen] = useState(null)
   const [sentenceExplanationJob, setSentenceExplanationJob] = useState(null)
   const [sentenceExplanationError, setSentenceExplanationError] = useState(null)
+  // 仅管理解析删除，不复用歌曲删除入口，避免误删音频或学习记录。
+  const [sentenceDeleteTarget,setSentenceDeleteTarget]=useState(null)
   const [annotating, setAnnotating] = useState(false)
   const [annotationError, setAnnotationError] = useState('')
   const [selectedTokenIndex, setSelectedTokenIndex] = useState(0)
@@ -252,6 +280,7 @@ export default function App() {
   const [lyricEditSaving, setLyricEditSaving] = useState(false)
   const lyricPressRef = useRef(null)
   const lyricPressSuppressionRef = useRef(0)
+  const lyricTapRef = useRef(null)
   const [recentLearnId, setRecentLearnId] = useState(() => localStorage.getItem(RECENT_LEARN_KEY) || '')
   const [recentSingId, setRecentSingId] = useState(() => localStorage.getItem(RECENT_SING_KEY) || '')
   const [editingArtworkChoice, setEditingArtworkChoice] = useState(null)
@@ -263,6 +292,8 @@ export default function App() {
   const [songPickerOpen, setSongPickerOpen] = useState(false)
   const [songPickerSearch, setSongPickerSearch] = useState('')
   const [deletingSongId, setDeletingSongId] = useState('')
+  // 安卓删除先展示适配本机文案的圆角确认框；确认前不修改歌曲数据。
+  const [songToDelete,setSongToDelete] = useState(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [backupBusy, setBackupBusy] = useState('')
   const [backupPreview, setBackupPreview] = useState(null)
@@ -287,6 +318,13 @@ export default function App() {
   const importAudioRequestRef = useRef(0)
   const importArtworkRequestRef = useRef(0)
   const sentenceExplanationJobRef = useRef(null)
+  const sentenceTaskGateRef=useRef(new SentenceTaskGate())
+  useEffect(()=>{
+    const task=sentenceTaskGateRef.current.current
+    if(task?.level!=null&&task.level!==japaneseLevel)cancelSentenceGeneration(task.songId)
+    setSentenceExplanationOpen(previous=>previous?.entry?.language==='ja'?null:previous)
+  },[japaneseLevel])
+  useEffect(()=>()=>sentenceTaskGateRef.current.cancel(),[])
   const attemptedBackgroundAiRef = useRef(new Set())
   const cancelledAiSongsRef = useRef(new Set())
 
@@ -382,6 +420,9 @@ export default function App() {
   // Reconcile before rendering and before every write, including after Vite
   // reloads generated lyrics or browser-local songs finish loading.
   const learning = useMemo(() => reconcileLearningState(allSongs, learningState), [allSongs, learningState])
+  // 网络返回时核对最新原文，而不是沿用请求发起时的闭包。
+  const sentenceSongsRef=useRef(allSongs)
+  sentenceSongsRef.current=allSongs
   const { learnedBySong, reviewItems, favoriteSongIds, corrections, lyricSnapshots, lyricEditsBySong, songSettings = {} } = learning.progress
   const { annotations: annotationsBySong, aiReviews, sentenceExplanations: sentenceExplanationsBySong } = learning
   function updateLearningMap(key, update, inProgress = false) {
@@ -456,6 +497,29 @@ export default function App() {
   // 安卓两种播放方式共用同页；无音频时由同一控制器按真实歌词时间轴计时。
   const unifiedStudy = IS_ANDROID_APP && activePage === 'lesson' && !practiceActive
   const study = useStudyPlayback({ enabled: unifiedStudy, song: activeSong, audioRef, audioUrl, rate: playbackRate, onSelect: setActiveLineId, onError: setAudioError })
+  // 仅安卓统一学习页启用双击选段；回调读取控制器当前状态，避免等待期间沿用旧选区。
+  useEffect(() => {
+    if (!unifiedStudy) return undefined
+    const gesture = new LyricTapGesture({
+      // 无时间轴仍允许阅读选句；可播放时由控制器决定段首，不能用被点句覆盖它。
+      onSingle: id => { if (!study.transport.state.ready) setActiveLineId(id); else study.transport.playLine(id) },
+      onDouble: id => {
+        if (!study.transport.state.ready) { setToast('歌词缺少完整时间戳，补全后可选段播放。'); return }
+        setSentenceExplanationOpen(null)
+        study.transport.doubleTapLine(id)
+      },
+    })
+    lyricTapRef.current = gesture
+    // 工具栏/掌握/解析等独立按钮及退到后台都会取消待确认单击，不能稍后偷偷播放。
+    const action = event => { if (event.target.closest('button,a,input,select,textarea,[role="dialog"]')) gesture.cancel() }
+    const hidden = () => { if (document.visibilityState !== 'visible') gesture.cancel() }
+    window.addEventListener('pointerdown', action, true)
+    document.addEventListener('visibilitychange', hidden)
+    return () => {
+      gesture.cancel(); window.removeEventListener('pointerdown', action, true); document.removeEventListener('visibilitychange', hidden)
+      if (lyricTapRef.current === gesture) lyricTapRef.current = null
+    }
+  }, [unifiedStudy, activeSong.id, study.transport, study.mode])
   useEffect(() => {
     if (!IS_ANDROID_APP) return undefined
     let active = true
@@ -549,6 +613,7 @@ export default function App() {
     attemptedBackgroundAiRef.current.add(song.id)
     // AI 请求在页面可继续使用时逐批处理；中断的任务保留，下次打开应用续做。
     void generateSentenceExplanations(song).then((result) => {
+      if(result.cancelled)return
       if (result.complete) {
         const latest = loadLocal(PENDING_AI_IMPORT_KEY, [])
         localStorage.setItem(PENDING_AI_IMPORT_KEY, JSON.stringify((Array.isArray(latest) ? latest : []).filter((id) => id !== song.id)))
@@ -668,6 +733,8 @@ export default function App() {
 
   function stopLinePlayback() {
     // 返回、编辑和解析统一暂停有声/静音进度。
+    // 同时取消300毫秒内尚未确认的整句点击，耳机断开或返回后不得延迟启动。
+    lyricTapRef.current?.cancel()
     study.transport.pause()
     audioRef.current?.pause()
     clipEndRef.current = null
@@ -713,6 +780,9 @@ export default function App() {
     const press = { x: event.clientX, y: event.clientY }
     press.timer = window.setTimeout(() => {
       lyricPressSuppressionRef.current = Date.now() + 1000
+      // 长按不可再触发延迟单击；选段区域长按只吞掉抬手，不进入编辑或改变播放。
+      lyricTapRef.current?.cancel()
+      if (unifiedStudy && (study.transport.inRange(lineId) || study.transport.state.rangeAnchorId === lineId)) return
       dragSelectionRef.current = null
       setDragSelection(null)
       setSelectedText(null)
@@ -724,7 +794,9 @@ export default function App() {
   }
   function moveLyricPress(event) {
     const press = lyricPressRef.current
-    if (press && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 12) cancelLyricPress()
+    // 原移动只取消长按；现连尚未确认的单击一起取消，滑动找终点不会误播放。
+    // if (press && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 12) cancelLyricPress()
+    if (press && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 12) { cancelLyricPress(); lyricTapRef.current?.cancel() }
   }
   function suppressLyricPressClick(event) {
     if (Date.now() < lyricPressSuppressionRef.current) { event.preventDefault(); event.stopPropagation() }
@@ -773,10 +845,12 @@ export default function App() {
   function handleLyricRowClick(event, lineId) {
     // 原逻辑：onClick={() => chooseLine(line.id)}，现保留给电脑端。
     if (event.target.closest('button, a, input, select, textarea, .sentence-inline-analysis')) return
+    // 安卓先区分单击/双击，网页维持原即时选句；第二次双击仅选段，不播放。
+    if (unifiedStudy) { lyricTapRef.current?.tap(lineId); return }
     chooseLine(lineId)
     // 原来任何整句点击都尝试播放；纯歌词阅读只切换当前句，避免无音频报错。
     // 原来无音频不能点击播放：if (isMobileLyricPlayback()&&playbackReady) playLine(lineId)
-    if (unifiedStudy) { study.transport.playLine(lineId); return }
+    // 原安卓即时播放：if (unifiedStudy) { study.transport.playLine(lineId); return }
     if (isMobileLyricPlayback()&&playbackReady) playLine(lineId)
   }
 
@@ -1054,87 +1128,198 @@ export default function App() {
     showLibraryPage({ focusSearch: true })
   }
 
-  async function generateSentenceExplanations(song, requestedLines = song.lines, onProgress) {
-    const cache = { ...(sentenceExplanationsBySong[song.id] || {}) }
-    const pending = requestedLines.filter((line) => !hasCachedSentenceExplanation(cache, line, songLanguage(song)))
-    const countReady = () => song.lines.filter((line) => hasCachedSentenceExplanation(cache, line, songLanguage(song))).length
-    if (!pending.length) return { cache, complete: true, ready: countReady(), error: '' }
-    if (sentenceExplanationJobRef.current) {
-      return { cache, complete: false, ready: countReady(), error: '已有一首歌曲正在生成解析，请稍后重试。' }
-    }
-    sentenceExplanationJobRef.current = song.id
-    setSentenceExplanationError(null)
-    setSentenceExplanationJob({ songId: song.id, ready: countReady(), total: song.lines.length })
-    onProgress?.(countReady(), song.lines.length)
-    let failure = ''
-    try {
-      for (let offset = 0; offset < pending.length; offset += SENTENCE_BATCH_SIZE) {
-        if (cancelledAiSongsRef.current.has(song.id)) return { cache, complete: false, ready: countReady(), error: '歌曲已删除，解析已停止。' }
-        const batch = pending.slice(offset, offset + SENTENCE_BATCH_SIZE)
-        const contextLines = batch.map((line) => {
-          const index = song.lines.findIndex((item) => item.id === line.id)
-          return {
-            id: line.id, text: line.text, translation: line.translation || '',
-            previous_line: song.lines[index - 1]?.text || '',
-            next_line: song.lines[index + 1]?.text || '',
+  // 原生成/展示函数保留，下面的新实现加原文绑定、任务失效与显式重生成。
+//   async function generateSentenceExplanations(song, requestedLines = song.lines, onProgress) {
+//     const cache = { ...(sentenceExplanationsBySong[song.id] || {}) }
+//     const pending = requestedLines.filter((line) => !hasCachedSentenceExplanation(cache, line, songLanguage(song)))
+//     const countReady = () => song.lines.filter((line) => hasCachedSentenceExplanation(cache, line, songLanguage(song))).length
+//     if (!pending.length) return { cache, complete: true, ready: countReady(), error: '' }
+//     if (sentenceExplanationJobRef.current) {
+//       return { cache, complete: false, ready: countReady(), error: '已有一首歌曲正在生成解析，请稍后重试。' }
+//     }
+//     sentenceExplanationJobRef.current = song.id
+//     setSentenceExplanationError(null)
+//     setSentenceExplanationJob({ songId: song.id, ready: countReady(), total: song.lines.length })
+//     onProgress?.(countReady(), song.lines.length)
+//     let failure = ''
+//     try {
+//       for (let offset = 0; offset < pending.length; offset += SENTENCE_BATCH_SIZE) {
+//         if (cancelledAiSongsRef.current.has(song.id)) return { cache, complete: false, ready: countReady(), error: '歌曲已删除，解析已停止。' }
+//         const batch = pending.slice(offset, offset + SENTENCE_BATCH_SIZE)
+//         const contextLines = batch.map((line) => {
+//           const index = song.lines.findIndex((item) => item.id === line.id)
+//           return {
+//             id: line.id, text: line.text, translation: line.translation || '',
+//             previous_line: song.lines[index - 1]?.text || '',
+//             next_line: song.lines[index + 1]?.text || '',
+//           }
+//         })
+//         try {
+//           const result = await explainSentenceBatchWithAi(contextLines,songLanguage(song))
+//           if (cancelledAiSongsRef.current.has(song.id)) return { cache, complete: false, ready: countReady(), error: '歌曲已删除，解析已停止。' }
+//           const knownIds = new Set(batch.map((line) => line.id))
+//           const lineById = new Map(batch.map((line) => [line.id, line]))
+//           for (const explanation of result.explanations || []) {
+//             if (!knownIds.has(explanation.line_id) || !explanation.meaning) continue
+//             const line = lineById.get(explanation.line_id)
+//             cache[line.id] = { text: line.text, language:songLanguage(song), explanation }
+//           }
+//           setSentenceExplanationsBySong((previous) => ({ ...previous, [song.id]: { ...(previous[song.id] || {}), ...cache } }))
+//           const ready = countReady()
+//           setSentenceExplanationJob({ songId: song.id, ready, total: song.lines.length })
+//           onProgress?.(ready, song.lines.length)
+//         } catch (error) {
+//           failure = error instanceof Error ? error.message : 'AI 整句解析暂时不可用。'
+//           break
+//         }
+//       }
+//       const complete = requestedLines.every((line) => hasCachedSentenceExplanation(cache, line, songLanguage(song)))
+//       if (!complete && !failure) failure = '部分句子的解析未生成，可稍后重试。'
+//       if (failure) setSentenceExplanationError({ songId: song.id, message: failure })
+//       return { cache, complete, ready: countReady(), error: failure }
+//     } finally {
+//       sentenceExplanationJobRef.current = null
+//       setSentenceExplanationJob(null)
+//     }
+//   }
+//
+//   async function showSentenceExplanation(line) {
+//     // 选段内禁止逐句 AI 解析，即使旧焦点或异步入口仍存在也不提交请求。
+//     if (unifiedStudy && study.transport.inRange(line.id)) return
+//     const songId = activeSong.id
+//     if (sentenceExplanationOpen?.songId === songId && sentenceExplanationOpen.line.id === line.id) {
+//       setSentenceExplanationOpen(null)
+//       return
+//     }
+//     // 展开前立即暂停，生成/收起后均由用户手动继续。
+//     if (IS_ANDROID_APP) stopLinePlayback()
+//     const cached = sentenceExplanationsBySong[activeSong.id]?.[line.id]
+//     if (hasCachedSentenceExplanation(sentenceExplanationsBySong[activeSong.id], line, activeLanguage)) {
+//       setSentenceExplanationOpen({ songId, line, explanation: cached.explanation })
+//       return
+//     }
+//     const result = await generateSentenceExplanations(activeSong, [line])
+//     const prepared = result.cache[line.id]
+//     // 请求途中用户可能进入选段，结果可保留缓存，但不能在段内突然展开解析。
+//     if (unifiedStudy && study.transport.inRange(line.id)) return
+//     if (hasCachedSentenceExplanation(result.cache, line, activeLanguage)) setSentenceExplanationOpen({ songId, line, explanation: prepared.explanation })
+//     else setToast(result.error || '这句的解析暂未生成，请稍后重试。')
+//   }
+//
+//   async function generateCurrentSongExplanations() {
+//     const result = await generateSentenceExplanations(activeSong)
+//     if (result.complete) {
+//       const pending = loadLocal(PENDING_AI_IMPORT_KEY, [])
+//       localStorage.setItem(PENDING_AI_IMPORT_KEY, JSON.stringify((Array.isArray(pending) ? pending : []).filter((id) => id !== activeSong.id)))
+//     }
+//     setToast(result.complete ? `《${activeSong.title}》的 ${result.ready} 句解析已准备好。`
+//       : `${result.error || '部分句子未完成'}：已准备 ${result.ready} / ${activeSong.lines.length} 句，可重试。`)
+//   }
+//
+//
+  // 删除、重生成和等级改变都取消本曲旧任务，旧响应不可再写回缓存。
+  function cancelSentenceGeneration(songId) {
+    const gate=sentenceTaskGateRef.current
+    if(gate.current?.songId===songId){gate.cancel(songId);sentenceExplanationJobRef.current=null;setSentenceExplanationJob(null)}
+  }
+  function removePendingSentenceSong(songId){
+    const pending=loadLocal(PENDING_AI_IMPORT_KEY,[])
+    localStorage.setItem(PENDING_AI_IMPORT_KEY,JSON.stringify((Array.isArray(pending)?pending:[]).filter(id=>id!==songId)))
+    attemptedBackgroundAiRef.current.add(songId)
+  }
+  function deleteSentenceAnalysis(target){
+    cancelSentenceGeneration(target.songId)
+    removePendingSentenceSong(target.songId)
+    setSentenceExplanationsBySong(previous=>removeSentenceEntries(previous,target.songId,target.lineId))
+    setSentenceExplanationOpen(previous=>previous?.songId===target.songId&&(target.lineId==null||previous.line.id===target.lineId)?null:previous)
+    setSentenceExplanationError(null);setSentenceDeleteTarget(null)
+    setToast(target.lineId==null?'已删除整曲AI解析。':'已删除本句AI解析。')
+  }
+  async function generateSentenceExplanations(song,requestedLines=song.lines,onProgress,force=false){
+    const language=songLanguage(song),level=readJapaneseLevel()
+    const cache={...(sentenceExplanationsBySong[song.id]||{})}
+    const pending=requestedLines.filter(line=>force||!hasCachedSentenceExplanation(cache,line,language))
+    const countReady=()=>song.lines.filter(line=>hasCachedSentenceExplanation(cache,line,language)).length
+    if(!pending.length)return{cache,complete:true,ready:countReady(),error:''}
+    if(sentenceExplanationJobRef.current)return{cache,complete:false,ready:countReady(),error:'已有一首歌曲正在生成解析，请稍后重试。'}
+    const gate=sentenceTaskGateRef.current
+    const run=gate.begin(song.id,language==='ja'?level:null,sentenceSongFingerprint({...song,language}))
+    const generated=new Set()
+    const cancelled=()=>!gate.active(run)||cancelledAiSongsRef.current.has(song.id)
+    const cancelledResult=()=>({cache,complete:false,ready:countReady(),error:'解析生成已停止。',cancelled:true})
+    sentenceExplanationJobRef.current=song.id;setSentenceExplanationError(null)
+    setSentenceExplanationJob({songId:song.id,ready:force?0:countReady(),total:force?requestedLines.length:song.lines.length,regenerating:force})
+    onProgress?.(force?0:countReady(),song.lines.length)
+    let failure=''
+    // 日语小批处理减少重复歌词导致的漏句/错配，也为零基础讲解保留足够输出长度。
+    const batchSize=IS_ANDROID_APP&&language==='ja'?4:SENTENCE_BATCH_SIZE
+    try{
+      for(let offset=0;offset<pending.length;offset+=batchSize){
+        if(cancelled())return cancelledResult()
+        const batch=pending.slice(offset,offset+batchSize)
+        const context=batch.map(line=>{const index=song.lines.findIndex(item=>item.id===line.id);return{id:line.id,text:line.text,translation:line.translation||'',previous_line:song.lines[index-1]?.text||'',next_line:song.lines[index+1]?.text||''}})
+        try{
+          const result=await explainSentenceBatchWithAi(context,language,{japaneseLevel:level,signal:run.controller.signal})
+          if(cancelled())return cancelledResult()
+          const latest=sentenceSongsRef.current.find(item=>item.id===song.id)
+          if(!latest||sentenceSongFingerprint({...latest,language:songLanguage(latest)})!==run.fingerprint){failure='歌词已更改，本次结果未保存，请重新生成。';break}
+          const lookup=new Map(batch.map(line=>[line.id,line])),accepted={}
+          for(const explanation of result.explanations||[]){
+            const line=lookup.get(explanation.line_id)
+            if(!line||!explanation.meaning)continue
+            if(IS_ANDROID_APP&&(explanation.binding_version!==2||explanation.source_text!==line.text))continue
+            accepted[line.id]=sentenceEntry(line,explanation,language,level);cache[line.id]=accepted[line.id];generated.add(line.id)
           }
-        })
-        try {
-          const result = await explainSentenceBatchWithAi(contextLines,songLanguage(song))
-          if (cancelledAiSongsRef.current.has(song.id)) return { cache, complete: false, ready: countReady(), error: '歌曲已删除，解析已停止。' }
-          const knownIds = new Set(batch.map((line) => line.id))
-          const lineById = new Map(batch.map((line) => [line.id, line]))
-          for (const explanation of result.explanations || []) {
-            if (!knownIds.has(explanation.line_id) || !explanation.meaning) continue
-            const line = lineById.get(explanation.line_id)
-            cache[line.id] = { text: line.text, language:songLanguage(song), explanation }
-          }
-          setSentenceExplanationsBySong((previous) => ({ ...previous, [song.id]: { ...(previous[song.id] || {}), ...cache } }))
-          const ready = countReady()
-          setSentenceExplanationJob({ songId: song.id, ready, total: song.lines.length })
-          onProgress?.(ready, song.lines.length)
-        } catch (error) {
-          failure = error instanceof Error ? error.message : 'AI 整句解析暂时不可用。'
-          break
-        }
+          // 不把最初整份cache合回去；只写本批通过校验的结果，避免覆盖别处已删除内容。
+          if(Object.keys(accepted).length)setSentenceExplanationsBySong(previous=>run.controller.signal.aborted?previous:{...previous,[song.id]:{...(previous[song.id]||{}),...accepted}})
+          setSentenceExplanationJob({songId:song.id,ready:force?generated.size:countReady(),total:force?requestedLines.length:song.lines.length,regenerating:force})
+          onProgress?.(countReady(),song.lines.length)
+          if(result.rejected_count)failure='部分解析与原文或编号不对应，未保存对应条目，可重新生成这些句子。'
+        }catch(error){if(cancelled())return cancelledResult();failure=error instanceof Error?error.message:'AI解析暂时不可用。';break}
       }
-      const complete = requestedLines.every((line) => hasCachedSentenceExplanation(cache, line, songLanguage(song)))
-      if (!complete && !failure) failure = '部分句子的解析未生成，可稍后重试。'
-      if (failure) setSentenceExplanationError({ songId: song.id, message: failure })
-      return { cache, complete, ready: countReady(), error: failure }
-    } finally {
-      sentenceExplanationJobRef.current = null
-      setSentenceExplanationJob(null)
+      const complete=requestedLines.every(line=>(!force||generated.has(line.id))&&hasCachedSentenceExplanation(cache,line,language))
+      if(!complete&&!failure)failure='部分句子未生成，可稍后重试。'
+      if(failure)setSentenceExplanationError({songId:song.id,message:failure})
+      // 重新生成失败时不能拿旧缓存数量冒充本次成功数量。
+      return{cache,complete,ready:force?generated.size:countReady(),error:failure}
+    }finally{
+      if(gate.current===run){gate.finish(run);sentenceExplanationJobRef.current=null;setSentenceExplanationJob(null)}
     }
   }
-
-  async function showSentenceExplanation(line) {
-    const songId = activeSong.id
-    if (sentenceExplanationOpen?.songId === songId && sentenceExplanationOpen.line.id === line.id) {
-      setSentenceExplanationOpen(null)
+  async function showSentenceExplanation(line){
+    if(unifiedStudy&&study.transport.inRange(line.id))return
+    const songId=activeSong.id
+    if(sentenceExplanationOpen?.songId===songId&&sentenceExplanationOpen.line.id===line.id){setSentenceExplanationOpen(null);return}
+    if(IS_ANDROID_APP)stopLinePlayback()
+    const cached=sentenceExplanationsBySong[songId]?.[line.id]
+    // 旧解析仍可查看及删除，但明确标注未验证/旧等级，不自动付费替换。
+    if(visibleSentenceEntry(cached,line,activeLanguage)){
+      setSentenceExplanationOpen({songId,line,entry:cached,explanation:cached.explanation,stale:!hasCachedSentenceExplanation(sentenceExplanationsBySong[songId],line,activeLanguage)})
       return
     }
-    // 展开前立即暂停，生成/收起后均由用户手动继续。
-    if (IS_ANDROID_APP) stopLinePlayback()
-    const cached = sentenceExplanationsBySong[activeSong.id]?.[line.id]
-    if (hasCachedSentenceExplanation(sentenceExplanationsBySong[activeSong.id], line, activeLanguage)) {
-      setSentenceExplanationOpen({ songId, line, explanation: cached.explanation })
-      return
-    }
-    const result = await generateSentenceExplanations(activeSong, [line])
-    const prepared = result.cache[line.id]
-    if (hasCachedSentenceExplanation(result.cache, line, activeLanguage)) setSentenceExplanationOpen({ songId, line, explanation: prepared.explanation })
-    else setToast(result.error || '这句的解析暂未生成，请稍后重试。')
+    const result=await generateSentenceExplanations(activeSong,[line])
+    if(result.cancelled||unifiedStudy&&study.transport.inRange(line.id))return
+    const prepared=result.cache[line.id]
+    if(hasCachedSentenceExplanation(result.cache,line,activeLanguage))setSentenceExplanationOpen({songId,line,entry:prepared,explanation:prepared.explanation})
+    else setToast(result.error||'这句的解析暂未生成，请稍后重试。')
   }
-
-  async function generateCurrentSongExplanations() {
-    const result = await generateSentenceExplanations(activeSong)
-    if (result.complete) {
-      const pending = loadLocal(PENDING_AI_IMPORT_KEY, [])
-      localStorage.setItem(PENDING_AI_IMPORT_KEY, JSON.stringify((Array.isArray(pending) ? pending : []).filter((id) => id !== activeSong.id)))
-    }
-    setToast(result.complete ? `《${activeSong.title}》的 ${result.ready} 句解析已准备好。`
-      : `${result.error || '部分句子未完成'}：已准备 ${result.ready} / ${activeSong.lines.length} 句，可重试。`)
+  async function regenerateSentence(line){
+    const song=activeSong
+    if(unifiedStudy&&study.transport.inRange(line.id))return
+    stopLinePlayback();cancelSentenceGeneration(song.id);removePendingSentenceSong(song.id)
+    const result=await generateSentenceExplanations(song,[line],undefined,true)
+    if(result.cancelled)return
+    if(result.complete){const entry=result.cache[line.id];setSentenceExplanationOpen({songId:song.id,line,entry,explanation:entry.explanation});setToast('本句解析已重新生成。')}
+    else setToast(result.error||'重新生成失败，原有解析已保留。')
+  }
+  async function generateCurrentSongExplanations(force=false){
+    const song=activeSong
+    if(force===true){cancelSentenceGeneration(song.id);removePendingSentenceSong(song.id)}
+    const result=await generateSentenceExplanations(song,song.lines,undefined,force===true)
+    if(result.cancelled)return
+    if(result.complete)removePendingSentenceSong(song.id)
+    setSentenceExplanationOpen(null)
+    setToast(result.complete?'本曲'+result.ready+'句解析已准备好。':(result.error||'部分句子未完成')+'：已准备'+result.ready+'/'+song.lines.length+'句。')
   }
 
   async function exportLearningData() {
@@ -1501,13 +1686,18 @@ export default function App() {
     } finally { setEditingDetailsBusy(false) }
   }
 
-  async function removeImportedSong(song) {
+  async function removeImportedSong(song,confirmed=false) {
     if (!song.isLocal || deletingSongId) return
-    if (!window.confirm(`确定删除《${song.title}》吗？歌词、音频和这首歌的学习进度都会从当前浏览器移除。`)) return
+    // 原两端共用浏览器确认框；安卓改用 DeleteSongDialog，网页保留原确认流程。
+    // if (!window.confirm(`确定删除《${song.title}》吗？歌词、音频和这首歌的学习进度都会从当前浏览器移除。`)) return
+    if (IS_ANDROID_APP&&!confirmed) { setSongToDelete(song); return }
+    if (!IS_ANDROID_APP&&!window.confirm(`确定删除《${song.title}》吗？歌词、音频和这首歌的学习进度都会从当前浏览器移除。`)) return
     setDeletingSongId(song.id)
     try {
       await deleteLocalSong(song.id)
       cancelledAiSongsRef.current.add(song.id)
+      // 删除歌曲同样立即作废其解析任务，释放队列且拒绝迟到响应。
+      cancelSentenceGeneration(song.id)
       const pendingAi = loadLocal(PENDING_AI_IMPORT_KEY, [])
       localStorage.setItem(PENDING_AI_IMPORT_KEY, JSON.stringify((Array.isArray(pendingAi) ? pendingAi : []).filter((id) => id !== song.id)))
       const audioObjectUrl = localAudioUrlRef.current[song.id]
@@ -1533,7 +1723,8 @@ export default function App() {
       }
       setToast(`已删除《${song.title}》及其本机保存的数据。`)
     } catch {
-      setToast('删除失败：浏览器未能更新本地歌曲库。')
+      // 安卓错误信息也使用本机文案，避免残留浏览器称呼。
+      setToast(IS_ANDROID_APP?'删除失败：未能更新本机歌曲库，请重试。':'删除失败：浏览器未能更新本地歌曲库。')
     } finally {
       setDeletingSongId('')
     }
@@ -1670,6 +1861,8 @@ export default function App() {
   }
 
   function toggleLearnedLine(lineId) {
+    // 选段只是临时播放单位，禁止借此批量或逐句改写掌握记录。
+    if (unifiedStudy && study.transport.inRange(lineId)) return
     const willLearn = !learnedLines.has(lineId)
     setLearnedBySong((previous) => {
       const next = new Set(previous[activeSong.id] || [])
@@ -1873,19 +2066,38 @@ export default function App() {
     })()}
     {IS_ANDROID_APP && androidLaunchVisible && <div className="android-launch-screen" role="img" aria-label="UTA 启动图：私のうた，聴いてください"><img src={androidLaunchPortrait} alt="" /><div className="android-launch-title" lang="ja"><span>私のうた</span><span>聴いてください</span></div></div>}
     <div className="page-grain" aria-hidden="true" />
+    {/* 删除框独立于歌曲操作菜单，只有点击中文“删除”按钮才进入原有删除流程。 */}
+    {IS_ANDROID_APP&&songToDelete&&<DeleteSongDialog song={songToDelete} onCancel={()=>setSongToDelete(null)} onConfirm={()=>{const song=songToDelete;setSongToDelete(null);void removeImportedSong(song,true)}}/>}
     <audio ref={audioRef} src={audioUrl || undefined} preload="metadata" onLoadedMetadata={handleAudioLoadedMetadata} onTimeUpdate={handleAudioTimeUpdate} onEnded={() => { clipEndRef.current = null; continuousPlaybackRef.current = false; setPlayingLineId(null); setSingAlongPlaying(false) }} onError={() => { continuousPlaybackRef.current = false; setPlayingLineId(null); setSingAlongPlaying(false); setAudioError(`未能加载《${activeSong.title}》的音频文件。`) }} />
-    {/* 学习详情页由歌曲栏承担页头，原品牌栏保留给主页面和网页。 */}
-    <header className={`topbar ${IS_ANDROID_APP ? `android-topbar ${['lesson', 'sing-along'].includes(activePage) ? 'study-topbar-hidden' : ''}` : ''}`}>
+    {/* 安卓三个主页移除品牌栏，由各页左上角标签承担页头；网页与其他页面继续使用此栏。 */}
+    {!(IS_ANDROID_APP && activePage.startsWith('mobile-')) && <header className={`topbar ${IS_ANDROID_APP ? `android-topbar ${['lesson', 'sing-along'].includes(activePage) ? 'study-topbar-hidden' : ''}` : ''}`}>
       <button className="brand" type="button" onClick={showLessonPage} aria-label="UTA 首页"><span className="brand-mark">う</span><span>UTA<span className="brand-dot">.</span></span></button>
       {/* 旧网页顶部导航保留；安卓使用下方固定的三按钮导航。 */}
       {!IS_ANDROID_APP && <nav className="main-nav" aria-label="主导航"><button className={activePage === 'lesson' ? 'active' : ''} type="button" onClick={showLessonPage}>发音学习</button><button className={activePage === 'library' ? 'active' : ''} type="button" onClick={() => showLibraryPage()}>歌曲库</button><button type="button" onClick={showReviewQueue}>复习</button></nav>}
       {!IS_ANDROID_APP && <div className="top-actions"><button className="icon-button" type="button" onClick={focusLibrarySearch} aria-label="搜索歌曲"><Search size={20} /></button><button className="settings-trigger" type="button" onClick={() => setSettingsOpen(true)} aria-label="设置"><Settings size={19} /><span>设置</span></button></div>}
-    </header>
+    </header>}
 
     {IS_ANDROID_APP && <WebDavAutoSync onCreateBackup={createCloudData} onNotice={setToast}/>}
     {IS_ANDROID_APP && <AppUpdatePrompt updates={appUpdates}/>}
+    {/* 首次询问避开启动页、设置及更新弹窗，个人资料保存后立即关闭。 */}
+    {IS_ANDROID_APP&&<JapaneseLevelOnboarding enabled={needsJapaneseLevel&&!androidLaunchVisible&&activePage.startsWith('mobile-')&&!settingsOpen&&!appUpdates.checking&&!appUpdates.prompt&&!appUpdates.installing&&!importOpen}/>}
+    {sentenceDeleteTarget&&<SentenceDeleteDialog whole={sentenceDeleteTarget.lineId==null} onCancel={()=>setSentenceDeleteTarget(null)} onConfirm={()=>deleteSentenceAnalysis(sentenceDeleteTarget)}/>}
+    {/* 首页连续空闲才允许提醒；更新、导入、编辑、练习与各类面板均优先。 */}
+    {IS_ANDROID_APP && <CommunityInvite routeKey={`${activePage}:${mobileTab}`} eligible={
+      !needsJapaneseLevel && activePage.startsWith('mobile-') && localSongsReady && !androidLaunchVisible &&
+      !practiceActive && !study.playing && !study.busy && playingLineId === null && !singAlongPlaying &&
+      !settingsOpen && !importOpen && !importBusy && !importPreparing && !importDraft &&
+      !songPickerOpen && !songToDelete && !deletingSongId && !backupBusy && !backupPreview && !computerShare &&
+      !editingArtworkSong && !editingDetailsSong && !editingDetailsBusy && !editingArtworkChoice && !artworkEditBusy && !artworkEditSaving &&
+      !editingLyric && !lyricEditMenu && !lyricEditSaving && !lyricAiReviewSong && !detailOpen && !sentenceExplanationOpen &&
+      !cloudSongRequest && !cloudSongBusy && !annotating && !aiBusy && !toast &&
+      !appUpdates.checking && !appUpdates.prompt && !appUpdates.downloadState.busy && !appUpdates.installing
+    }/>}
     {/* 原学习页只有 android-lesson-page；统一页单独声明布局，不改网页端。 */}
-    <main id="top" className={IS_ANDROID_APP ? `android-main ${activePage === 'lesson' ? `android-lesson-page ${unifiedStudy ? 'unified-study-page' : ''}` : ''}` : ''} data-reading-style={readingStyle}>
+    {/* 主页单独占满可用高度，去掉品牌栏后不留下原栏占位。 */}
+    {/* 原主容器没有滚动处理；选段期间滚动只取消手势，不取消已选起点。 */}
+    {/* <main id="top" className={...} data-reading-style={readingStyle}> */}
+    <main id="top" className={IS_ANDROID_APP ? `android-main ${activePage.startsWith('mobile-') ? 'android-home-main' : ''} ${activePage === 'lesson' ? `android-lesson-page ${unifiedStudy ? 'unified-study-page' : ''}` : ''}` : ''} data-reading-style={readingStyle} onScrollCapture={unifiedStudy ? () => { lyricTapRef.current?.cancel(); cancelLyricPress() } : undefined}>
       {/* 安卓三屏首页按确认稿呈现，模式卡片只负责进入现有功能。 */}
       {IS_ANDROID_APP && activePage.startsWith('mobile-') && <AndroidHome tab={mobileTab} recentLearn={recentLearnSong ? { song: recentLearnSong, artwork: artworkForSong(recentLearnSong) } : null} recentSing={recentSingSong ? { song: recentSingSong, artwork: artworkForSong(recentSingSong) } : null} onEnterLearn={enterRecentLearning} onEnterSingAlong={showSingAlong} onEnterReview={showReviewQueue} onOpenLibrary={() => showLibraryPage()} onOpenSettings={() => setSettingsOpen(true)} />}
       {/* 原独立界面实现保留供对照：
@@ -1912,7 +2124,7 @@ export default function App() {
       {/* 原播放器传参保留对照：
       {unifiedStudy && <AndroidStudyPlayer song={activeSong} onLanguage={changeSongLanguage} readingOptions={activeSongSettings} onReadingOptions={updateSongSettings} transport={study.transport} rate={playbackRate} onRate={choosePlaybackRate} readingStyle={readingStyle} onReadingStyle={setReadingStyle} showTranslation={showStudyTranslation} onTranslation={setShowStudyTranslation} ready={readySentenceCount} total={activeSong.lines.length} generating={Boolean(sentenceExplanationJob)} onGenerate={generateCurrentSongExplanations} onReview={() => { stopLinePlayback(); setLyricAiReviewSong(activeSong) }} chat={<LyricChat key={activeSong.id} song={activeSong} lineId={activeLine.id} annotations={annotations} corrections={corrections} />} />}
       */}
-      {unifiedStudy && <AndroidStudyPlayer song={activeSong} onChooseSong={openStudySongPicker} onLanguage={changeSongLanguage} readingOptions={activeSongSettings} onReadingOptions={updateSongSettings} transport={study.transport} rate={playbackRate} onRate={choosePlaybackRate} readingStyle={readingStyle} onReadingStyle={setReadingStyle} showTranslation={showStudyTranslation} onTranslation={setShowStudyTranslation} ready={readySentenceCount} total={activeSong.lines.length} generating={Boolean(sentenceExplanationJob)} onGenerate={generateCurrentSongExplanations} onReview={() => { stopLinePlayback(); setLyricAiReviewSong(activeSong) }} chat={<LyricChat key={activeSong.id} song={activeSong} lineId={activeLine.id} annotations={annotations} corrections={corrections} />} />}
+      {unifiedStudy && <AndroidStudyPlayer song={activeSong} onChooseSong={openStudySongPicker} onLanguage={changeSongLanguage} readingOptions={activeSongSettings} onReadingOptions={updateSongSettings} transport={study.transport} rate={playbackRate} onRate={choosePlaybackRate} readingStyle={readingStyle} onReadingStyle={setReadingStyle} showTranslation={showStudyTranslation} onTranslation={setShowStudyTranslation} ready={readySentenceCount} total={activeSong.lines.length} generating={Boolean(sentenceExplanationJob)} onGenerate={()=>generateCurrentSongExplanations(false)} onRegenerate={()=>generateCurrentSongExplanations(true)} onDeleteAnalyses={()=>setSentenceDeleteTarget({songId:activeSong.id,lineId:null})} hasAnalyses={Object.keys(currentSentenceCache).length>0} generationProgress={sentenceExplanationJob?.songId===activeSong.id?sentenceExplanationJob:null} onReview={() => { stopLinePlayback(); setLyricAiReviewSong(activeSong) }} chat={<LyricChat key={activeSong.id} song={activeSong} lineId={activeLine.id} annotations={annotations} corrections={corrections} />} />}
       {/* 已按用户要求移除逐句页顶部返回按钮；系统返回手势和底部导航继续可用。 */}
       <section className="hero anime-hero" aria-labelledby="song-title" style={{ '--hero-art': `url(${twilightStation})` }}>
         <div className="hero-art" aria-hidden="true" />
@@ -1968,7 +2180,7 @@ export default function App() {
               <p className="guided-prompt">先听原声，自己读一遍，并猜猜这句的意思。答案在你点击前不会显示。</p>
               <div className="guided-listen"><button type="button" disabled={!playbackReady} onClick={() => playLine(activeLine.id)}>{playingLineId === activeLine.id ? <Pause size={14} /> : <Play size={14} />} {playingLineId === activeLine.id ? '暂停原声' : '听这一句'}</button><span>{audioUrl ? `当前 ${playbackRate}× 速度` : '这首歌尚无音频'}</span></div>
               {audioError && <p className="guided-error" role="alert">{audioError}</p>}
-              {practiceRevealed ? <div className="guided-answer" aria-live="polite"><span>读音</span><p lang={readingLang}>{activeLineReading || '自动读音尚未准备好，请先到校对页面确认。'}</p><span>中文释义</span><p>{activeLine.translation || '原 LRC 未提供中文译文，请结合词汇理解这一句。'}</p><button className="guided-sentence-explain" type="button" aria-expanded={sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === activeLine.id} aria-controls={`guided-sentence-analysis-${activeSong.id}-${activeLine.id}`} onClick={() => showSentenceExplanation(activeLine)}><Sparkles size={13} /> {sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === activeLine.id ? '收起整句解析' : '查看整句解析'}</button>{sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === activeLine.id && <SentenceAnalysis explanation={sentenceExplanationOpen.explanation} id={`guided-sentence-analysis-${activeSong.id}-${activeLine.id}`} />}<div className="guided-grade"><button type="button" onClick={() => gradePracticeLine(false)}>还要再练 · 加入复习</button><button type="button" onClick={() => gradePracticeLine(true)}>我会了 · 下一句 <Check size={14} /></button></div></div> : <button className="guided-reveal" type="button" disabled={!activeLineReading} onClick={() => setPracticeRevealed(true)}>{activeLineReading ? '揭晓读音与译文' : annotationError || '正在准备自动读音…'}</button>}
+              {practiceRevealed ? <div className="guided-answer" aria-live="polite"><span>读音</span><p lang={readingLang}>{activeLineReading || '自动读音尚未准备好，请先到校对页面确认。'}</p><span>中文释义</span><p>{activeLine.translation || '原 LRC 未提供中文译文，请结合词汇理解这一句。'}</p><button className="guided-sentence-explain" type="button" aria-expanded={sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === activeLine.id} aria-controls={`guided-sentence-analysis-${activeSong.id}-${activeLine.id}`} onClick={() => showSentenceExplanation(activeLine)}><Sparkles size={13} /> {sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === activeLine.id ? '收起整句解析' : '查看整句解析'}</button>{sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === activeLine.id && <SentenceAnalysis explanation={sentenceExplanationOpen.explanation} id={`guided-sentence-analysis-${activeSong.id}-${activeLine.id}`} line={activeLine} entry={sentenceExplanationOpen.entry} stale={!hasCachedSentenceExplanation(currentSentenceCache,activeLine,activeLanguage)} currentLevel={japaneseLevel} busy={Boolean(sentenceExplanationJob)} onDelete={()=>setSentenceDeleteTarget({songId:activeSong.id,lineId:activeLine.id})} onRegenerate={()=>regenerateSentence(activeLine)} />}<div className="guided-grade"><button type="button" onClick={() => gradePracticeLine(false)}>还要再练 · 加入复习</button><button type="button" onClick={() => gradePracticeLine(true)}>我会了 · 下一句 <Check size={14} /></button></div></div> : <button className="guided-reveal" type="button" disabled={!activeLineReading} onClick={() => setPracticeRevealed(true)}>{activeLineReading ? '揭晓读音与译文' : annotationError || '正在准备自动读音…'}</button>}
               <div className="guided-navigation"><button type="button" disabled={practicePosition === 0} onClick={() => goToPracticePosition(practicePosition - 1)}>← 上一句</button><button type="button" disabled={practicePosition + 1 >= practiceSessionLineIds.length} onClick={() => goToPracticePosition(practicePosition + 1)}>跳过这一句 →</button></div>
             </>}
           </section>}
@@ -1979,17 +2191,23 @@ export default function App() {
           {aiError && <p className="annotation-tip ai-error"><CircleAlert size={13} /> {aiError}</p>}
           {aiReview && <p className="ai-review-summary"><Sparkles size={13} /> AI 已复核 {aiReview.reviewed_token_count} 个词素：{pendingAiSuggestions.length ? <>还有 {pendingAiSuggestions.length} 处待处理建议，<button type="button" onClick={() => document.getElementById('ai-review-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>查看全部</button></> : aiReview.suggestions?.length ? '所有建议均已处理。' : '未发现明显异常；仍建议以原唱为准。'}</p>}
           <div className="lyrics-list">
-            {activeSong.lines.map((line) => {
+            {/* 原 map 只接收 line；数组位置用于判断选段，不能假定句子 id 连续。 */}
+            {activeSong.lines.map((line, lineIndex) => {
               const annotation = annotations?.find((item) => item.id === line.id)
               const lineTokens = annotation?.tokens
               const current = line.id === activeLine.id
               const isPlaying = playingLineId === line.id
               const isLearned = learnedLines.has(line.id)
               const lineReading = activeLanguage!=='ja'?'':getLineReading(lineTokens, corrections, activeSong.id, line.id, readingStyle, line.romaji)
-              const hasSentenceExplanation = hasCachedSentenceExplanation(currentSentenceCache, line, activeLanguage)
+              const hasSentenceExplanation = visibleSentenceEntry(currentSentenceCache[line.id], line, activeLanguage)
               const sentenceExpanded = sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === line.id
+              // 已选段的各句共享连续底色；操作按钮保留布局位置但禁用并移出可访问控件树。
+              const rangeSelected = unifiedStudy && study.range && lineIndex >= study.range.startIndex && lineIndex <= study.range.endIndex
+              const rangeAnchor = unifiedStudy && study.rangeAnchorId === line.id
+              const rangeEdge = rangeSelected ? `${lineIndex === study.range.startIndex ? 'range-start' : ''} ${lineIndex === study.range.endIndex ? 'range-end' : ''}` : ''
               // 原点击播放保留；新增整句长按与滚动取消，抬手后不误触播放或词语详情。
-              return <article id={`lyric-row-${activeSong.id}-${line.id}`} className={`lyric-row ${current ? 'active' : ''}`} onPointerDownCapture={(event) => beginLyricPress(event, line.id)} onPointerMoveCapture={moveLyricPress} onPointerUpCapture={(event) => { cancelLyricPress(); suppressLyricPressClick(event) }} onPointerCancel={cancelLyricPress} onPointerLeave={cancelLyricPress} onClickCapture={suppressLyricPressClick} onContextMenu={(event) => { if (IS_ANDROID_APP) event.preventDefault() }} onClick={(event) => handleLyricRowClick(event, line.id)} key={`${activeSong.id}-${line.id}`}>
+              // 原行属性：className={`lyric-row ${current ? 'active' : ''}`}；其余原长按/点击事件保留，新加选段样式与双击缩放抑制。
+              return <article id={`lyric-row-${activeSong.id}-${line.id}`} className={`lyric-row ${current ? 'active' : ''} ${rangeSelected ? 'lyric-range-selected' : ''} ${rangeAnchor ? 'lyric-range-anchor' : ''} ${rangeEdge}`} data-range-selected={rangeSelected ? 'true' : undefined} data-range-anchor={rangeAnchor ? 'true' : undefined} aria-describedby={rangeSelected || rangeAnchor ? 'study-range-note' : undefined} onPointerDownCapture={(event) => beginLyricPress(event, line.id)} onPointerMoveCapture={moveLyricPress} onPointerUpCapture={(event) => { cancelLyricPress(); suppressLyricPressClick(event) }} onPointerCancel={cancelLyricPress} onPointerLeave={cancelLyricPress} onClickCapture={suppressLyricPressClick} onDoubleClick={unifiedStudy ? event => event.preventDefault() : undefined} onContextMenu={(event) => { if (IS_ANDROID_APP) event.preventDefault() }} onClick={(event) => handleLyricRowClick(event, line.id)} key={`${activeSong.id}-${line.id}`}>
                 <span className="line-number">{String(line.displayNumber).padStart(2, '0')}</span>
                 <div className="auto-line-wrap">
                   {/* 自带罗马音按可靠边界用于 ruby 与整句读音；人工校正继续优先。 */}<div className="japanese"><AnnotatedLine language={activeLanguage} showSourceReadings={activeSongSettings.showSourceReadings} showManualReadings={activeSongSettings.showManualReadings} text={line.text} interactive={!IS_ANDROID_APP} importedRomaji={line.romaji} tokens={lineTokens} corrections={corrections} songId={activeSong.id} lineId={line.id} mode={IS_ANDROID_APP ? readingStyle === 'none' ? 'original' : 'reading' : mode} readingStyle={readingStyle} selectedIndex={current ? selectedTokenIndex : -1} selectionRange={dragSelection?.lineId === line.id ? dragSelection : selectedPhraseRange?.lineId === line.id ? selectedPhraseRange : null} showSelectionAction={selectedText?.lineId === line.id && selectedPhraseRange?.lineId === line.id} onStartSelection={(tokenIndex) => beginTokenSelection(line.id, tokenIndex)} onExtendSelection={(tokenIndex) => extendTokenSelection(line.id, tokenIndex)} onFinishSelection={finishTokenSelection} onExplainSelection={() => askAiToExplain(selectedText)} onSelectToken={(tokenIndex) => handleTokenClick(line.id, tokenIndex)} /></div>
@@ -2000,9 +2218,11 @@ export default function App() {
                   {line.translation && (!IS_ANDROID_APP || showStudyTranslation) && <div className="translation lyric-translation">{line.translation}</div>}
                 </div>
                 {/* 统一页仅显示操作图标；旧文字保留给网页，图标仍提供完整可访问名称。 */}
-                <div className="line-actions"><button className={`line-action line-play ${isPlaying ? 'playing' : ''}`} type="button" onClick={(event) => { event.stopPropagation(); playLine(line.id) }} aria-label={`${isPlaying ? '暂停' : '播放'}第 ${line.displayNumber} 句`} title={`${isPlaying ? '暂停' : '播放'}这一句`}>{isPlaying ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}</button><button className={`line-mastery ${isLearned ? 'mastered' : ''}`} type="button" aria-label={`第 ${line.displayNumber} 句，${isLearned ? '已掌握，改为未掌握' : '未掌握，标记为已掌握'}`} aria-pressed={isLearned} onClick={(event) => { event.stopPropagation(); toggleLearnedLine(line.id) }} title={isLearned ? '点击改为未掌握' : '点击标记为已掌握'}>{isLearned ? <Check size={12} /> : <Circle size={11} />}{!unifiedStudy && <span>{isLearned ? '已掌握' : '未掌握'}</span>}</button><button className="sentence-explain-link" type="button" aria-label={`第 ${line.displayNumber} 句，${sentenceExpanded ? '收起解析' : hasSentenceExplanation ? '查看解析' : '生成解析'}`} title={sentenceExpanded ? '收起解析' : hasSentenceExplanation ? '查看解析' : '生成解析'} aria-expanded={sentenceExpanded} aria-controls={`sentence-analysis-${activeSong.id}-${line.id}`} disabled={!hasSentenceExplanation && Boolean(sentenceExplanationJob)} onClick={(event) => { event.stopPropagation(); showSentenceExplanation(line) }}><Sparkles size={11} />{!unifiedStudy && (sentenceExpanded ? '收起解析' : hasSentenceExplanation ? '查看解析' : sentenceExplanationJob ? '生成中…' : '生成解析')}</button></div>
+                {/* 原 line-actions 无 aria-hidden，播放/掌握按钮无 disabled，解析仅按生成状态 disabled；保留原操作，选段内统一禁用。 */}
+                <div className="line-actions" aria-hidden={rangeSelected ? true : undefined}><button className={`line-action line-play ${isPlaying ? 'playing' : ''}`} type="button" disabled={Boolean(rangeSelected)} onClick={(event) => { event.stopPropagation(); playLine(line.id) }} aria-label={`${isPlaying ? '暂停' : '播放'}第 ${line.displayNumber} 句`} title={`${isPlaying ? '暂停' : '播放'}这一句`}>{isPlaying ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}</button><button className={`line-mastery ${isLearned ? 'mastered' : ''}`} type="button" disabled={Boolean(rangeSelected)} aria-label={`第 ${line.displayNumber} 句，${isLearned ? '已掌握，改为未掌握' : '未掌握，标记为已掌握'}`} aria-pressed={isLearned} onClick={(event) => { event.stopPropagation(); toggleLearnedLine(line.id) }} title={isLearned ? '点击改为未掌握' : '点击标记为已掌握'}>{isLearned ? <Check size={12} /> : <Circle size={11} />}{!unifiedStudy && <span>{isLearned ? '已掌握' : '未掌握'}</span>}</button><button className="sentence-explain-link" type="button" aria-label={`第 ${line.displayNumber} 句，${sentenceExpanded ? '收起解析' : hasSentenceExplanation ? '查看解析' : '生成解析'}`} title={sentenceExpanded ? '收起解析' : hasSentenceExplanation ? '查看解析' : '生成解析'} aria-expanded={sentenceExpanded} aria-controls={`sentence-analysis-${activeSong.id}-${line.id}`} disabled={Boolean(rangeSelected) || !hasSentenceExplanation && Boolean(sentenceExplanationJob)} onClick={(event) => { event.stopPropagation(); showSentenceExplanation(line) }}><Sparkles size={11} />{!unifiedStudy && (sentenceExpanded ? '收起解析' : hasSentenceExplanation ? '查看解析' : sentenceExplanationJob ? '生成中…' : '生成解析')}</button></div>
                 {IS_ANDROID_APP && <span className="android-line-state">{isPlaying ? '♪ 正在播放' : current ? '长按编辑歌词' : ''}</span>}
-                {sentenceExpanded && <SentenceAnalysis explanation={sentenceExplanationOpen.explanation} id={`sentence-analysis-${activeSong.id}-${line.id}`} />}
+                {/* 原 sentenceExpanded 即显示；选段内隐藏异步返回的逐句解析，退出后恢复正常入口。 */}
+                {!rangeSelected && sentenceExpanded && <SentenceAnalysis explanation={sentenceExplanationOpen.explanation} id={`sentence-analysis-${activeSong.id}-${line.id}`} line={line} entry={sentenceExplanationOpen.entry} stale={!hasCachedSentenceExplanation(currentSentenceCache,line,activeLanguage)} currentLevel={japaneseLevel} busy={Boolean(sentenceExplanationJob)} onDelete={()=>setSentenceDeleteTarget({songId:activeSong.id,lineId:line.id})} onRegenerate={()=>regenerateSentence(line)} />}
               </article>
             })}
           </div>

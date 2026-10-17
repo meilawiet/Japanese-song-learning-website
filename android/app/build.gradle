@@ -59,8 +59,10 @@ android {
         // 1.4.0 汇总耳机断开暂停、播放器操作、更新检查和字体管理等改动。
         // 首次 1.4.0 发布使用 versionCode 22；重发包保持显示版本，内部编号递增以允许覆盖安装。
         // versionCode 22
-        versionCode 23
-        versionName "1.4.0"
+        // 旧正式版保留对照：versionCode 23 / versionName "1.4.0"。
+        // 本批选段播放、应用内反馈及个性化AI解析升级，正式发布1.5.0。
+        versionCode 24
+        versionName "1.5.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

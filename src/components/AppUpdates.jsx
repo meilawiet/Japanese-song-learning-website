@@ -2,13 +2,21 @@ import {useCallback,useEffect,useRef,useState} from 'react'
 import {CapacitorHttp,registerPlugin} from '@capacitor/core'
 import {App} from '@capacitor/app'
 import {Browser} from '@capacitor/browser'
-import {RefreshCw,ExternalLink,Users} from 'lucide-react'
+// 原关于图标：import {RefreshCw,ExternalLink,Users} from 'lucide-react'
+import {RefreshCw,ExternalLink,Users,MessageSquare} from 'lucide-react'
 // 增加发布说明分段，避免把 Markdown 符号直接显示给手机用户。
 // import {UPDATE_API,selectAppRelease} from '../lib/appUpdate'
 // 原来只检查全仓库 Latest：import {UPDATE_API,selectAppRelease,parseUpdateNotes} from '../lib/appUpdate'
-import {UPDATE_API,selectLatestAppRelease,parseUpdateNotes} from '../lib/appUpdate'
+// 原导入保留：import {UPDATE_API,selectLatestAppRelease,parseUpdateNotes} from '../lib/appUpdate'
+import {parseUpdateNotes} from '../lib/appUpdate'
+import {fetchPreferredAppRelease,downloadAppRelease} from '../lib/appUpdateTransport'
 import {shouldPromptUpdate,ignoreUpdateVersion} from '../lib/updatePreference'
 const installer=registerPlugin('UtaAppUpdate')
+// 原独立 WebView：const feedback=registerPlugin('UtaFeedback')
+// QQ 授权回到系统浏览器，改用系统 Custom Tab 共享正常登录态；不传递应用本地数据。
+// const FEEDBACK_URL='https://support.qq.com/product/802246'
+// 由原生页生成随机访客身份并以 HTTPS POST 接入，第三方页面不共享主应用插件桥。
+const feedback=registerPlugin('UtaFeedback')
 const PROJECT_URL='https://github.com/meilawiet/Japanese-song-learning-website/releases'
 const MANUAL_INSTALL='请尝试手动安装：到“关于 → 项目地址”下载 APK，再用手机文件管理器打开安装。'
 
@@ -36,7 +44,8 @@ export function useAppUpdates(enabled) {
       // if(response.status===403||response.status===429)throw new Error('更新检查过于频繁，请稍后重试。')
       // if(response.status!==200)throw new Error('检测更新失败，请检查网络后重试。')
       // const result=selectAppRelease(typeof response.data==='string'?JSON.parse(response.data):response.data,info.version)
-      let result={available:false,message:'暂未发布可下载安装的更新。'}
+      // 旧版只检查 GitHub，保留原分页处理供对照；新版按 Gitee→GitHub 的顺序检查。
+      /* let result={available:false,message:'暂未发布可下载安装的更新。'}
       // 从最近发行版开始寻找有效 APK；若整页都是电脑版，再读下一页。
       for(let page=1;page<=10;page++){
         const url=page===1?UPDATE_API:`${UPDATE_API}&page=${page}`
@@ -47,7 +56,8 @@ export function useAppUpdates(enabled) {
         const releases=typeof response.data==='string'?JSON.parse(response.data):response.data
         result=selectLatestAppRelease(releases,info.version)
         if(result.available||releases.length<100)break
-      }
+      } */
+      const result=await fetchPreferredAppRelease(info.version,(url,options)=>CapacitorHttp.get({url,...options}))
       // 原来所有新版本每次启动均弹窗；仅自动检查尊重当前待更新版本的忽略设置。
       setRelease(result);if(result.newer&&shouldPromptUpdate(result.version,manual===true))setPrompt(true)
     }catch{setError('检测更新失败，请检查网络或稍后重试。')}
@@ -61,9 +71,13 @@ export function useAppUpdates(enabled) {
       // 只复用对应版本的已校验缓存，旧安装包不能误当成新版本。
       const cached=await installer.status()
       if(cancelled.current)return
-      if(!cached.ready||cached.version!==release.version.replace(/^v/,'')){
+      // 原缓存仅比版本名；双源发布还需匹配当前 APK 摘要，防止同版本修正包误复用旧文件。
+      // if(!cached.ready||cached.version!==release.version.replace(/^v/,'')){
+      if(!cached.ready||cached.version!==release.version.replace(/^v/,'')||cached.sha256!==release.sha256){
         setDownloadState(old=>({...old,busy:true,progress:0}))
-        const result=await installer.download({url:release.url,sha256:release.sha256})
+        // 原下载仅使用 release.url；现在优先 Gitee，失败后自动下载同摘要的 GitHub 附件。
+        // const result=await installer.download({url:release.url,sha256:release.sha256})
+        const result=await downloadAppRelease(release,args=>installer.download(args),()=>cancelled.current)
         setDownloadState({...result,busy:false,progress:result.cancelled?0:100})
         if(result.cancelled||cancelled.current)return
       }else setDownloadState({...cached,busy:false,progress:100})
@@ -84,13 +98,18 @@ export function useAppUpdates(enabled) {
 
 export function AboutPanel({updates}) {
   const [notice,setNotice]=useState(''),[linkError,setLinkError]=useState('')
+  const [openingFeedback,setOpeningFeedback]=useState(false)
+  // 原打开方式：const openFeedback=async()=>{setLinkError('');setOpeningFeedback(true);try{await feedback.open()}catch{setLinkError('无法打开建议与反馈，请稍后重试。')}finally{setOpeningFeedback(false)}}
+  // 原浏览器方案：const openFeedback=async()=>{setLinkError('');setOpeningFeedback(true);try{await Browser.open({url:FEEDBACK_URL,toolbarColor:'#ffffff'})}catch{setLinkError('无法打开建议与反馈，请确认已安装可用浏览器后重试。')}finally{setOpeningFeedback(false)}}
+  const openFeedback=async()=>{setLinkError('');setOpeningFeedback(true);try{await feedback.open()}catch{setLinkError('无法打开建议与反馈，请稍后重试。')}finally{setOpeningFeedback(false)}}
   const openProject=async()=>{setLinkError('');try{await Browser.open({url:PROJECT_URL})}catch{setLinkError('无法打开项目地址，请检查网络后重试。')}}
   const copyGroup=async()=>{setLinkError('');try{await navigator.clipboard.writeText('1125131374');setNotice('已复制群号，请在 QQ 中搜索加入。')}catch{setNotice('请在 QQ 中搜索群号：1125131374。')}}
-  // 关于页面只有三个入口；QQ群号可复制，更新操作集中在提示弹窗。
+  // 关于页新增建议与反馈，进入带访客身份的独立原生页面。
   return <section className="settings-content about-panel"><h3>UTA</h3><p>当前版本 {updates.version||'读取中…'}</p>
     <button className="about-check-update" type="button" disabled={updates.checking} onClick={()=>updates.check(true)}><span><RefreshCw size={19}/>检查更新</span><span>{updates.checking?'检测中…':'›'}</span></button>
     <button className="about-check-update" type="button" onClick={openProject}><span><ExternalLink size={19}/>项目地址</span><span>›</span></button>
     <button className="about-check-update" type="button" onClick={copyGroup}><span><Users size={19}/>加群交流</span><span>QQ群 1125131374</span></button>
+    <button className="about-check-update" type="button" disabled={openingFeedback} onClick={openFeedback}><span><MessageSquare size={19}/>建议与反馈</span><span>{openingFeedback?'正在打开…':'›'}</span></button>
     {(updates.error||linkError)&&<p role="alert">{linkError||updates.error}</p>}
     {!updates.error&&updates.release&&<p role="status">{updates.release.message}{updates.release.newer?` ${updates.release.version}`:''}</p>}{notice&&<p role="status">{notice}</p>}
   </section>

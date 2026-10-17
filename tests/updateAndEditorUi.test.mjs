@@ -6,14 +6,24 @@ import {renderToStaticMarkup} from 'react-dom/server'
 // 同时校验所有联网入口，防止歌曲宝出现重复按钮。
 // let server, AppUpdatePrompt, AboutPanel, Editor
 let server, AppUpdatePrompt, AboutPanel, Editor, OnlineSongSearch
+// 新增首页交流邀请的可见文案与无障碍入口检查。
+let CommunityInviteDialog
 before(async()=>{
   server=await createServer({server:{middlewareMode:true,watch:{ignored:['**/.tools/**','**/server/.venv/**']}},appType:'custom',logLevel:'silent'})
   const updates=await server.ssrLoadModule('/src/components/AppUpdates.jsx')
   AppUpdatePrompt=updates.AppUpdatePrompt;AboutPanel=updates.AboutPanel
   Editor=(await server.ssrLoadModule('/src/components/SongDetailsEditor.jsx')).default
   OnlineSongSearch=(await server.ssrLoadModule('/src/components/OnlineSongSearch.jsx')).default
+  CommunityInviteDialog=(await server.ssrLoadModule('/src/components/CommunityInvite.jsx')).CommunityInviteDialog
 })
 after(async()=>{await server?.close()})
+test('交流邀请有正确群号、两个主动入口以及关闭和永久忽略选项',()=>{
+  const html=renderToStaticMarkup(createElement(CommunityInviteDialog,{onClose:()=>{}}))
+  for(const text of ['欢迎来聊聊','1125131374','复制群号','建议与反馈','暂时不用','不再提醒'])assert.ok(html.includes(text))
+  assert.match(html,/role="dialog"/);assert.match(html,/aria-modal="true"/)
+  assert.match(html,/type="checkbox"/)
+  assert.equal((html.match(/<button /g)||[]).length,3)
+})
 // 校验用户看见的入口，避免旧安装方式或多余按钮再次出现在更新界面。
 test('下载前、下载中和安装失败时更新弹窗都只保留取消与更新',()=>{
   for(const state of [{busy:false},{busy:true,progress:42},{busy:false,ready:true}]){
@@ -26,10 +36,12 @@ test('下载前、下载中和安装失败时更新弹窗都只保留取消与�
     assert.doesNotMatch(html,/选择其他安装方式|保存安装包|选择已下载/)
   }
 })
-test('关于页面三项入口与交流群号正确且没有启动说明',()=>{
+test('关于页面四项入口包含建议与反馈，交流群号正确',()=>{
   const html=renderToStaticMarkup(createElement(AboutPanel,{updates:{version:'1.0.2',check:()=>{}}}))
-  assert.equal((html.match(/<button /g)||[]).length,3)
-  for(const text of ['检查更新','项目地址','加群交流','1125131374']) assert.ok(html.includes(text))
+  // 原只有检查更新、项目地址、加群交流三个按钮；现在增加兔小巢入口。
+  // assert.equal((html.match(/<button /g)||[]).length,3)
+  assert.equal((html.match(/<button /g)||[]).length,4)
+  for(const text of ['检查更新','项目地址','加群交流','建议与反馈','1125131374']) assert.ok(html.includes(text))
   assert.doesNotMatch(html,/每次启动自动检测/)
 })
 test('歌曲编辑提供五个可收起分区且默认不挂载联网搜索',()=>{
