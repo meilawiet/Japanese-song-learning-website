@@ -61,8 +61,10 @@ android {
         // versionCode 22
         // 旧正式版保留对照：versionCode 23 / versionName "1.4.0"。
         // 本批选段播放、应用内反馈及个性化AI解析升级，正式发布1.5.0。
-        versionCode 24
-        versionName "1.5.0"
+        // 旧正式版保留对照：versionCode 24 / versionName "1.5.0"。
+        // 歌曲库移除顶部品牌栏，发布1.5.1供用户验证Gitee远程更新。
+        versionCode 25
+        versionName "1.5.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

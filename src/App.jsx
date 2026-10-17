@@ -2069,8 +2069,9 @@ export default function App() {
     {/* 删除框独立于歌曲操作菜单，只有点击中文“删除”按钮才进入原有删除流程。 */}
     {IS_ANDROID_APP&&songToDelete&&<DeleteSongDialog song={songToDelete} onCancel={()=>setSongToDelete(null)} onConfirm={()=>{const song=songToDelete;setSongToDelete(null);void removeImportedSong(song,true)}}/>}
     <audio ref={audioRef} src={audioUrl || undefined} preload="metadata" onLoadedMetadata={handleAudioLoadedMetadata} onTimeUpdate={handleAudioTimeUpdate} onEnded={() => { clipEndRef.current = null; continuousPlaybackRef.current = false; setPlayingLineId(null); setSingAlongPlaying(false) }} onError={() => { continuousPlaybackRef.current = false; setPlayingLineId(null); setSingAlongPlaying(false); setAudioError(`未能加载《${activeSong.title}》的音频文件。`) }} />
-    {/* 安卓三个主页移除品牌栏，由各页左上角标签承担页头；网页与其他页面继续使用此栏。 */}
-    {!(IS_ANDROID_APP && activePage.startsWith('mobile-')) && <header className={`topbar ${IS_ANDROID_APP ? `android-topbar ${['lesson', 'sing-along'].includes(activePage) ? 'study-topbar-hidden' : ''}` : ''}`}>
+    {/* 原条件仅隐藏三个主页的品牌栏：!(IS_ANDROID_APP && activePage.startsWith('mobile-'))。 */}
+    {/* 安卓歌曲库也由自身标题承担页头，去掉顶部UTA栏后内容自然上移；网页沿用原页头。 */}
+    {!(IS_ANDROID_APP && (activePage.startsWith('mobile-') || activePage === 'library')) && <header className={`topbar ${IS_ANDROID_APP ? `android-topbar ${['lesson', 'sing-along'].includes(activePage) ? 'study-topbar-hidden' : ''}` : ''}`}>
       <button className="brand" type="button" onClick={showLessonPage} aria-label="UTA 首页"><span className="brand-mark">う</span><span>UTA<span className="brand-dot">.</span></span></button>
       {/* 旧网页顶部导航保留；安卓使用下方固定的三按钮导航。 */}
       {!IS_ANDROID_APP && <nav className="main-nav" aria-label="主导航"><button className={activePage === 'lesson' ? 'active' : ''} type="button" onClick={showLessonPage}>发音学习</button><button className={activePage === 'library' ? 'active' : ''} type="button" onClick={() => showLibraryPage()}>歌曲库</button><button type="button" onClick={showReviewQueue}>复习</button></nav>}

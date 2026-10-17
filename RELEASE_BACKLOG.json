@@ -37,13 +37,13 @@
     "installedOn": "2026-10-17",
     "device": "Xiaomi 23049RAD8C / Android 15",
     "package": "com.uta.songlearning",
-    "path": ".tools/device-builds/UTA-analysis-buttons-final.apk",
-    "version": "1.4.0",
-    "versionCode": 23,
+    "path": ".tools/releases/UTA-Android-1.5.0.apk",
+    "version": "1.5.0",
+    "versionCode": 24,
     "size": 31331739,
-    "sha256": "da654bc0f4cdf6272b8b1f94c242e635c059ca901547ed691f1327ca8d1ecad8",
-    "method": "adb install --no-incremental -r保留数据覆盖，冷启动，手机base.apk摘要一致；原证书v2/v3、WebView调试关闭，隔离测试应用卸载、9226移除",
-    "published": false
+    "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+    "method": "用户自行更新后，ADB只读核验versionName/versionCode及手机base.apk摘要，与公开1.5.0正式包一致；本轮不安装1.5.1，供用户亲测Gitee远程更新",
+    "published": true
   },
   "reminder": {
     "lastRemindedItemIds": [
@@ -61,7 +61,7 @@
       "FIX-20261017-024"
     ],
     "lastRemindedOn": "2026-10-17",
-    "userDecision": "用户2026-10-17授权本批发布及上传，1.5.0双平台正式发布与附件核验成功，12项已结转；源码及发布维护记录只推送GitHub android-dev，Gitee仅APK"
+    "userDecision": "用户2026-10-17明确要求此项验证后直接发布1.5.1，沿用GitHub源码+APK、Gitee仅APK分工，无需等满10项；两端核验成功后再结转"
   },
   "items": [
     {
@@ -1083,6 +1083,30 @@
         "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
         "publishedOn": "2026-10-17",
         "verification": "GitHub正式附件digest与本地一致；Gitee正式附件匿名完整下载31331739字节验SHA256一致，两端版本/目标提交核验通过，Gitee master资源提交未改变"
+      }
+    },
+    {
+      "id": "FIX-20261017-025",
+      "type": "bugfix",
+      "title": "歌曲库移除顶部UTA品牌栏并上移页面内容",
+      "status": "verified",
+      "startedOn": "2026-10-17",
+      "completedOn": "2026-10-17",
+      "summary": "安卓歌曲库页沿用三个主页的无品牌页头，直接显示我的音乐/歌曲库标题与原有列表；保留网页页头，源条件注释留作对照。",
+      "files": [
+        "src/App.jsx"
+      ],
+      "verification": [
+        "219/219 Node测试及Android前端/原生Release构建通过；正式1.5.1/code25使用原发行证书v2/v3签名，WebView调试关闭，发布计划核对包名/版本/证书及SHA256成功",
+        "小米Android15独立测试包，100%及130%字号均无UTA品牌栏、歌曲库标题顶距22 CSS像素；网格/列表切换、歌曲搜索与清空、进入歌曲/返回、导入入口以及三个主页均正常，392 CSS像素无横向溢出，截图已查看",
+        "使用独立原创测试歌曲，不调用AI、不修改正式应用数据；测试包已卸载、9226转发已移除。正式应用仍为1.5.0/code24，手机内APK SHA256与公开1.5.0正式包一致，未ADB覆盖到1.5.1，留给用户亲测Gitee更新"
+      ],
+      "localBuild": {
+        "path": ".tools/releases/UTA-Android-1.5.1.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31331739,
+        "sha256": "a801f5508745ba19c1a8d385f26ab76e4dbf0b470b8c05d2132f879da42f3940"
       }
     }
   ]
