@@ -21,16 +21,16 @@
     }
   },
   "lastPublished": {
-    "version": "1.5.0",
-    "versionCode": 24,
-    "tag": "v1.5.0",
+    "version": "1.5.1",
+    "versionCode": 25,
+    "tag": "v1.5.1",
     "branch": "android-dev",
-    "commit": "cae9319ea52c77ce5e908c6a0f469e0490a3fbd0",
-    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.0",
-    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.0",
-    "asset": "UTA-Android-1.5.0.apk",
+    "commit": "9e3cb62bf9ecc8b854107257271db1c787e3916d",
+    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.1",
+    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.1",
+    "asset": "UTA-Android-1.5.1.apk",
     "size": 31331739,
-    "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
+    "sha256": "a801f5508745ba19c1a8d385f26ab76e4dbf0b470b8c05d2132f879da42f3940",
     "publishedOn": "2026-10-17"
   },
   "currentLocalInstall": {
@@ -61,7 +61,7 @@
       "FIX-20261017-024"
     ],
     "lastRemindedOn": "2026-10-17",
-    "userDecision": "用户2026-10-17明确要求此项验证后直接发布1.5.1，沿用GitHub源码+APK、Gitee仅APK分工，无需等满10项；两端核验成功后再结转"
+    "userDecision": "用户要求此项测试后直接发1.5.1，已完成GitHub代码+APK与Gitee仅APK发布并全部核验；此项已结转，待发布0/10，正式手机仍1.5.0留给用户亲测Gitee更新"
   },
   "items": [
     {
@@ -1089,7 +1089,7 @@
       "id": "FIX-20261017-025",
       "type": "bugfix",
       "title": "歌曲库移除顶部UTA品牌栏并上移页面内容",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-17",
       "completedOn": "2026-10-17",
       "summary": "安卓歌曲库页沿用三个主页的无品牌页头，直接显示我的音乐/歌曲库标题与原有列表；保留网页页头，源条件注释留作对照。",
@@ -1107,6 +1107,19 @@
         "versionCode": 25,
         "size": 31331739,
         "sha256": "a801f5508745ba19c1a8d385f26ab76e4dbf0b470b8c05d2132f879da42f3940"
+      },
+      "release": {
+        "version": "1.5.1",
+        "versionCode": 25,
+        "commit": "9e3cb62bf9ecc8b854107257271db1c787e3916d",
+        "tag": "v1.5.1",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.1",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.1",
+        "asset": "UTA-Android-1.5.1.apk",
+        "size": 31331739,
+        "sha256": "a801f5508745ba19c1a8d385f26ab76e4dbf0b470b8c05d2132f879da42f3940",
+        "publishedOn": "2026-10-17",
+        "verification": "发布器匿名完整下载Gitee APK并核对摘要后将两端转正式；GitHub附件digest、两端公开版本与提交再次核验一致；真实更新接口从1.5.0优先选中Gitee v1.5.1"
       }
     }
   ]
