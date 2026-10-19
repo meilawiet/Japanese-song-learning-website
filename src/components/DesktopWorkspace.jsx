@@ -4,13 +4,13 @@ import { BookOpenCheck, Mic2, Library, RotateCcw, Settings, FolderOpen, Music2, 
 import DesktopResizeHandle from './DesktopResizeHandle'
 import utaIcon from '../../desktop/icon.png'
 
-export function DesktopChrome({ page, song, songs, reviewCount, onLesson, onSingAlong, onLibrary, onReview, onSettings, onSong, onTasks, taskCount, sidebarWidth, onSidebarWidth, editUndo }) {
+export function DesktopChrome({ page, song, songs, artworkFor = () => null, reviewCount, onLesson, onSingAlong, onLibrary, onReview, onSettings, onSong, onTasks, taskCount, sidebarWidth, onSidebarWidth, editUndo }) {
   return <>
     <header className="desktop-titlebar"><span className="desktop-app-icon"><img src={utaIcon} alt="" /></span><b>UTA</b><span className="desktop-window-caption">日语歌学习</span><div className="desktop-menu">{[['file', '文件'], ['edit', '编辑'], ['view', '视图'], ['help', '帮助']].map(([id, label]) => <button key={id} type="button" onClick={() => window.utaDesktop.openMenu(id)}>{label}</button>)}</div><span className="desktop-title-context">{song.title}</span></header>
     <aside className="desktop-sidebar" aria-label="桌面导航">
       <div className="desktop-product"><span><img src={utaIcon} alt="" /></span><div><b>UTA</b><small>日语歌学习工作室</small></div></div>
       <nav>{[[onLesson, 'lesson', BookOpenCheck, '发音学习'], [onSingAlong, 'sing-along', Mic2, '跟唱练习'], [onLibrary, 'library', Library, '歌曲库'], [onReview, 'review-list', RotateCcw, '复习']].map(([action, id, Icon, label]) => <button key={id} type="button" aria-current={page === id ? 'page' : undefined} onClick={action}><Icon size={18}/><span>{label}</span>{id === 'review-list' && reviewCount > 0 && <small>{reviewCount}</small>}</button>)}<button type="button" onClick={onTasks} aria-label="打开任务面板"><ListTodo size={18}/><span>任务面板</span>{taskCount > 0 && <small>{taskCount}</small>}</button></nav>
-      <div className="desktop-sidebar-section"><span>快速打开</span><div className="desktop-recent">{songs.filter(item => !item.isDemo).slice(0, 8).map(item => <button key={item.id} type="button" className={item.id === song.id ? 'current' : ''} onClick={() => onSong(item.id)} title={`${item.title} · ${item.artist}`}><Music2 size={15}/><span>{item.title}<small>{item.artist}</small></span></button>)}</div></div>
+      <div className="desktop-sidebar-section"><span>快速打开</span><div className="desktop-recent">{songs.filter(item => !item.isDemo).slice(0, 8).map(item => <button key={item.id} type="button" className={item.id === song.id ? 'current' : ''} onClick={() => onSong(item.id)} title={`${item.title} · ${item.artist}`}><Cover song={item} artwork={artworkFor(item)}/><span className="desktop-recent-copy"><b>{item.title}</b><small>{item.artist}</small></span></button>)}</div></div>
       <div className="desktop-sidebar-bottom">{editUndo && <div className="desktop-edit-checkpoint"><p>《{editUndo.title}》已保存，可恢复到本次编辑前的歌曲与学习记录。</p><button type="button" disabled={editUndo.busy} onClick={editUndo.onUndo}>撤销本次歌曲编辑</button><button type="button" disabled={editUndo.busy} onClick={editUndo.onDismiss}>关闭撤销提示</button></div>}<button type="button" onClick={() => window.utaDesktop.openDataFolder()}><FolderOpen size={17}/>数据文件夹</button><button type="button" onClick={onSettings}><Settings size={17}/>设置</button><small>WINDOWS EDITION · 1.2</small></div>
       <DesktopResizeHandle label="调整导航栏宽度" value={sidebarWidth} min={176} max={320} onChange={onSidebarWidth} onReset={() => onSidebarWidth(204)}/>
     </aside>
@@ -25,7 +25,12 @@ export function DesktopSongHeader({ song, artwork, learned, progress, favorite, 
   </header>
 }
 
-function Cover({ song, artwork }) { return <span className="desktop-cover">{artwork?.artworkUrl ? <img src={artwork.artworkUrl} alt="" referrerPolicy="no-referrer" onError={event => { event.currentTarget.hidden = true }}/>: <Music2 size={24}/>}</span> }
+function Cover({ artwork }) {
+  const url = artwork?.artworkUrl
+  const [failed, setFailed] = useState(false)
+  useEffect(() => { setFailed(false) }, [url])
+  return <span className="desktop-cover" aria-hidden="true">{url && !failed ? <img src={url} alt="" referrerPolicy="no-referrer" onError={() => setFailed(true)}/> : <Music2 size={24}/>}</span>
+}
 
 export function DesktopLibrary({ songs, search, onSearch, favoriteIds, learnedBySong, activeId, artworkFor, onOpen, onImport, onEdit, onArtwork, onDelete, deletingId }) {
   const [filter, setFilter] = useState('all')

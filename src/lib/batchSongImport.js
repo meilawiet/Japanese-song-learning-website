@@ -75,6 +75,7 @@ export function buildBatchImportRows(audios, lyrics, previousRows = []) {
     const lyric = availableLyrics.get(lyricId)
     return {
       audioId: audio.id, lyricId, manualPair: false,
+      ...(old?.artwork ? { artwork: old.artwork } : {}),
       title: lyric?.parsed?.title || audio.metadata?.title || inferMetadataFromFilename(audio.file.name).title,
       artist: lyric?.parsed?.artist !== '本地导入' && lyric?.parsed?.artist || audio.metadata?.artist || '本地导入',
       selected: Boolean(lyric?.parsed && !lyric.error && !lyric.parsed.issues?.length),
@@ -111,6 +112,6 @@ export function prepareBatchImport(rows, audios, lyrics) {
     const lines = sourceLines.filter(line => !isSongHeadingLine(line.text, title, artist))
       .map((line, id) => ({ ...line, id }))
     if (!lines.length) throw new Error(`${title}：没有可学习的歌词句子。`)
-    return { parsed: { ...parsed, title, artist, lines, duration: lines.at(-1).start }, audioFile: audio.file }
+    return { parsed: { ...parsed, title, artist, lines, duration: lines.at(-1).start }, audioFile: audio.file, artwork: row.artwork || { artworkUrl: '', artworkChoice: 'default', artworkProvider: '默认封面' } }
   })
 }

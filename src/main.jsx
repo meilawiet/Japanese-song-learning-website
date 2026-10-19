@@ -4,6 +4,7 @@ import App from './App'
 import './styles.css'
 import './desktop.css'
 import './desktopThemes.css'
+import './desktopFonts.css'
 import './singAlongPlayer.css'
 if (window.utaDesktop) document.documentElement.classList.add('uta-desktop')
 import { loadAiSettingsFromDevice } from './lib/aiSettings'

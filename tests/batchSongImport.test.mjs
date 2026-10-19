@@ -59,3 +59,16 @@ test('manual reuse of lyrics and a missing title cannot silently import the wron
   rows.pop();rows[0].title=' '
   assert.throws(()=>prepareBatchImport(rows,audios,lyrics),/填写歌曲名/)
 })
+
+
+test('each batch row keeps its own artwork across late pairing and added files', () => {
+  const audios = [audio('a', '雨.wav')]
+  const artwork = { artworkUrl: 'data:image/jpeg;base64,cover-a', artworkProvider: '本地上传' }
+  const unpaired = [{ ...buildBatchImportRows(audios, [])[0], artwork }]
+  const rows = buildBatchImportRows([...audios, audio('b', '春.wav')], [lyric('l1', '雨.lrc'), lyric('l2', '春.lrc')], unpaired)
+  assert.deepEqual(rows[0].artwork, artwork)
+  const items = prepareBatchImport(rows, [...audios, audio('b', '春.wav')], [lyric('l1', '雨.lrc'), lyric('l2', '春.lrc')])
+  assert.deepEqual(items[0].artwork, artwork)
+  assert.equal(items[1].artwork.artworkChoice, 'default')
+  assert.equal(rows[1].artwork, undefined)
+})

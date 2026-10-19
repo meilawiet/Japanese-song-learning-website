@@ -3,7 +3,7 @@ import { LoaderCircle, Search } from 'lucide-react'
 import { desktopLyricsRecordToFile, searchDesktopLyrics } from '../lib/desktopLyricsSearch'
 import { loadDesktopLyricSources, LYRIC_SOURCES_CHANGED } from '../lib/desktopLyricSources'
 
-export default function DesktopOnlineLyricsSearch({ autoQuery = '', onChooseLyrics, disabled = false }) {
+export default function DesktopOnlineLyricsSearch({ autoQuery = '', onChooseLyrics, disabled = false, description = '本地没有匹配歌词时，可搜索候选版本。选用后先检查歌词与时间轴，确认后才保存；歌词自带假名会优先于自动注音。' }) {
   const [query, setQuery] = useState(autoQuery)
   const [source, setSource] = useState('all')
   const [sources, setSources] = useState([])
@@ -13,6 +13,8 @@ export default function DesktopOnlineLyricsSearch({ autoQuery = '', onChooseLyri
   const [chosen, setChosen] = useState('')
   const [message, setMessage] = useState('')
   const request = useRef(0)
+  const alive = useRef(true)
+  useEffect(() => { alive.current = true; return () => { alive.current = false; request.current += 1 } }, [])
 
   useEffect(() => {
     let alive = true
@@ -20,7 +22,7 @@ export default function DesktopOnlineLyricsSearch({ autoQuery = '', onChooseLyri
       if (!alive) return
       setSources(items.filter(item => item.enabled))
       setSource(current => current === 'all' || items.some(item => item.id === current && item.enabled) ? current : 'all')
-      request.current += 1; setBusy(false); setResults([]); setErrors([]); setMessage('')
+      request.current += 1; setBusy(false); setChosen(''); setResults([]); setErrors([]); setMessage('')
     }).catch(error => { if (alive) setMessage(error.message) })
     // Initial loading must not invalidate the automatic search started below.
     loadDesktopLyricSources().then(items => { if (alive) setSources(items.filter(item => item.enabled)) }).catch(error => { if (alive) setMessage(error.message) })
@@ -48,19 +50,21 @@ export default function DesktopOnlineLyricsSearch({ autoQuery = '', onChooseLyri
   }, [autoQuery])
 
   async function choose(record) {
+    const current = ++request.current
     setChosen(record.id); setMessage('')
     try {
       const file = await desktopLyricsRecordToFile(record)
+      if (!alive.current || current !== request.current) return
       await onChooseLyrics(file, record)
-      if (file.sourceWarnings?.length) setMessage(file.sourceWarnings.join('；'))
-    } catch (error) { setMessage(error.message || '获取歌词失败，请重试。') }
-    finally { setChosen('') }
+      if (alive.current && current === request.current && file.sourceWarnings?.length) setMessage(file.sourceWarnings.join('；'))
+    } catch (error) { if (alive.current && current === request.current) setMessage(error.message || '获取歌词失败，请重试。') }
+    finally { if (alive.current && current === request.current) setChosen('') }
   }
 
   return <section className="online-song-search desktop-online-lyrics" aria-label="联网搜索歌词">
     <h3>联网查找歌词</h3>
-    <p>本地没有匹配歌词时，可搜索候选版本。选用后先检查歌词与时间轴，确认后才保存；歌词自带假名会优先于自动注音。</p>
-    <div className="online-song-search-row"><input aria-label="在线搜索歌曲名称" value={query} onChange={event => setQuery(event.target.value)} maxLength={160} placeholder="歌曲名或歌手" disabled={disabled}/><select aria-label="歌词来源" value={source} onChange={event => setSource(event.target.value)} disabled={disabled || busy}><option value="all">全部已启用来源</option>{sources.map(item => <option key={item.id} value={item.id}>{item.name} · {item.kind === 'utaten' ? '可能带假名' : item.kind === 'lrclib' ? '有时间轴' : '平台歌词'}</option>)}</select><button type="button" disabled={disabled || busy || !query.trim() || !sources.length} onClick={() => search(query)}>{busy ? <LoaderCircle size={15} className="spin"/> : <Search size={15}/>} 搜索</button></div>
+    <p>{description}</p>
+    <div className="online-song-search-row"><input aria-label="在线搜索歌曲名称" value={query} onChange={event => setQuery(event.target.value)} maxLength={160} placeholder="歌曲名或歌手" disabled={disabled || Boolean(chosen)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); if (!disabled && !busy && !chosen && query.trim() && sources.length) void search(query) } else if (event.ctrlKey && ['z', 'y'].includes(event.key.toLowerCase())) event.stopPropagation() }}/><select aria-label="歌词来源" value={source} onChange={event => setSource(event.target.value)} disabled={disabled || busy || Boolean(chosen)}><option value="all">全部已启用来源</option>{sources.map(item => <option key={item.id} value={item.id}>{item.name} · {item.kind === 'utaten' ? '可能带假名' : item.kind === 'lrclib' ? '有时间轴' : '平台歌词'}</option>)}</select><button type="button" disabled={disabled || busy || Boolean(chosen) || !query.trim() || !sources.length} onClick={() => search(query)}>{busy ? <LoaderCircle size={15} className="spin"/> : <Search size={15}/>} 搜索</button></div>
     {!sources.length && !busy && <p className="settings-note">暂无已启用的歌词源，请到“设置 → 歌词源”启用或添加来源。</p>}
     {message && <p className="online-song-search-error" role="status">{message}</p>}
     {errors.length > 0 && <div className="online-song-source-warnings" role="status"><strong>{results.length ? '部分来源暂不可用，其他来源的结果可正常选用。' : '部分来源暂不可用；其余来源未找到匹配歌词。'}</strong>{errors.map(error => <p key={error}>{error}</p>)}</div>}

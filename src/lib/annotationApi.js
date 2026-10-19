@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { aiRequestHeaders } from './aiSettings'
-import { isManuallySegmentedToken } from './lyricSegmentation'
+import { createAiReviewRequest, resolveAiReviewResult } from './aiLyricContext'
 
 const apiOrigin = import.meta.env.VITE_ANNOTATION_API_URL || 'http://127.0.0.1:8000'
 
@@ -52,21 +52,9 @@ async function postAi(path, payload, settings, signal) {
   return body
 }
 
-export function reviewSongWithAi(song, annotations = [], corrections = {}) {
-  const byLine = new Map(annotations.map(item => [item.id, item]))
-  return postAi('/api/ai/review-song', {
-    song_id: song.id,
-    title: song.title,
-    artist: song.artist,
-    lines: song.lines.map(({ id, text }) => {
-      const annotation = byLine.get(id)
-      if (annotation?.tokens?.map(token => token.surface).join('') !== text) return { id, text }
-      return { id, text, tokens: annotation.tokens.map(token => ({ index: token.index, surface: token.surface,
-        reading: corrections[`${song.id}:${id}:${token.index}`] || token.reading,
-        is_symbol: Boolean(token.is_symbol), segmentation_locked: isManuallySegmentedToken(token),
-        dictionary_form: token.dictionary_form || '', part_of_speech: token.part_of_speech || '' })) }
-    }),
-  })
+export async function reviewSongWithAi(song, annotations = [], corrections = {}) {
+  const request = createAiReviewRequest(song, annotations, corrections)
+  return resolveAiReviewResult(await postAi('/api/ai/review-song', request.payload), request)
 }
 
 export function explainSelectionWithAi(payload) {

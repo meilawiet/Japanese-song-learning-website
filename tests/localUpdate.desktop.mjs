@@ -91,7 +91,7 @@ try {
   await page.waitForFunction(songId => JSON.parse(localStorage.getItem('uta-pronunciation-progress-v2')).learnedBySong[songId]?.includes(0), songId)
   await page.getByRole('button', { name: '设置', exact: true }).click()
   let settings = page.getByRole('dialog', { name: '设置', exact: true })
-  await settings.locator('.settings-tabs').getByRole('button', { name: '检查更新', exact: true }).click()
+  await settings.locator('.settings-tabs').getByRole('button', { name: '关于', exact: true }).click()
   await settings.getByRole('button', { name: '本地增量包', exact: true }).click()
   await fs.mkdir(path.join(work, 'verification'), { recursive: true })
   await settings.screenshot({ path: path.join(work, 'verification', 'offline-update-mode.png') })
@@ -113,7 +113,7 @@ try {
   await settings.getByRole('button', { name: '关闭设置' }).click()
   await page.getByRole('button', { name: '设置', exact: true }).click()
   settings = page.getByRole('dialog', { name: '设置', exact: true })
-  await settings.locator('.settings-tabs').getByRole('button', { name: '检查更新', exact: true }).click()
+  await settings.locator('.settings-tabs').getByRole('button', { name: '关于', exact: true }).click()
   await settings.getByRole('button', { name: '退出 UTA、安装并重新打开', exact: true }).waitFor()
   // Choosing to keep an unsaved draft prevents installation and shutdown.
   await page.evaluate(() => window.utaDesktop.setUnsavedDraft('offline-update-test', true))

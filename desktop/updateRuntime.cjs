@@ -3,89 +3,11 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
-const { pipeline } = require('node:stream/promises');
-const { Readable } = require('node:stream');
 const { randomBytes } = require('node:crypto');
-const { hashFile, verifyVersion, unpackPatch, versionName } = require('./updateCore.cjs');
+const { verifyVersion, unpackPatch, versionName } = require('./updateCore.cjs');
 const { prepareLocalPatch } = require('./localUpdate.cjs');
 
-const REPOSITORY = 'meilawiet/Japanese-song-learning-website';
-const RELEASES_API = `https://api.github.com/repos/${REPOSITORY}/releases?per_page=100`;
-const VERSION_TAG = /^windows-v(\d+\.\d+\.\d+)$/;
-
-function compareVersions(a, b) {
-  const left = versionName(a).split('.').map(Number), right = versionName(b).split('.').map(Number);
-  for (let index = 0; index < 3; index++) if (left[index] !== right[index]) return left[index] - right[index];
-  return 0;
-}
-function validReleaseUrl(value) {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' && url.hostname === 'github.com' && !url.username && !url.password &&
-      url.pathname.startsWith(`/${REPOSITORY}/releases/download/`);
-  } catch { return false; }
-}
-function pickRelease(releases, current) {
-  const candidates = releases.filter(release => !release.draft && !release.prerelease && VERSION_TAG.test(release.tag_name || ''))
-    .map(release => ({ release, version: release.tag_name.match(VERSION_TAG)[1] }))
-    .filter(item => compareVersions(item.version, current) > 0)
-    .sort((a, b) => compareVersions(b.version, a.version));
-  for (const { release, version } of candidates) {
-    const assets = new Map((release.assets || []).filter(asset => validReleaseUrl(asset.browser_download_url))
-      .map(asset => [asset.name, asset]));
-    const fullName = `UTA-${version}-Windows-x64.zip`;
-    const patchName = `UTA-${current}-to-${version}-Windows-x64.utapatch`;
-    const full = assets.get(fullName);
-    const fullChecksum = assets.get(`${fullName}.sha256`);
-    const patch = assets.get(patchName);
-    const checksum = assets.get(`${patchName}.sha256`);
-    if (!full) continue;
-    return { version, notes: typeof release.body === 'string' ? release.body.slice(0, 4000) : '',
-      full: { url: full.browser_download_url, size: full.size,
-        checksumUrl: fullChecksum?.browser_download_url || null },
-      patch: patch && checksum ? { url: patch.browser_download_url, size: patch.size,
-        checksumUrl: checksum.browser_download_url } : null };
-  }
-  return null;
-}
-
-async function getJson(url) {
-  const response = await fetch(url, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'UTA-Windows-Updater' }, signal: AbortSignal.timeout(20000) });
-  if (!response.ok) throw new Error(`无法检查 GitHub 更新（HTTP ${response.status}）。`);
-  return response.json();
-}
-async function download(assetUrl, filename, onProgress, expectedSize = 0) {
-  if (!validReleaseUrl(assetUrl)) throw new Error('更新下载地址不是官方发布地址。');
-  const response = await fetch(assetUrl, { headers: { 'User-Agent': 'UTA-Windows-Updater' }, signal: AbortSignal.timeout(20 * 60 * 1000) });
-  const final = new URL(response.url);
-  if (!response.ok || final.protocol !== 'https:' ||
-      !(final.hostname === 'github.com' || final.hostname.endsWith('.githubusercontent.com'))) {
-    throw new Error(`更新下载失败（HTTP ${response.status}）。`);
-  }
-  const total = Number(response.headers.get('content-length')) || 0;
-  if (expectedSize && total && total !== expectedSize) throw new Error('更新文件大小与发布信息不一致。');
-  let received = 0;
-  const counter = new (require('node:stream').Transform)({ transform(chunk, _encoding, callback) {
-    received += chunk.length;
-    if (received > (expectedSize || 1024 * 1024 * 1024)) { callback(new Error('更新下载超出预期大小。')); return; }
-    onProgress(received, total);
-    callback(null, chunk);
-  } });
-  await pipeline(Readable.fromWeb(response.body), counter, fs.createWriteStream(filename, { flags: 'wx' }));
-  if (expectedSize && received !== expectedSize) throw new Error('更新文件下载不完整。');
-}
-
-async function verifyChecksum(asset, filename) {
-  if (!asset.checksumUrl) throw new Error('发布包缺少 SHA-256 校验文件。');
-  const checksumFile = filename + '.sha256';
-  await fsp.rm(checksumFile, { force: true });
-  await download(asset.checksumUrl, checksumFile, () => {});
-  const line = (await fsp.readFile(checksumFile, 'utf8')).trim();
-  const match = line.match(/^([a-f0-9]{64})\s+\*?([^\s]+)$/i);
-  if (!match || match[2] !== path.basename(filename) || await hashFile(filename) !== match[1].toLowerCase()) {
-    throw new Error('更新包 SHA-256 校验失败。');
-  }
-}
+const { compareVersions, pickRelease, validReleaseUrl, checkSources, downloadFromSources } = require('./updateSources.cjs');
 
 async function extractFullVersion(archive, stage, version, script) {
   await fsp.mkdir(stage);
@@ -124,13 +46,15 @@ function registerUpdateHandlers({ app, ipcMain, mainWindow, home, dataDir, versi
   ipcMain.handle('uta:update:check', async event => {
     trusted(event);
     if (busy) throw new Error('更新任务正在进行。');
-    const releases = await getJson(RELEASES_API);
-    if (!Array.isArray(releases)) throw new Error('发布列表格式无效。');
-    releaseInfo = pickRelease(releases, appVersion);
-    if (!releaseInfo) return { current: appVersion, available: false };
-    return { current: appVersion, available: true, version: releaseInfo.version, notes: releaseInfo.notes,
+    const checked = await checkSources(appVersion);
+    releaseInfo = checked.release;
+    const notice = checked.notices.join(' ');
+    if (!releaseInfo) return { current: appVersion, available: false, notice };
+    const preferred = releaseInfo.patch || releaseInfo.full;
+    return { current: appVersion, available: true, version: releaseInfo.version, notes: releaseInfo.notes, notice,
       mode: releaseInfo.patch ? 'incremental' : releaseInfo.full.checksumUrl ? 'full' : 'full-manual',
-      downloadBytes: releaseInfo.patch?.size || releaseInfo.full.size };
+      provider: preferred.provider === 'gitee' ? 'Gitee' : 'GitHub',
+      downloadBytes: preferred.size };
   });
 
   ipcMain.handle('uta:update:prepare', async event => {
@@ -155,19 +79,21 @@ function registerUpdateHandlers({ app, ipcMain, mainWindow, home, dataDir, versi
         return { ready: true, version };
       }
       if (fs.existsSync(stage)) throw new Error('发现上次未完成的更新目录，请先处理后重试。');
-      let deltaWorked = false;
+      let deltaWorked = false, downloaded;
       if (releaseInfo.patch) {
         try {
-          await fsp.rm(patchPath, { force: true });
-          progress({ phase: 'downloading', percent: 0 });
-          await download(releaseInfo.patch.url, patchPath, (received, total) => progress({ phase: 'downloading',
-            percent: total ? Math.min(90, Math.round(received / total * 90)) : 0, received, total }), releaseInfo.patch.size);
-          await verifyChecksum(releaseInfo.patch, patchPath);
-          progress({ phase: 'preparing', percent: 91 });
-          const result = await unpackPatch(versionRoot, patchPath, stage, (done, total) => progress({ phase: 'preparing',
-            percent: 91 + Math.round(done / total * 8) }));
-          if (result.from !== appVersion || result.to !== version) throw new Error('增量包版本不匹配。');
-          await verifyVersion(stage, version, runtimeVersion);
+          downloaded = await downloadFromSources(releaseInfo.patchCandidates, patchPath, state => progress({ ...state, phase: 'downloading',
+            percent: Math.round(state.fraction * 90) }), {
+            cleanup: async () => { if (fs.existsSync(stage)) await fsp.rm(stage, { recursive: true, force: true }); },
+            prepare: async asset => {
+              const provider = asset.provider === 'gitee' ? 'Gitee' : 'GitHub';
+              progress({ phase: 'preparing', provider, percent: 91 });
+              const result = await unpackPatch(versionRoot, patchPath, stage, (done, total) => progress({ phase: 'preparing', provider,
+                percent: 91 + Math.round(done / total * 8) }));
+              if (result.from !== appVersion || result.to !== version) throw new Error('增量包版本不匹配。');
+              await verifyVersion(stage, version, runtimeVersion);
+            },
+          });
           deltaWorked = true;
         } catch (error) {
           log(`Incremental update unavailable: ${error.message}`);
@@ -178,18 +104,19 @@ function registerUpdateHandlers({ app, ipcMain, mainWindow, home, dataDir, versi
       }
       if (!deltaWorked) {
         const fullPath = path.join(updatesDir, `UTA-${version}-Windows-x64.zip`);
-        await fsp.rm(fullPath, { force: true });
-        progress({ phase: 'downloading-full', percent: 0 });
-        await download(releaseInfo.full.url, fullPath, (received, total) => progress({ phase: 'downloading-full',
-          percent: total ? Math.min(90, Math.round(received / total * 90)) : 0, received, total }), releaseInfo.full.size);
-        await verifyChecksum(releaseInfo.full, fullPath);
-        progress({ phase: 'preparing', percent: 91 });
-        await extractFullVersion(fullPath, stage, version, path.join(versionRoot, 'app', 'desktop', 'extractVersion.ps1'));
-        await verifyVersion(stage, version, runtimeVersion);
+        downloaded = await downloadFromSources(releaseInfo.fullCandidates, fullPath, state => progress({ ...state, phase: 'downloading-full',
+          percent: Math.round(state.fraction * 90) }), {
+          cleanup: async () => { if (fs.existsSync(stage)) await fsp.rm(stage, { recursive: true, force: true }); },
+          prepare: async asset => {
+            progress({ phase: 'preparing', provider: asset.provider === 'gitee' ? 'Gitee' : 'GitHub', percent: 91 });
+            await extractFullVersion(fullPath, stage, version, path.join(versionRoot, 'app', 'desktop', 'extractVersion.ps1'));
+            await verifyVersion(stage, version, runtimeVersion);
+          },
+        });
       }
       await fsp.rename(stage, installed);
       prepared = version;
-      preparedInfo = { ready: true, source: 'online', current: appVersion, version };
+      preparedInfo = { ready: true, source: 'online', current: appVersion, version, provider: downloaded.provider === 'gitee' ? 'Gitee' : 'GitHub' };
       progress({ ...preparedInfo, phase: 'ready', percent: 100 });
       return { ready: true, version };
     } catch (error) {

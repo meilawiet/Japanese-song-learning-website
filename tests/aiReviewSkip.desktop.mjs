@@ -43,6 +43,7 @@ try {
   const queue = page.locator('#ai-review-queue')
   await queue.waitFor()
   assert.equal(await queue.locator('li').count(), 2)
+  assert.equal(await page.locator('.ai-review-summary').count(), 1)
   const segmentationQueue = page.locator('#ai-segmentation-queue')
   await segmentationQueue.waitFor()
   await segmentationQueue.locator('.ai-review-skip').click()
@@ -72,7 +73,35 @@ try {
   await queue.locator('.ai-review-select').click()
   await page.getByRole('button', { name: '跳过，保留原注音', exact: true }).click()
   await page.waitForFunction(() => !document.querySelector('#ai-review-queue'))
+  assert.equal(await page.locator('.ai-review-summary').count(), 0, 'handled AI review must not occupy lyric space')
+  assert.equal(await page.locator('.word-panel').getByRole('button', { name: '恢复已跳过建议', exact: true }).count(), 1)
+  assert.equal(await page.locator('.lyrics-panel > .audio-tools').count(), 0)
+  assert.equal(await page.locator('.desktop-lyric-range-hint').count(), 0)
+  const measurements = []
+  const outputDir = path.join(root, 'work', 'verification')
+  await fs.mkdir(outputDir, { recursive: true })
+  for (const [width, height, zoom] of [[1440, 900, 1], [1024, 768, 1], [1000, 680, 1.25]]) {
+    await client.evaluate(({ BrowserWindow }, { width, height, zoom }) => { const win = BrowserWindow.getAllWindows()[0]; win.setContentSize(width, height); win.webContents.setZoomFactor(zoom) }, { width, height, zoom })
+    await page.waitForFunction(({ width, zoom }) => Math.abs(innerWidth - width / zoom) <= 2, { width, zoom })
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    const metrics = await page.evaluate(() => {
+      const panel = document.querySelector('.lyrics-panel').getBoundingClientRect()
+      const tools = document.querySelector('.desktop-lesson-toolbar').getBoundingClientRect()
+      const list = document.querySelector('.lyrics-list').getBoundingClientRect()
+      const selects = [...document.querySelectorAll('.desktop-lesson-toolbar select')].map(node => node.getBoundingClientRect().toJSON())
+      return { viewport: innerWidth, topSpace: list.top - panel.top, toolbar: tools.toJSON(), panel: panel.toJSON(), selects }
+    })
+    assert.ok(metrics.topSpace <= (zoom > 1 ? 125 : 90), JSON.stringify(metrics))
+    assert.ok(metrics.selects.every(rect => rect.left >= metrics.panel.left && rect.right <= metrics.panel.right + 1), JSON.stringify(metrics))
+    assert.ok(metrics.selects[0].right <= metrics.selects[1].left || metrics.selects[0].bottom <= metrics.selects[1].top, JSON.stringify(metrics))
+    measurements.push({ width, height, zoom, ...metrics })
+    const shot = await client.evaluate(async ({ BrowserWindow }) => (await BrowserWindow.getAllWindows()[0].webContents.capturePage()).toPNG().toString('base64'))
+    await fs.writeFile(path.join(outputDir, `compact-lesson-${width}-${zoom}.png`), Buffer.from(shot, 'base64'))
+  }
+  await fs.writeFile(path.join(outputDir, 'compact-lesson-layout.json'), JSON.stringify(measurements, null, 2))
   await page.getByRole('button', { name: '恢复已跳过建议', exact: true }).click()
+  await page.locator('.ai-review-summary').waitFor()
+
   await queue.waitFor()
   await segmentationQueue.waitFor()
   assert.equal(await queue.locator('li').count(), 2)
@@ -105,11 +134,15 @@ try {
     return words.some((word,index)=>word===parts[0] && words[index+1]===parts[1])
   }, {songId:fixture.songId,lineId:fixture.segmentation.line_id,parts:fixture.segmentation.suggested_segments})
   assert.equal(saved,true)
+  await page.evaluate(id => { const reviews = JSON.parse(localStorage.getItem('uta-ai-reviews-v1')); reviews[id] = { reviewed_token_count: 279, suggestions: [], segmentation_suggestions: [] }; localStorage.setItem('uta-ai-reviews-v1', JSON.stringify(reviews)) }, fixture.songId)
+  await page.reload(); await page.locator('.desktop-lesson-toolbar').waitFor()
+  assert.equal(await page.locator('.ai-review-summary').count(), 0, 'no findings must also remain compact')
   assert.deepEqual(errors, [])
   const report = { passed: true, version: await client.evaluate(({ app }) => app.getVersion()), checks: [
     'skip-in-queue-keeps-original-annotation-and-corrections', 'skip-survives-reload', 'skip-in-current-suggestion-card',
     'all-skipped-hides-pending-queue', 'restore-skipped-without-ai-request', 'adopt-suggestion-still-works', 'skip-button-small-window-125-percent',
     'segmentation-suggestion-skip-restore-preview-confirm-save-restart',
+    'completed-and-empty-reviews-hide-summary', 'skipped-restore-in-inspector', 'compact-toolbar-1440-1024-and-125-percent',
   ] }
   await fs.writeFile(path.join(evidence, 'ai-review-skip.json'), JSON.stringify(report, null, 2))
   console.log(JSON.stringify(report))

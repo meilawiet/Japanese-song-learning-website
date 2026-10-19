@@ -14,6 +14,17 @@ const saved = () => ({
   aiReviews: { [song.id]: { suggestions: [] } },
   sentenceExplanations: { [song.id]: { 2: { text: '明日', explanation: {} }, 7: { text: '歌', explanation: {} } } },
 })
+
+test('reordering clears context-dependent AI without renumbering or losing mastery and corrections', () => {
+  const before = saved(), reordered = { ...song, lines: [...song.lines].reverse() }
+  const next = applySongDetailsEdit(song, reordered, before)
+  assert.equal(next.aiReviews[song.id], undefined)
+  assert.equal(next.sentenceExplanations[song.id], undefined)
+  assert.deepEqual(next.progress.learnedBySong[song.id], before.progress.learnedBySong[song.id])
+  assert.deepEqual(next.progress.corrections, before.progress.corrections)
+  assert.deepEqual(next.annotations[song.id], before.annotations[song.id])
+  assert.deepEqual(next.progress.reviewItems, before.progress.reviewItems)
+})
 test('translation-only edit retains annotation, corrections, mastery, review and other-song state', () => {
   const before = saved(), original = structuredClone(before)
   const after = { ...song, lines: song.lines.map(line => line.id === 2 ? { ...line, translation: '' } : line) }
@@ -72,4 +83,23 @@ test('draft undo and redo cover deleted lines and replacement files without chan
   history = editHistoryReducer(history, { type: 'undo' })
   history = editHistoryReducer(history, { type: 'edit', patch: { title: '另一个修改' } })
   assert.equal(history.future.length, 0)
+})
+
+
+test('new source kana refreshes just affected token state while retaining unchanged-text mastery', () => {
+  const before = saved()
+  before.progress.hiddenReadings = { [`${song.id}:2:0`]: true, [`${song.id}:7:0`]: true }
+  const checkpoint = structuredClone(before)
+  const after = { ...song, lines: song.lines.map(line => line.id === 2 ? { ...line, sourceReadings: [{ start: 0, end: 2, reading: 'あした' }] } : line) }
+  const next = applySongDetailsEdit(song, after, before)
+  assert.deepEqual(next.progress.learnedBySong, before.progress.learnedBySong)
+  assert.deepEqual(next.progress.reviewItems, before.progress.reviewItems)
+  assert.deepEqual(next.annotations[song.id].map(line => line.id), [7])
+  assert.equal(next.progress.corrections[`${song.id}:2:0`], undefined)
+  assert.equal(next.progress.hiddenReadings[`${song.id}:2:0`], undefined)
+  assert.equal(next.progress.corrections[`${song.id}:7:0`], 'うた')
+  assert.equal(next.progress.hiddenReadings[`${song.id}:7:0`], true)
+  assert.equal(next.sentenceExplanations[song.id][2], undefined)
+  assert.ok(next.sentenceExplanations[song.id][7])
+  assert.deepEqual(before, checkpoint, 'the edit-undo checkpoint must stay intact')
 })

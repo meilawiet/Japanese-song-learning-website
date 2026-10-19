@@ -82,10 +82,13 @@ export function reconcileLearningState(songs, saved) {
     progress.reviewItems = progress.reviewItems.filter((item) => item.songId !== song.id
       || song.lines.some((line) => line.id === item.lineId && line.text === item.text))
     // Whole-song review and sentence explanations depend on adjacent context.
-    if (!sameLines(previous, song.lines)) {
+    const sameOrder = previous?.length === song.lines.length
+      && song.lines.every((line, index) => previous[index].id === line.id && previous[index].text === line.text)
+    if (!sameOrder) {
       delete aiReviews[song.id]
       delete sentenceExplanations[song.id]
     }
+    if (aiReviews[song.id]?.sourceContext && aiReviews[song.id].sourceContext !== JSON.stringify(song.lines.map(line => [line.id, line.text, line.translation || '']))) delete aiReviews[song.id]
     progress.lyricSnapshots[song.id] = lyricSnapshot(song)
   }
   return { progress, annotations, aiReviews, sentenceExplanations }

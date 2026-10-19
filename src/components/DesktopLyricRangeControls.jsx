@@ -21,7 +21,7 @@ function practiceLabel(practice) {
 }
 
 export default function DesktopLyricRangeControls({ range, available, playing, paused, rate, onRate, onToggle, onReplay, onClear, settings = DEFAULT_RANGE_PRACTICE_SETTINGS, practice, onSettings, onStop }) {
-  if (!range) return <div className="desktop-lyric-range-hint">先点首句，再按住 <kbd>Ctrl</kbd> 点末句，选择连续歌词并播放。</div>
+  if (!range) return null
   const active = practice && !['idle', 'complete'].includes(practice.phase)
   const waiting = practice?.phase === 'gap' && !practice.paused
   const recall = practice?.phase === 'recall'

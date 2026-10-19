@@ -14,6 +14,7 @@ const state = {
     readingStyle: 'romaji',
     lyricFontSize: 28,
     desktopTheme: 'crimson-blade',
+    desktopFont: 'source-han-light',
     readingFontSize: 16,
     lineReadingFontSize: 20,
     translationFontSize: 18,
@@ -44,6 +45,7 @@ test('backed-up songs, audio and learning state round-trip', async () => {
   assert.equal(inspection.manifest.progress.readingStyle, 'romaji')
   assert.equal(inspection.manifest.progress.lyricFontSize,28)
   assert.equal(inspection.manifest.progress.desktopTheme,'crimson-blade')
+  assert.equal(inspection.manifest.progress.desktopFont,'source-han-light')
   assert.equal(inspection.manifest.progress.readingFontSize,16)
   assert.equal(inspection.manifest.progress.lineReadingFontSize,20)
   assert.equal(inspection.manifest.progress.translationFontSize,18)
@@ -108,6 +110,7 @@ test('backups created before whole-line analysis remain restorable', async () =>
   delete manifest.progress.rangePracticeSettings
   delete manifest.progress.lyricFontSize
   delete manifest.progress.desktopTheme
+  delete manifest.progress.desktopFont
   delete manifest.progress.readingStyle
   const metadata = new TextEncoder().encode(JSON.stringify(manifest))
   const nextLength = new Uint8Array(4)
@@ -121,6 +124,7 @@ test('backups created before whole-line analysis remain restorable', async () =>
   assert.equal(inspected.manifest.progress.lyricSnapshots, undefined)
   assert.equal(inspected.manifest.progress.lyricFontSize, undefined)
   assert.equal(inspected.manifest.progress.desktopTheme, undefined)
+  assert.equal(inspected.manifest.progress.desktopFont, undefined)
   assert.equal(inspected.manifest.progress.readingStyle, undefined)
   assert.equal(inspected.manifest.progress.readingFontSize, undefined)
   assert.equal(inspected.manifest.progress.lineReadingFontSize, undefined)
@@ -130,6 +134,11 @@ test('backups created before whole-line analysis remain restorable', async () =>
 
 test('invalid lyric snapshots cannot be saved in backups', () => {
   const invalid = { ...state, progress: { ...state.progress, lyricSnapshots: { broken: { lines: 'not an array' } } } }
+  assert.throws(() => createLearningBackup([], invalid), /学习记录格式不正确/)
+})
+
+test('unknown desktop font identifiers are rejected before restoring learning data', () => {
+  const invalid = { ...state, progress: { ...state.progress, desktopFont: 'untrusted-font' } }
   assert.throws(() => createLearningBackup([], invalid), /学习记录格式不正确/)
 })
 

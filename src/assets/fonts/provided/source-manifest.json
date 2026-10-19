@@ -1,0 +1,106 @@
+[
+  {
+    "source": "字体/京华老宋体/京華老宋体2.002.ttf",
+    "file": "KingHwaOldSong.woff",
+    "originalBytes": 36587506,
+    "bytes": 24663828,
+    "glyphs": 45780,
+    "sha256": "26a769cb344de7f61a0aa590c6e68c9fc39da7e4a5338910094ab1f2129043f0"
+  },
+  {
+    "source": "字体/刻明朝/刻明朝.ttf",
+    "file": "KokuMincho.woff",
+    "originalBytes": 4646508,
+    "bytes": 2995252,
+    "glyphs": 15563,
+    "sha256": "0d65476f0fde33a3d4efcaee0572a8419b3a62b122a7cdc6eb0754229beaa7c1"
+  },
+  {
+    "source": "字体/思源宋体/SOURCEHANSERIFCN-BOLD-2.OTF",
+    "file": "SourceHanSerifCN-Bold.woff",
+    "originalBytes": 11772444,
+    "bytes": 10074260,
+    "glyphs": 30995,
+    "sha256": "13e7854c1dbdda8c4a4673761cc90845f27d761ac19a5302ee373812608e5f27"
+  },
+  {
+    "source": "字体/思源宋体/SOURCEHANSERIFCN-EXTRALIGHT-3.OTF",
+    "file": "SourceHanSerifCN-Extralight.woff",
+    "originalBytes": 10372344,
+    "bytes": 8650168,
+    "glyphs": 30995,
+    "sha256": "bc1d376d90ac9874ddcb119afa27b88fc978fb9e7af3dd633a8cf7b6e33779af"
+  },
+  {
+    "source": "字体/思源宋体/SOURCEHANSERIFCN-HEAVY-4.OTF",
+    "file": "SourceHanSerifCN-Heavy.woff",
+    "originalBytes": 11304840,
+    "bytes": 9592932,
+    "glyphs": 30995,
+    "sha256": "f06fa842d9bfb23cdef1485be5d12ce97681e2619da09456762921605890c272"
+  },
+  {
+    "source": "字体/思源宋体/SOURCEHANSERIFCN-LIGHT-5.OTF",
+    "file": "SourceHanSerifCN-Light.woff",
+    "originalBytes": 11090240,
+    "bytes": 9319736,
+    "glyphs": 30995,
+    "sha256": "2b7929ef8876b1e90ac533443727507b143bcfb671d501dc4219e9268f4cdef2"
+  },
+  {
+    "source": "字体/思源宋体/SOURCEHANSERIFCN-MEDIUM-6.OTF",
+    "file": "SourceHanSerifCN-Medium.woff",
+    "originalBytes": 11373656,
+    "bytes": 9662124,
+    "glyphs": 30995,
+    "sha256": "7eb7a58f21d8269434a84986cec1d84c784a0ee75348151d6f535da0a6689cae"
+  },
+  {
+    "source": "字体/思源宋体/SOURCEHANSERIFCN-REGULAR-1.OTF",
+    "file": "SourceHanSerifCN-Regular.woff",
+    "originalBytes": 11257480,
+    "bytes": 9507096,
+    "glyphs": 30995,
+    "sha256": "9644e7ac2806c3ec0f208a5bb1ae2967052c853ce6ed8b70767482e7fa82e7cd"
+  },
+  {
+    "source": "字体/思源宋体/SOURCEHANSERIFCN-SEMIBOLD-7.OTF",
+    "file": "SourceHanSerifCN-Semibold.woff",
+    "originalBytes": 11453056,
+    "bytes": 9768488,
+    "glyphs": 30995,
+    "sha256": "996d1762aaec98606359e8f8e332818f7b8c7881545324f7ada0325ff9f10667"
+  },
+  {
+    "source": "字体/思源宋体/思源宋体.OTF",
+    "file": "SourceHanSerifSC-Heavy.woff",
+    "originalBytes": 22915736,
+    "bytes": 18525296,
+    "glyphs": 65535,
+    "sha256": "cb2feea14df19a7179578f4c92786f6616f38057c815e51fffdc3dfaccb51a9f"
+  },
+  {
+    "source": "字体/爱点风雅黑/爱点风雅黑.ttf",
+    "file": "AidianFengYaHei.woff",
+    "originalBytes": 4127128,
+    "bytes": 2049228,
+    "glyphs": 7217,
+    "sha256": "db14116d6e3c917d438314ac9cece07353388c0af8775279a77d4ac7e68b47c1"
+  },
+  {
+    "source": "字体/猫啃珠圆体/MAOKENZHUYUANTI-MAOKENZHUYUANTI-2.TTF",
+    "file": "MaokenZhuyuanTi.woff",
+    "originalBytes": 5708296,
+    "bytes": 3288228,
+    "glyphs": 15122,
+    "sha256": "6c0decaaf9d2d99c5bd2094c77dae382c9b9161addb11922f1179fd99c9cf39d"
+  },
+  {
+    "source": "字体/飞花宋体/飞花宋体.ttf",
+    "file": "FlyFlowerSong.woff",
+    "originalBytes": 13817696,
+    "bytes": 4447696,
+    "glyphs": 25487,
+    "sha256": "3a1236c310a967ef1d763ae7ca032db7f5255613a97afcd912063c36a1ad50a7"
+  }
+]

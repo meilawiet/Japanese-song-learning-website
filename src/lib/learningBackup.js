@@ -1,5 +1,6 @@
 import { PLAYBACK_RATES, LEGACY_FAST_RATES, normalizePlaybackRate } from './playbackRate.js'
 import { DESKTOP_THEME_IDS } from './desktopThemes.js'
+import { DESKTOP_FONT_IDS } from './desktopFonts.js'
 import { validRangePracticeSettings } from './rangePractice.js'
 
 const SIGNATURE = 'UTA-LEARNING-BACKUP\n'
@@ -62,6 +63,7 @@ function checkState(manifest) {
       || Object.entries(progress.hiddenReadings).some(([key, value]) => !/^.+:\d+:\d+$/.test(key) || value !== true)))
     || (progress.lyricFontSize != null && (!Number.isInteger(progress.lyricFontSize) || progress.lyricFontSize < 14 || progress.lyricFontSize > 40))
     || (progress.desktopTheme != null && !DESKTOP_THEME_IDS.includes(progress.desktopTheme))
+    || (progress.desktopFont != null && !DESKTOP_FONT_IDS.includes(progress.desktopFont))
     || (progress.readingFontSize != null && (!Number.isInteger(progress.readingFontSize) || progress.readingFontSize < 8 || progress.readingFontSize > 24))
     || (progress.lineReadingFontSize != null && (!Number.isInteger(progress.lineReadingFontSize) || progress.lineReadingFontSize < 8 || progress.lineReadingFontSize > 24))
     || (progress.translationFontSize != null && (!Number.isInteger(progress.translationFontSize) || progress.translationFontSize < 10 || progress.translationFontSize > 24))

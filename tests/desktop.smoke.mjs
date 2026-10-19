@@ -34,9 +34,12 @@ const mock = createServer(async (request, response) => {
   const chunks = []
   for await (const chunk of request) chunks.push(chunk)
   const isSegmentationReview = Buffer.concat(chunks).toString('utf8').includes('segmentation_suggestions')
+  const body = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+  const userInput = body.messages.filter(message => message.role === 'user').at(-1).content
+  const firstLineId = isSegmentationReview ? JSON.parse(userInput.slice(userInput.lastIndexOf('\n{') + 1)).lines[0].id : null
   response.writeHead(200, { 'content-type': 'application/json' })
   response.end(JSON.stringify({ choices: [{ message: { content: isSegmentationReview
-    ? JSON.stringify({ suggestions: [], segmentation_suggestions: [{ line_id: 0, start_token_index: 0,
+    ? JSON.stringify({ suggestions: [], segmentation_suggestions: [{ line_id: firstLineId, start_token_index: 0,
       end_token_index: 0, suggested_segments: ['学', '校'], confidence: 0.9, reason: '测试分词建议' }] })
     : '{"ok":true}' } }] }))
 })
@@ -321,14 +324,53 @@ try {
   assert.equal(singWindow.title.top, 0)
   assert.equal(singWindow.player.bottom, singWindow.height)
   await page.screenshot({ path:path.join(evidence, 'singalong-player-background.png') })
+  // Leaving continuous playback must also end its audio session and lyric following.
+  await page.getByLabel('歌曲播放速度').selectOption('1')
+  await page.getByRole('button', { name: '从第 1 句开始跟唱' }).click()
+  await page.waitForFunction(() => !document.querySelector('audio').paused)
   await page.getByRole('button', { name:'返回学习' }).click()
   await page.getByRole('heading', { name:'逐句读音' }).waitFor()
+  assert.equal(await page.locator('audio').evaluate(audio => audio.paused), true, 'Returning to learning must stop the song')
+  const stoppedTime = await page.locator('audio').evaluate(audio => audio.currentTime)
+  const selectedLine = await page.locator('.lyrics-list .lyric-row.active').getAttribute('id')
+  await page.waitForTimeout(1100)
+  assert.ok(Math.abs(await page.locator('audio').evaluate(audio => audio.currentTime) - stoppedTime) < 0.05)
+  // A queued media event must not reinstate the old continuous-playback highlight.
+  await page.locator('audio').evaluate(audio => { audio.currentTime = 2.1; audio.dispatchEvent(new Event('timeupdate')) })
+  await page.waitForTimeout(100)
+  assert.equal(await page.locator('.lyrics-list .desktop-now-playing').count(), 0)
+  assert.equal(await page.locator('.lyrics-list .lyric-row.active').getAttribute('id'), selectedLine)
+  await page.locator('.lyrics-list .lyric-row').first().locator('.line-number').dblclick()
+  await page.waitForFunction(() => !document.querySelector('audio').paused)
+  await page.waitForFunction(() => document.querySelector('audio').paused && document.querySelector('audio').currentTime >= 0.95)
+  assert.ok(await page.locator('audio').evaluate(audio => audio.currentTime) < 1.1, 'Single-line playback must still stop at the next timestamp')
   assert.equal(await page.locator('.desktop-shell-singalong').count(), 0)
   assert.equal(await page.locator('.desktop-sidebar').evaluate(node => getComputedStyle(node).display), 'flex')
   await page.locator('.desktop-sidebar nav').getByRole('button', { name:'跟唱练习' }).click()
   await page.waitForFunction(() => document.querySelector('.desktop-sing-wallpaper')?.style.backgroundImage.startsWith('url("blob:'))
   await page.waitForFunction(() => document.querySelector('.desktop-shell-singalong')?.style.getPropertyValue('--sing-background-image').startsWith('url("blob:'))
+  await page.getByRole('button', { name: '从第 3 句开始跟唱' }).click()
+  await page.waitForFunction(() => !document.querySelector('audio').paused && document.querySelector('audio').currentTime >= 2)
+  await shortcut('1')
+  await page.getByRole('heading', { name:'逐句读音' }).waitFor()
+  assert.equal(await page.locator('audio').evaluate(audio => audio.paused), true, 'The native learning shortcut must stop continuous playback too')
+  assert.equal(await page.locator('.lyrics-list .desktop-now-playing').count(), 0)
+  await page.locator('.desktop-sidebar nav').getByRole('button', { name:'跟唱练习' }).click()
+  // Hold metadata loading so return is tested before playback can start.
+  await page.locator('audio').evaluate(audio => {
+    Object.defineProperty(audio, 'readyState', { configurable: true, value: 0 })
+    audio.load = () => {}
+  })
+  await page.getByRole('button', { name: '从第 1 句开始跟唱' }).click()
   await page.getByRole('button', { name:'返回学习' }).click()
+  await page.locator('audio').evaluate(audio => {
+    delete audio.readyState; delete audio.load
+    audio.dispatchEvent(new Event('loadedmetadata'))
+    audio.dispatchEvent(new Event('timeupdate'))
+  })
+  await page.waitForTimeout(250)
+  assert.equal(await page.locator('audio').evaluate(audio => audio.paused), true, 'Late metadata must not restart a song after return')
+  assert.equal(await page.locator('.lyrics-list .desktop-now-playing').count(), 0)
   assert.equal(await page.evaluate(() => typeof require), 'undefined')
   await page.evaluate(async () => { localStorage.setItem('desktop-persistence-test', 'persisted'); await window.utaDesktop.saveCredential('desktop-encrypted-test-key'); })
   const credentialBytes = await fs.readFile(path.join(testDir, 'uta-data', 'ai-credential.bin'))
@@ -346,7 +388,7 @@ try {
   await shortcut(',')
   await page.locator('.settings-dialog').waitFor()
   await page.screenshot({ path:path.join(evidence, 'desktop-settings.png') })
-  await page.getByRole('button', { name:'注音显示', exact:true }).click()
+  await page.getByRole('button', { name:'主题设置', exact:true }).click()
   const sizeSlider=page.getByRole('slider', { name:'歌词上方假名字体大小', exact:true })
   assert.equal(await sizeSlider.inputValue(),'10')
   const lineSizeSlider=page.getByRole('slider', { name:'词语下方罗马音字体大小', exact:true })
@@ -383,7 +425,7 @@ try {
   for (const value of ['10', '24']) {
     await translationSize.fill(value)
     await page.waitForFunction(size => getComputedStyle(document.querySelector('.lyric-translation')).fontSize === size + 'px', value)
-    assert.equal(await page.locator('.reading-preview-translation').evaluate(element => getComputedStyle(element).fontSize), value + 'px')
+    assert.equal(await page.locator('.reading-font-preview .reading-preview-translation').evaluate(element => getComputedStyle(element).fontSize), value + 'px')
     assert.equal(await page.locator('.japanese').first().evaluate(element => getComputedStyle(element).fontSize), lyricFont)
     assert.equal(await page.locator('.lyrics-list .token-reading-kana').first().evaluate(element => getComputedStyle(element).fontSize), '16px')
   }
@@ -425,7 +467,7 @@ try {
   await page.screenshot({path:path.join(evidence,'combined-kana-romaji.png')})
   await shortcut(',')
   await page.locator('.settings-dialog').waitFor()
-  await page.getByRole('button', { name:'注音显示', exact:true }).click()
+  await page.getByRole('button', { name:'主题设置', exact:true }).click()
   await page.getByRole('radio', { name:/平假名/ }).check()
   await page.screenshot({path:path.join(evidence,'reading-font-size.png')})
   await page.getByRole('button', { name:'关闭设置', exact:true }).click()
@@ -630,6 +672,7 @@ try {
   assert.deepEqual(failures, [])
   const report = { passed: true, runtime, checks: ['packaged-exe', 'relocated-chinese-space-path', 'no-system-node-python', 'bundled-sudachi-tomoshi', 'ai-proxy-mock',
     'ui-import-wav-lrc', 'backup-export', 'indexeddb-localstorage-restart', 'windows-encrypted-key', 'renderer-isolation', 'api-authentication', 'parent-exit-cleanup', 'native-titlebar-shortcuts', 'library-filter-sort-search', 'lesson-display-dropdown-four-modes', 'lesson-player-removed', 'double-click-line-playback', 'themed-song-lyric-segmentation-editors', 'singalong-player-seek-volume-speed', 'independent-panes-1024-1440', 'review-opens-singalong', 'ai-settings-visible-footer-small-window-and-zoom', 'ai-settings-test-and-save-through-ui', 'ctrl-contiguous-lines-token-and-reverse-selection', 'selected-range-exact-start-stop-and-tail', 'selected-range-slow-pause-resume-replay', 'single-line-lead-in-preserved', 'right-click-line-edit-and-hidden-word', 'combined-kana-romaji', 'batch-import-matching-manual-and-selection', 'batch-import-atomic-failure-retry', 'batch-import-restart-and-backup', 'independent-line-and-ruby-reading-sizes', 'reading-size-live-preview-reset', 'reading-size-restart-and-backup', ...rangePracticeChecks, ...dataProtectionChecks] }
+  report.checks.push('singalong-return-stops-audio-and-highlighting', 'singalong-return-preserves-single-line-playback', 'singalong-native-learning-shortcut-stops-audio', 'singalong-return-cancels-pending-metadata-playback')
   await fs.writeFile(path.join(evidence, 'desktop-smoke.json'), JSON.stringify(report, null, 2))
   console.log(JSON.stringify(report, null, 2))
 } catch (error) {

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, protocol, net, dialog, shell, ipcMain, safeStorage } = require('electron');
+const { app, BrowserWindow, Menu, Tray, nativeImage, protocol, net, dialog, shell, ipcMain, safeStorage } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -9,6 +9,7 @@ const { RestoreSnapshotStore } = require('./restoreSnapshots.cjs');
 const { lyricRequest, createLyricsClient } = require('./lyricNetwork.cjs');
 const { LyricSourceStore } = require('./lyricSources.cjs');
 const { registerUpdateHandlers } = require('./updateRuntime.cjs');
+const { WindowCloseController } = require('./windowClose.cjs');
 
 const appRoot = path.resolve(__dirname, '..');
 const home = app.isPackaged ? path.dirname(process.execPath) : appRoot;
@@ -66,6 +67,10 @@ ipcMain.handle('uta:snapshot:folder', async event => {
 const logPath = path.join(logDir, 'desktop.log');
 if (fs.existsSync(logPath) && fs.statSync(logPath).size > 2 * 1024 * 1024) fs.renameSync(logPath, logPath + '.previous');
 const log = (message) => fs.appendFileSync(logPath, `${new Date().toISOString()} ${message}\n`);
+const windowClose = new WindowCloseController({ app, dialog, Tray, Menu, nativeImage, getWindow: () => mainWindow,
+  unsavedDrafts, dataDir, iconPath: path.join(__dirname, 'icon.png'), onSettings: () => sendCommand('settings'), log });
+ipcMain.handle('uta:close-behavior:load', event => { trustedSnapshotCaller(event); return windowClose.store.load(); });
+ipcMain.handle('uta:close-behavior:save', (event, value) => { trustedSnapshotCaller(event); return windowClose.saveBehavior(value); });
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function startBackend() {
@@ -202,13 +207,7 @@ function createWindow() {
     }
   });
   mainWindow.webContents.on('did-start-loading', () => unsavedDrafts.clear());
-  mainWindow.on('close', event => {
-    if (!unsavedDrafts.size) return;
-    const choice = dialog.showMessageBoxSync(mainWindow, { type: 'warning', title: '还有未保存的修改',
-      message: '还有未保存的歌词或歌曲修改。', detail: '现在退出会丢失尚未保存的输入。',
-      buttons: ['继续编辑', '放弃修改并退出'], defaultId: 0, cancelId: 0, noLink: true });
-    if (choice !== 1) event.preventDefault(); else unsavedDrafts.clear();
-  });
+  mainWindow.on('close', event => { void windowClose.handleClose(event); });
   mainWindow.on('closed', () => { mainWindow = null; });
   mainWindow.webContents.on('render-process-gone', (_event, details) => log(`Renderer stopped: ${details.reason}`));
   mainWindow.loadURL(APP_ORIGIN + '/').catch((error) => { dialog.showErrorBox('UTA 页面加载失败', error.message); app.quit(); });
@@ -228,11 +227,12 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
 }
 
-app.on('will-quit', () => { stopping = true; if (backend) { backend.stdin.end(); backend.kill(); } });
+app.on('before-quit', event => windowClose.beforeQuit(event));
+app.on('will-quit', () => { windowClose.destroy(); stopping = true; if (backend) { backend.stdin.end(); backend.kill(); } });
 app.on('window-all-closed', () => app.quit());
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
-  app.on('second-instance', () => { if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.show(); mainWindow.focus(); } });
+  app.on('second-instance', () => windowClose.showWindow());
   app.whenReady().then(async () => {
     log('Starting UTA ' + appVersion);
     try { backendOrigin = await startBackend(); registerProtocol(); registerCredentials(); createWindow();

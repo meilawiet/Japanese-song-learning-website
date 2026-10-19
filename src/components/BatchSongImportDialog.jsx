@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { CircleAlert, LoaderCircle, Upload, X } from 'lucide-react'
+import { CircleAlert, Image, LoaderCircle, Upload, X } from 'lucide-react'
 import { inferAudioMetadata } from '../lib/audioMetadata'
 import { parseLrcFile } from '../lib/localSongStore'
 import { batchFileId, batchRowProblem, buildBatchImportRows, prepareBatchImport } from '../lib/batchSongImport'
 import { compileLrcCues } from '../lib/lrcReview'
 import LrcReviewEditor from './LrcReviewEditor'
+import ArtworkPicker from './ArtworkPicker'
 import DesktopOnlineLyricsSearch from './DesktopOnlineLyricsSearch'
 import { useDesktopUnsavedDraft } from '../lib/useDesktopUnsavedDraft'
 
@@ -17,9 +18,11 @@ export default function BatchSongImportDialog({ onClose, onSwitchSingle, onImpor
   const [submitting, setSubmitting] = useState(false)
   const [reviewingAudioId, setReviewingAudioId] = useState('')
   const [searchingAudioId, setSearchingAudioId] = useState('')
+  const [artworkAudioId, setArtworkAudioId] = useState('')
+  const [artworkProcessing, setArtworkProcessing] = useState(false)
   const [batchAiChecked, setBatchAiChecked] = useState(false)
   const alive = useRef(true)
-  const locked = Boolean(preparing || busy || submitting)
+  const locked = Boolean(preparing || busy || submitting || artworkProcessing)
   useDesktopUnsavedDraft('batch-import-editor', Boolean(audios.length || lyrics.length))
   const close = () => { if (!locked && (!audios.length && !lyrics.length || window.confirm('所选歌曲和歌词尚未导入，确定关闭吗？'))) onClose() }
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
@@ -96,6 +99,7 @@ export default function BatchSongImportDialog({ onClose, onSwitchSingle, onImpor
   function removeAudio(audioId) {
     const next = audios.filter(entry => entry.id !== audioId)
     setAudios(next); setRows(buildBatchImportRows(next, lyrics, rows))
+    if (artworkAudioId === audioId) setArtworkAudioId('')
     setError('')
   }
 
@@ -132,7 +136,7 @@ export default function BatchSongImportDialog({ onClose, onSwitchSingle, onImpor
         <label className={`song-file-field ${lyrics.length ? 'selected' : ''}`}><span>02 · 歌词文件</span><strong>{lyrics.length ? `已选择 ${lyrics.length} 份歌词 · 点击继续添加` : '选择多份 LRC 或注音歌词'}</strong><small>在文件窗口按 Ctrl 或 Shift 可以多选；自带假名优先保留。</small><input type="file" multiple accept=".lrc,.uta-lyrics.json" aria-label="批量选择歌词文件" disabled={locked} onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ''; void addFiles('lyrics', files) }}/></label>
       </div>
       {preparing && <p className="batch-import-progress" role="status"><LoaderCircle className="spin" size={14}/>{preparing}</p>}
-      <div className="batch-import-toolbar"><span>{audios.length} 首音频 · {lyrics.length} 份歌词 · {ready.length} 首可导入 · {needsAttention.length} 首需处理</span><button type="button" disabled={locked || !ready.length} onClick={() => setRows(previous => previous.map(row => ({ ...row, selected: !batchRowProblem(row, previous, lyrics) })))}>全选可导入歌曲</button><button type="button" disabled={locked || !selected.length} onClick={() => setRows(previous => previous.map(row => ({ ...row, selected: false })))}>清空选择</button><button type="button" disabled={locked || (!audios.length && !lyrics.length)} onClick={() => { setAudios([]); setLyrics([]); setRows([]); setReviewingAudioId(''); setError('') }}>清空文件</button></div>
+      <div className="batch-import-toolbar"><span>{audios.length} 首音频 · {lyrics.length} 份歌词 · {ready.length} 首可导入 · {needsAttention.length} 首需处理</span><button type="button" disabled={locked || !ready.length} onClick={() => setRows(previous => previous.map(row => ({ ...row, selected: !batchRowProblem(row, previous, lyrics) })))}>全选可导入歌曲</button><button type="button" disabled={locked || !selected.length} onClick={() => setRows(previous => previous.map(row => ({ ...row, selected: false })))}>清空选择</button><button type="button" disabled={locked || (!audios.length && !lyrics.length)} onClick={() => { setAudios([]); setLyrics([]); setRows([]); setReviewingAudioId(''); setSearchingAudioId(''); setArtworkAudioId(''); setError('') }}>清空文件</button></div>
       {rows.length ? <div className="batch-import-table">
         <div className="batch-import-columns" aria-hidden="true"><span/><span>歌名 / 歌手</span><span>音频 / 对应歌词</span><span>状态</span><span/></div>
         <ol className="batch-import-rows">{rows.map((row, index) => {
@@ -141,17 +145,18 @@ export default function BatchSongImportDialog({ onClose, onSwitchSingle, onImpor
           const lyric = lyrics.find(entry => entry.id === row.lyricId)
           return <li className={`batch-import-row ${problem ? 'needs-pair' : 'ready'}`} key={row.audioId}>
             <input type="checkbox" checked={row.selected} disabled={locked || !lyric?.parsed || Boolean(lyric?.error)} aria-label={`选择第 ${index + 1} 首歌曲`} onChange={event => changeRow(row.audioId, 'selected', event.target.checked)}/>
-            <div className="batch-song-meta"><input aria-label={`第 ${index + 1} 首歌曲名`} value={row.title} maxLength={200} disabled={locked} onChange={event => changeRow(row.audioId, 'title', event.target.value)}/><input aria-label={`第 ${index + 1} 首歌手`} value={row.artist} maxLength={200} disabled={locked} onChange={event => changeRow(row.audioId, 'artist', event.target.value)}/></div>
+            <div className="batch-song-meta"><input aria-label={`第 ${index + 1} 首歌曲名`} value={row.title} maxLength={200} disabled={locked} onChange={event => changeRow(row.audioId, 'title', event.target.value)}/><input aria-label={`第 ${index + 1} 首歌手`} value={row.artist} maxLength={200} disabled={locked} onChange={event => changeRow(row.audioId, 'artist', event.target.value)}/><div className="batch-song-cover">{row.artwork?.artworkUrl ? <img src={row.artwork.artworkUrl} alt={`第 ${index + 1} 首已选封面`} referrerPolicy="no-referrer"/> : <Image size={24} aria-hidden="true"/>}<button type="button" disabled={locked} aria-label={`第 ${index + 1} 首选择封面`} aria-expanded={artworkAudioId === row.audioId} onClick={() => setArtworkAudioId(current => current === row.audioId ? '' : row.audioId)}>{artworkAudioId === row.audioId ? '收起封面' : row.artwork?.artworkUrl ? '更换封面' : '选择封面'}</button><small>{row.artwork?.artworkProvider || '默认封面'}</small></div></div>
             <div className="batch-song-files"><strong title={audio.file.name}>{audio.file.name}</strong><select aria-label={`第 ${index + 1} 首对应歌词`} value={row.lyricId} disabled={locked} onChange={event => pairLyric(row.audioId, event.target.value)}><option value="">请选择歌词文件</option>{lyrics.map(entry => <option key={entry.id} value={entry.id} disabled={usedLyrics.has(entry.id) && usedLyrics.get(entry.id) !== row.audioId}>{entry.file.name}{entry.error ? '（读取失败）' : ''}</option>)}</select></div>
             <div className="batch-song-review-action"><span className={`batch-song-status ${problem ? 'error' : ''}`}>{problem || `可导入 · ${lyric.parsed.lines.length} 句`}</span>{!row.lyricId && <button type="button" disabled={locked} aria-expanded={searchingAudioId === row.audioId} onClick={() => setSearchingAudioId(current => current === row.audioId ? '' : row.audioId)}>{searchingAudioId === row.audioId ? '收起搜索' : '联网查找歌词'}</button>}{lyric?.parsed?.cues && <button type="button" disabled={locked} aria-expanded={reviewingAudioId === row.audioId} onClick={() => setReviewingAudioId(current => current === row.audioId ? '' : row.audioId)}>{reviewingAudioId === row.audioId ? '收起歌词' : problem ? '检查并处理' : '预览歌词'}</button>}</div>
             <button type="button" className="batch-remove-audio" aria-label={`移除第 ${index + 1} 首音频`} disabled={locked} onClick={() => removeAudio(row.audioId)}><X size={14}/></button>
+            {artworkAudioId === row.audioId && <div className="batch-cover-picker"><ArtworkPicker title={row.title} artist={row.artist === '本地导入' ? '' : row.artist} selected={row.artwork} onSelect={artwork => changeRow(row.audioId, 'artwork', artwork)} disabled={locked} onProcessing={setArtworkProcessing}/></div>}
             {searchingAudioId === row.audioId && !row.lyricId && <div className="batch-lyric-review"><DesktopOnlineLyricsSearch autoQuery={[row.title, row.artist !== '本地导入' ? row.artist : ''].filter(Boolean).join(' ')} onChooseLyrics={file => chooseOnlineLyrics(row.audioId, file)} disabled={locked}/></div>}
             {reviewingAudioId === row.audioId && lyric?.parsed?.cues && <div className="batch-lyric-review"><LrcReviewEditor cues={lyric.parsed.cues} onChange={cues => updateLyricCues(lyric.id, cues)} disabled={locked} label={`第 ${index + 1} 首歌词`}/></div>}
           </li>
         })}</ol>
       </div> : <div className="batch-import-empty">先选择音频和歌词，配对结果会显示在这里。</div>}
       {unpairedLyrics.length > 0 && <details className="batch-unpaired-lyrics" open><summary>{unpairedLyrics.length} 份歌词尚未配对</summary><ul>{unpairedLyrics.map(entry => <li key={entry.id}>{entry.file.name}{entry.error && <span> · {entry.error}</span>}</li>)}</ul></details>}
-      <p className="batch-import-note">使用默认封面。导入后可在歌曲库编辑歌词、时间轴与封面，也可在学习页生成 AI 解析。</p>
+      <p className="batch-import-note">每首歌曲可单独选择在线封面、上传本地图片或使用默认封面；未选择时使用默认封面。导入后仍可修改。</p>
       <label className="batch-ai-option"><input type="checkbox" checked={batchAiChecked} disabled={locked} onChange={event => setBatchAiChecked(event.target.checked)}/><span><strong>导入后批量生成 AI 整句解析</strong><small>默认关闭。只处理本次勾选导入的歌曲；会发送歌词及已有译文，可能产生 API 费用。进度与失败原因显示在任务面板。</small></span></label>
     </div>
     <footer className="batch-import-footer">

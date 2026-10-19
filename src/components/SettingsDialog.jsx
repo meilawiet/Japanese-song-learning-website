@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
-import { Check, Database, Download, Eye, EyeOff, KeyRound, Languages, Palette, UserRound, LoaderCircle, Save, Search, Upload, X } from 'lucide-react'
+import { Check, Database, Download, Eye, EyeOff, KeyRound, Languages, Palette, Settings, Info, UserRound, LoaderCircle, Save, Search, Upload, X } from 'lucide-react'
 import { clearAiSettings, DEFAULT_AI_SETTINGS, loadAiSettings, loadAiSettingsFromDevice, saveAiSettings } from '../lib/aiSettings'
 import { getAiStatus, testAiConnection } from '../lib/annotationApi'
 import ProfilePanel from './ProfilePanel'
@@ -10,8 +10,11 @@ import {AboutPanel} from './AppUpdates'
 import { DEFAULT_LYRIC_FONT_SIZE, DEFAULT_READING_FONT_SIZE, DEFAULT_LINE_READING_FONT_SIZE, DEFAULT_TRANSLATION_FONT_SIZE } from '../lib/readingDisplay'
 import { DEFAULT_DESKTOP_THEME, DESKTOP_THEMES } from '../lib/desktopThemes'
 import WordReading from './WordReading'
-import DesktopUpdatePanel from './DesktopUpdatePanel'
+import DesktopAboutSettings from './DesktopAboutSettings'
 import DesktopLyricSourcesPanel from './DesktopLyricSourcesPanel'
+import DesktopFontSettings from './DesktopFontSettings'
+import DesktopGeneralSettings from './DesktopGeneralSettings'
+import { DEFAULT_DESKTOP_FONT } from '../lib/desktopFonts'
 
 const previewTokens = [
   { index: 0, surface: '学校', reading: 'がっこう' },
@@ -20,16 +23,18 @@ const previewTokens = [
   { index: 3, surface: '。', reading: '', is_symbol: true },
 ]
 
-export default function SettingsDialog({ onClose, onExport, onRestore, onCloudExport, updates, backupBusy, backupError, readingStyle = 'hiragana', onReadingStyleChange, lyricFontSize = DEFAULT_LYRIC_FONT_SIZE, onLyricFontSizeChange, readingFontSize = DEFAULT_READING_FONT_SIZE, onReadingFontSizeChange, lineReadingFontSize = DEFAULT_LINE_READING_FONT_SIZE, onLineReadingFontSizeChange, translationFontSize = DEFAULT_TRANSLATION_FONT_SIZE, onTranslationFontSizeChange, desktopTheme = DEFAULT_DESKTOP_THEME, onDesktopThemeChange, initialTab = 'data', updateDrop, onUpdateDropHandled }) {
+export default function SettingsDialog({ onClose, onExport, onRestore, onCloudExport, updates, backupBusy, backupError, readingStyle = 'hiragana', onReadingStyleChange, lyricFontSize = DEFAULT_LYRIC_FONT_SIZE, onLyricFontSizeChange, readingFontSize = DEFAULT_READING_FONT_SIZE, onReadingFontSizeChange, lineReadingFontSize = DEFAULT_LINE_READING_FONT_SIZE, onLineReadingFontSizeChange, translationFontSize = DEFAULT_TRANSLATION_FONT_SIZE, onTranslationFontSizeChange, desktopTheme = DEFAULT_DESKTOP_THEME, onDesktopThemeChange, desktopFont = DEFAULT_DESKTOP_FONT, onDesktopFontChange, initialTab = 'data', updateDrop, onUpdateDropHandled }) {
   const isDesktop = Boolean(globalThis.window?.utaDesktop)
   const canUpdateDesktop = isDesktop && window.utaDesktop.packaged
-  const [tab, setTab] = useState(Capacitor.isNativePlatform() && initialTab === 'reading' ? 'data' : initialTab)
+  const [tab, setTab] = useState(() => isDesktop && ['reading', 'fonts'].includes(initialTab) ? 'theme'
+    : isDesktop && initialTab === 'update' ? 'about'
+    : Capacitor.isNativePlatform() && initialTab === 'reading' ? 'data' : initialTab)
   const [sourcesDirty, setSourcesDirty] = useState(false)
   const handledDrop = useRef(null)
   useEffect(() => {
     if (!updateDrop || handledDrop.current === updateDrop) return
     handledDrop.current = updateDrop
-    if (!sourcesDirty || window.confirm('歌词源配置尚未保存，确定放弃修改并打开更新页面吗？')) setTab('update')
+    if (!sourcesDirty || window.confirm('歌词源配置尚未保存，确定放弃修改并打开更新页面吗？')) setTab('about')
     else onUpdateDropHandled?.()
   }, [updateDrop])
   const confirmLeaveSources = () => !sourcesDirty || window.confirm('歌词源配置尚未保存，确定放弃修改吗？')
@@ -59,7 +64,7 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
     function onKey(event) {
       if (event.key === 'Escape') { event.preventDefault(); closeRef.current() }
       if (event.key !== 'Tab') return
-      const focusable = [...dialogRef.current.querySelectorAll('button, input, select, [tabindex="0"]')]
+      const focusable = [...dialogRef.current.querySelectorAll('button, input, select, textarea, a[href], [tabindex="0"]')]
         .filter((element) => !element.disabled && element.getClientRects().length)
       const first = focusable[0], last = focusable.at(-1)
       if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) {
@@ -109,16 +114,8 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
     } finally { setBusy(false) }
   }
 
-  return <div className="settings-backdrop" onClick={closeSettings}>
-    <section className="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabIndex={-1} ref={dialogRef} onClick={(event) => event.stopPropagation()}>
-      <header className="settings-heading"><div><p className="eyebrow">MAKE IT YOURS</p><h2 id="settings-title">设置</h2><p>{isDesktop ? '调整阅读与主题，管理学习数据、歌词源和 AI 服务。' : '管理学习数据，连接你的 AI 服务。'}</p></div><button type="button" className="settings-close" onClick={closeSettings} aria-label="关闭设置"><X size={21} /></button></header>
-      {/* 旧注音设置入口保留供电脑端使用；安卓将个人资料与其他分类放在同一行。 */}
-      <div className="settings-tabs" aria-label="设置分类">{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => changeTab('profile')}><UserRound size={17} /> 个人资料</button> : <button type="button" aria-pressed={tab === 'reading'} onClick={() => changeTab('reading')}><Languages size={17} /> 注音显示</button>}{isDesktop && <button type="button" aria-pressed={tab === 'theme'} onClick={() => changeTab('theme')}><Palette size={17} /> 主题设置</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => changeTab('data')}><Database size={17} /> 数据管理</button><button type="button" aria-pressed={tab === 'ai'} onClick={() => changeTab('ai')}><KeyRound size={17} /> AI 服务</button>{isDesktop && <button type="button" aria-pressed={tab === 'sources'} onClick={() => changeTab('sources')}><Search size={17}/> 歌词源</button>}{canUpdateDesktop && <button type="button" aria-pressed={tab === 'update'} onClick={() => changeTab('update')}><Download size={17}/> 检查更新</button>}{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>changeTab('about')}>关于</button>}</div>
-      {/* 个人资料编辑集中在安卓设置页，主页头像只用于查看。 */}
-      {/* 原独立个人资料按钮已移入上方分类栏。 */}
-      {/* 安卓新增关于页，其他设置分类保持同一行。 */}
-      {tab === 'about' && isAndroid ? <AboutPanel updates={updates}/> : tab === 'update' && isDesktop ? <DesktopUpdatePanel updateDrop={updateDrop} onUpdateDropHandled={onUpdateDropHandled}/> : tab === 'sources' && isDesktop ? <DesktopLyricSourcesPanel onDirtyChange={setSourcesDirty}/> : tab === 'profile' && isAndroid ? <div className="settings-content"><ProfilePanel editable /></div> : tab === 'reading' && !isAndroid ? <div className="settings-content">
-        <h3>选择你习惯的注音</h3><p className="settings-description">切换后立即生效。歌词原文不会改变。</p>
+  const readingSettings = <div className="settings-content">
+        <h3>{isDesktop ? '注音显示' : '选择你习惯的注音'}</h3><p className="settings-description">切换后立即生效。歌词原文不会改变。</p>
         <fieldset className="reading-style-options"><legend>注音方式</legend>
           <label><input type="radio" name="reading-style" value="hiragana" checked={readingStyle === 'hiragana'} onChange={() => onReadingStyleChange('hiragana')} /><span><b>平假名</b><small>夢 → ゆめ　·　学校 → がっこう</small></span></label>
           <label><input type="radio" name="reading-style" value="romaji" checked={readingStyle === 'romaji'} onChange={() => onReadingStyleChange('romaji')} /><span><b>罗马音</b><small>夢 → yume　·　学校 → gakkou</small></span></label>
@@ -140,13 +137,23 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
           <p className="settings-description reading-font-help">歌词、上方假名、词语下方罗马音和翻译分别调节。三种注音模式都按词对齐，长读音会适当撑开字间距。</p>
         </section>}
         <p className="settings-note">歌词上方注音、下方读音行、逐句练习及词语读音会随之切换。罗马音根据现有读音在本地转换，不额外调用 AI；长音使用连续元音表示。校对时仍输入假名，旁边会显示罗马音预览，已有修正不会被改写。</p>
-      </div> : tab === 'theme' && isDesktop ? <div className="settings-content desktop-theme-settings">
+      </div>
+
+  return <div className="settings-backdrop" onClick={closeSettings}>
+    <section className="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabIndex={-1} ref={dialogRef} onClick={(event) => event.stopPropagation()}>
+      <header className="settings-heading"><div><p className="eyebrow">MAKE IT YOURS</p><h2 id="settings-title">设置</h2><p>{isDesktop ? '调整阅读、字体与主题，管理学习数据、歌词源和 AI 服务。' : '管理学习数据，连接你的 AI 服务。'}</p></div><button type="button" className="settings-close" onClick={closeSettings} aria-label="关闭设置"><X size={21} /></button></header>
+      {/* Windows 将配色、字体与注音集中到主题设置；网页与安卓保留各自入口。 */}
+      <div className="settings-tabs" aria-label="设置分类">{isDesktop && <button type="button" aria-pressed={tab === 'general'} onClick={() => changeTab('general')}><Settings size={17} /> 常规设置</button>}{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => changeTab('profile')}><UserRound size={17} /> 个人资料</button> : !isDesktop && <button type="button" aria-pressed={tab === 'reading'} onClick={() => changeTab('reading')}><Languages size={17} /> 注音显示</button>}{isDesktop && <button type="button" aria-pressed={tab === 'theme'} onClick={() => changeTab('theme')}><Palette size={17} /> 主题设置</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => changeTab('data')}><Database size={17} /> 数据管理</button><button type="button" aria-pressed={tab === 'ai'} onClick={() => changeTab('ai')}><KeyRound size={17} /> AI 服务</button>{isDesktop && <button type="button" aria-pressed={tab === 'sources'} onClick={() => changeTab('sources')}><Search size={17}/> 歌词源</button>}{isDesktop && <button type="button" aria-pressed={tab === 'about'} onClick={() => changeTab('about')}><Info size={17}/> 关于</button>}{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>changeTab('about')}>关于</button>}</div>
+
+      {tab === 'about' && isAndroid ? <AboutPanel updates={updates}/> : tab === 'about' && isDesktop ? <DesktopAboutSettings canUpdate={canUpdateDesktop} updateDrop={updateDrop} onUpdateDropHandled={onUpdateDropHandled}/> : tab === 'sources' && isDesktop ? <DesktopLyricSourcesPanel onDirtyChange={setSourcesDirty}/> : tab === 'profile' && isAndroid ? <div className="settings-content"><ProfilePanel editable /></div> : tab === 'reading' && !isAndroid ? readingSettings : tab === 'general' && isDesktop ? <DesktopGeneralSettings/> : tab === 'theme' && isDesktop ? <div className="settings-content desktop-theme-settings desktop-appearance-settings">
         <h3>应用主题色</h3><p className="settings-description">选择一套配色，让学习界面更合你的心意。</p>
         <div className="desktop-theme-grid" aria-label="应用主题色">{DESKTOP_THEMES.map(theme => <button key={theme.id} type="button" className="desktop-theme-card" data-theme-card={theme.id} aria-pressed={desktopTheme === theme.id} onClick={() => onDesktopThemeChange(theme.id)} style={{ '--swatch-bg': theme.colors.surface, '--swatch-accent': theme.colors.accent, '--swatch-soft': theme.colors.soft }}>
           <span className="desktop-theme-swatches" aria-hidden="true"><i/><i/><i/></span><b>{theme.name}</b><small>{theme.description}</small>{desktopTheme === theme.id && <Check className="desktop-theme-check" size={16} aria-hidden="true"/>}
         </button>)}</div>
         <div className="desktop-theme-sample" aria-label="主题阅读预览"><span>READING PREVIEW</span><p lang="ja"><ruby>風<rt>かぜ</rt></ruby>を<ruby>待<rt>ま</rt></ruby>っている</p><small>等候一阵风，也等候下一句。</small><div><span>已掌握 3 / 12 句</span><button type="button" onClick={onClose}>继续学习</button></div></div>
         <p className="settings-note">切换后立即生效，自动保存。主题不改变歌词内容、读音修正或学习进度。</p>
+        <section className="desktop-settings-section" aria-label="字体设置"><DesktopFontSettings value={desktopFont} onChange={onDesktopFontChange}/></section>
+        <section className="desktop-settings-section" aria-label="注音显示">{readingSettings}</section>
       </div> : tab === 'data' ? <div className="settings-content">
         {/* 安卓端按用户要求暂时移除网站导入导出入口；网页端保留原数据管理。 */}
         {!isAndroid && <>

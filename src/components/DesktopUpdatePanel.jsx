@@ -77,11 +77,12 @@ export default function DesktopUpdatePanel({ updateDrop, onUpdateDropHandled }) 
       <button type="button" className="settings-primary" disabled={busy} onClick={check}><RefreshCw size={16}/> {busy && !progress ? '检查中…' : '检查更新'}</button>
       {release && <div className="settings-data-card desktop-update-result"><div>
         <h4>{release.available ? `发现新版 ${release.version}` : `当前版本 ${release.current} 已是最新版本`}</h4>
+        {release.provider && <p>优先下载来源：{release.provider}</p>}{release.notice && <p>{release.notice}</p>}
         {release.available && <p>{release.mode === 'incremental' ? '优先使用增量包' : release.mode === 'full' ? '下载完整包自动更新' : '此版本需手动使用完整包'} · 下载约 {size(release.downloadBytes)}</p>}
         {release.notes && <p className="desktop-update-notes">{release.notes}</p>}
       </div>{release.available && release.mode !== 'full-manual' && <button type="button" disabled={busy || progress?.phase === 'ready'} onClick={prepare}><Download size={16}/> 下载并校验</button>}</div>}
       {release?.available && release.mode === 'full-manual' && <p className="settings-note">当前版本没有对应的增量包。请从官方 Windows Release 下载完整 ZIP，关闭 UTA 后替换程序文件，并保留 uta-data。</p>}
-      <p className="settings-note">在线检查需要访问 GitHub；网络不便时可切换到本地增量包模式。</p>
+      <p className="settings-note">在线更新优先从 Gitee 下载，失败后自动切换 GitHub。完整包分片会自动合并并校验，也可使用本地增量包模式。</p>
     </> : <>
       <div className={`desktop-update-dropzone${dragging ? ' dragging' : ''}${busy ? ' busy' : ''}`} role="region" aria-label="拖放增量包"
         onDragOver={event => { event.preventDefault(); event.stopPropagation(); if (!busy) setDragging(true) }}
@@ -95,6 +96,7 @@ export default function DesktopUpdatePanel({ updateDrop, onUpdateDropHandled }) 
     </>}
     {progress && <div className="desktop-update-progress" role="status">
       <span>{phaseLabels[progress.phase] || '正在准备更新'}{Number.isFinite(progress.percent) ? ` · ${progress.percent}%` : ''}</span>
+      {progress.provider && <small>下载来源：{progress.provider}{progress.switching ? ' · 已自动切换' : ''}</small>}
       {progress.filename && <small className="desktop-update-filename">{progress.filename}</small>}
       {Number.isFinite(progress.percent) && <progress value={progress.percent} max="100"/>}
       {progress.reason && <small>原因：{progress.reason}</small>}

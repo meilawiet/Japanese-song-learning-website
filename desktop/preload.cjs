@@ -17,6 +17,13 @@ contextBridge.exposeInMainWorld('utaDesktop', Object.freeze({
   loadLyricsSources: () => ipcRenderer.invoke('uta:lyrics:sources:load'),
   saveLyricsSources: sources => ipcRenderer.invoke('uta:lyrics:sources:save', sources),
   setUnsavedDraft: (id, dirty) => ipcRenderer.invoke('uta:unsaved-draft', id, dirty),
+  loadCloseBehavior: () => ipcRenderer.invoke('uta:close-behavior:load'),
+  saveCloseBehavior: value => ipcRenderer.invoke('uta:close-behavior:save', value),
+  onCloseBehaviorChanged: callback => {
+    const listener = (_event, value) => callback(value);
+    ipcRenderer.on('uta:close-behavior:changed', listener);
+    return () => ipcRenderer.removeListener('uta:close-behavior:changed', listener);
+  },
   beginRestoreSnapshot: () => ipcRenderer.invoke('uta:snapshot:begin'),
   appendRestoreSnapshot: (id, bytes) => ipcRenderer.invoke('uta:snapshot:append', id, bytes),
   finishRestoreSnapshot: (id) => ipcRenderer.invoke('uta:snapshot:finish', id),
