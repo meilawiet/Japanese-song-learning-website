@@ -22,17 +22,17 @@
     }
   },
   "lastPublished": {
-    "version": "1.5.1",
-    "versionCode": 25,
-    "tag": "v1.5.1",
-    "branch": "android-dev",
-    "commit": "9e3cb62bf9ecc8b854107257271db1c787e3916d",
-    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.1",
-    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.1",
-    "asset": "UTA-Android-1.5.1.apk",
-    "size": 31331739,
-    "sha256": "a801f5508745ba19c1a8d385f26ab76e4dbf0b470b8c05d2132f879da42f3940",
-    "publishedOn": "2026-10-17"
+    "version": "1.5.2",
+    "versionCode": 26,
+    "commit": "bcb6b06adad2d2a0db86a41399d92b93d7de1fd5",
+    "tag": "v1.5.2",
+    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.2",
+    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.2",
+    "asset": "UTA-Android-1.5.2.apk",
+    "size": 31352299,
+    "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+    "publishedOn": "2026-10-19",
+    "branch": "android-dev"
   },
   "currentLocalInstall": {
     "installedOn": "2026-10-19",
@@ -60,7 +60,7 @@
       "FEAT-20261019-037"
     ],
     "lastRemindedOn": "2026-10-19",
-    "userDecision": "用户2026-10-19明确授权打包发布1.5.2并上传代码：GitHub android-dev源码及APK，Gitee仅同一APK；本批十项在两端及提交附件核验完成后再结转。"
+    "userDecision": "用户明确授权本批发布1.5.2并上传代码，GitHub android-dev源码+APK与Gitee仅同APK已成功；十项全部结转，待发布0/10。后续达到10项提醒并展示全部具体清单；下一批发布仍需当批授权。"
   },
   "items": [
     {
@@ -1191,7 +1191,7 @@
         "后续授权安装最新手动拆并版本：小米Android15主应用保留数据-r覆盖成功，冷启动Status ok，手机base.apk SHA256核对一致；未公开发布或上传代码。此为安装核验，不代表手动拆并已完成真机交互测试",
         "后续移除已撤销的多源功能后，219/219剩余检查及原生构建通过；本项仍保留，最新包保留数据覆盖小米成功，冷启动与手机APK摘要核验通过。"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-17",
       "completedOn": "2026-10-17",
       "localBuild": {
@@ -1217,6 +1217,19 @@
         "sha256": "cb2fbebcdfb60e6080de43f435fc105b152dcee91f85fde8f0ae5feb93c186fe",
         "method": "用户明确要求移除多源功能后覆盖手机；adb install --no-incremental -r返回Success，冷启动Status ok，手机base.apk摘要与无多源补全的最新本地包一致，未清除数据",
         "published": false
+      },
+      "release": {
+        "version": "1.5.2",
+        "versionCode": 26,
+        "commit": "bcb6b06adad2d2a0db86a41399d92b93d7de1fd5",
+        "tag": "v1.5.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.2",
+        "asset": "UTA-Android-1.5.2.apk",
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "publishedOn": "2026-10-19",
+        "verification": "两平台正式版本、目标提交、附件及GitHub asset digest一致；发布器匿名完整下载Gitee附件并核对SHA256成功；真实更新接口1.5.1优先选择Gitee v1.5.2，1.5.2显示最新版"
       }
     },
     {
@@ -1237,7 +1250,7 @@
         "后续授权安装最新手动拆并版本：小米Android15主应用保留数据-r覆盖成功，冷启动Status ok，手机base.apk SHA256核对一致；未公开发布或上传代码。此为安装核验，不代表手动拆并已完成真机交互测试",
         "后续移除已撤销的多源功能后，219/219剩余检查及原生构建通过；本项仍保留，最新包保留数据覆盖小米成功，冷启动与手机APK摘要核验通过。"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-17",
       "completedOn": "2026-10-17",
       "localBuild": {
@@ -1263,13 +1276,26 @@
         "sha256": "cb2fbebcdfb60e6080de43f435fc105b152dcee91f85fde8f0ae5feb93c186fe",
         "method": "用户明确要求移除多源功能后覆盖手机；adb install --no-incremental -r返回Success，冷启动Status ok，手机base.apk摘要与无多源补全的最新本地包一致，未清除数据",
         "published": false
+      },
+      "release": {
+        "version": "1.5.2",
+        "versionCode": 26,
+        "commit": "bcb6b06adad2d2a0db86a41399d92b93d7de1fd5",
+        "tag": "v1.5.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.2",
+        "asset": "UTA-Android-1.5.2.apk",
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "publishedOn": "2026-10-19",
+        "verification": "两平台正式版本、目标提交、附件及GitHub asset digest一致；发布器匿名完整下载Gitee附件并核对SHA256成功；真实更新接口1.5.1优先选择Gitee v1.5.2，1.5.2显示最新版"
       }
     },
     {
       "id": "FEAT-20261017-029",
       "type": "feature",
       "title": "停用兔小巢反馈，首页弹窗仅邀请加入QQ交流群",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-17",
       "completedOn": "2026-10-17",
       "summary": "移除关于页及首页弹窗的反馈入口，前端不再注册或调用UtaFeedback；Android不再注册反馈插件及Activity。仅保留QQ群邀请文案、复制群号、关闭及不再提醒，原提醒周期和勿扰逻辑不变。旧代码保留注释，不新接邮件等第三方服务。",
@@ -1314,6 +1340,19 @@
         "sha256": "cb2fbebcdfb60e6080de43f435fc105b152dcee91f85fde8f0ae5feb93c186fe",
         "method": "用户明确要求移除多源功能后覆盖手机；adb install --no-incremental -r返回Success，冷启动Status ok，手机base.apk摘要与无多源补全的最新本地包一致，未清除数据",
         "published": false
+      },
+      "release": {
+        "version": "1.5.2",
+        "versionCode": 26,
+        "commit": "bcb6b06adad2d2a0db86a41399d92b93d7de1fd5",
+        "tag": "v1.5.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.2",
+        "asset": "UTA-Android-1.5.2.apk",
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "publishedOn": "2026-10-19",
+        "verification": "两平台正式版本、目标提交、附件及GitHub asset digest一致；发布器匿名完整下载Gitee附件并核对SHA256成功；真实更新接口1.5.1优先选择Gitee v1.5.2，1.5.2显示最新版"
       }
     },
     {
@@ -1365,7 +1404,7 @@
       "id": "FIX-20261018-031",
       "type": "bugfix",
       "title": "修复旧WebView启动空白并提供独立启动失败诊断",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-18",
       "completedOn": "2026-10-18",
       "summary": "公开1.5.1在Chromium89复现启动时Object.hasOwn缺失致米色空白。入口先加载所需core-js补丁并安全补齐UUID，安卓构建面向Chrome80、动态视口单位提供旧值回退且不请求Google在线字体；增加独立ES5启动守卫和React错误边界，失败可重试/手动复制最小诊断，不清理或上传用户数据。",
@@ -1409,7 +1448,20 @@
         "scope": "启动问题恢复由用户转述确认，其他功能及所有厂商机型未在本次扩大验证",
         "publicationDecision": "保留为一项更新内容，等待后续一起发包；不是本次公开发布或上传代码授权"
       },
-      "releaseNote": "修复部分旧网页内核设备启动空白的问题，新增启动异常提示与诊断信息。"
+      "releaseNote": "修复部分旧网页内核设备启动空白的问题，新增启动异常提示与诊断信息。",
+      "release": {
+        "version": "1.5.2",
+        "versionCode": 26,
+        "commit": "bcb6b06adad2d2a0db86a41399d92b93d7de1fd5",
+        "tag": "v1.5.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.2",
+        "asset": "UTA-Android-1.5.2.apk",
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "publishedOn": "2026-10-19",
+        "verification": "两平台正式版本、目标提交、附件及GitHub asset digest一致；发布器匿名完整下载Gitee附件并核对SHA256成功；真实更新接口1.5.1优先选择Gitee v1.5.2，1.5.2显示最新版"
+      }
     },
     {
       "id": "FEAT-20261019-032",
@@ -1433,7 +1485,7 @@
         "228/228 Node检查通过；验证上下位置、汉字上方假名、人工读音不变及按歌曲备份往返，非法位置被拒绝",
         "Chromium89真实内核392px视口验证双注音上下坐标、无横向溢出、逐句/跟唱共用与刷新持久化；小米主应用更多面板位置入口核对通过，未改用户原设置"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-19",
       "completedOn": "2026-10-19",
       "localBuild": {
@@ -1459,6 +1511,19 @@
         "sha256": "af21d98849a4e890356cf847b7c0a4e04f951508dda642ee99b132f3f3658438",
         "method": "用户本轮明确授权覆盖；adb install --no-incremental -r返回Success，冷启动Status ok，手机base.apk摘要与本地一致；原有数据保留，核对更多的位置控件及导入粘贴文本框，未修改现有歌曲",
         "published": false
+      },
+      "release": {
+        "version": "1.5.2",
+        "versionCode": 26,
+        "commit": "bcb6b06adad2d2a0db86a41399d92b93d7de1fd5",
+        "tag": "v1.5.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.2",
+        "asset": "UTA-Android-1.5.2.apk",
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "publishedOn": "2026-10-19",
+        "verification": "两平台正式版本、目标提交、附件及GitHub asset digest一致；发布器匿名完整下载Gitee附件并核对SHA256成功；真实更新接口1.5.1优先选择Gitee v1.5.2，1.5.2显示最新版"
       }
     },
     {
@@ -1478,7 +1543,7 @@
         "228/228 Node检查通过；实际LRC文件解析保留原文/时间/来源注音/译文，普通文本无时间，空白/超长/无正文均报错",
         "Chromium89手机尺寸完整验证空白提示、折叠保留、LRC预览并保存、已有歌曲替换普通文本且保留ID、草稿重置、解析失败保留输入；小米正式应用粘贴面板及原生EditText入口核对通过，未导入测试歌曲到主应用"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-19",
       "completedOn": "2026-10-19",
       "localBuild": {
@@ -1504,6 +1569,19 @@
         "sha256": "af21d98849a4e890356cf847b7c0a4e04f951508dda642ee99b132f3f3658438",
         "method": "用户本轮明确授权覆盖；adb install --no-incremental -r返回Success，冷启动Status ok，手机base.apk摘要与本地一致；原有数据保留，核对更多的位置控件及导入粘贴文本框，未修改现有歌曲",
         "published": false
+      },
+      "release": {
+        "version": "1.5.2",
+        "versionCode": 26,
+        "commit": "bcb6b06adad2d2a0db86a41399d92b93d7de1fd5",
+        "tag": "v1.5.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.2",
+        "asset": "UTA-Android-1.5.2.apk",
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "publishedOn": "2026-10-19",
+        "verification": "两平台正式版本、目标提交、附件及GitHub asset digest一致；发布器匿名完整下载Gitee附件并核对SHA256成功；真实更新接口1.5.1优先选择Gitee v1.5.2，1.5.2显示最新版"
       }
     },
     {
@@ -1523,7 +1601,7 @@
         "228/228 Node检查通过；可控时钟验证持续拖动超5秒、松手/惯性后完整等待、滚轮重复延长、程序滚动不触发、离页清理不回调",
         "Chromium89真实CDP触摸滑动及滚轮验证60行连续静音播放：跨句不拉回、继续滑动重计5秒、空闲后恢复居中，无页面异常。该交互为浏览器验证；小米本轮只做覆盖安装、冷启动及新增入口核对，未在主应用改歌/播放用户歌曲"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-19",
       "completedOn": "2026-10-19",
       "localBuild": {
@@ -1549,13 +1627,26 @@
         "sha256": "af21d98849a4e890356cf847b7c0a4e04f951508dda642ee99b132f3f3658438",
         "method": "用户本轮明确授权覆盖；adb install --no-incremental -r返回Success，冷启动Status ok，手机base.apk摘要与本地一致；原有数据保留，核对更多的位置控件及导入粘贴文本框，未修改现有歌曲",
         "published": false
+      },
+      "release": {
+        "version": "1.5.2",
+        "versionCode": 26,
+        "commit": "bcb6b06adad2d2a0db86a41399d92b93d7de1fd5",
+        "tag": "v1.5.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.2",
+        "asset": "UTA-Android-1.5.2.apk",
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "publishedOn": "2026-10-19",
+        "verification": "两平台正式版本、目标提交、附件及GitHub asset digest一致；发布器匿名完整下载Gitee附件并核对SHA256成功；真实更新接口1.5.1优先选择Gitee v1.5.2，1.5.2显示最新版"
       }
     },
     {
       "id": "FEAT-20261019-035",
       "type": "feature",
       "title": "单句时间戳调试：固定渐变调节条、即时保存及原点重置",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-19",
       "completedOn": "2026-10-19",
       "summary": "更多新增调试时间戳模式，保留翻译开关；开启后隐藏逐句掌握/解析、停用自动居中及长按编辑/双击选段。点击歌词选中当前句，右侧固定条两端较实、中间更透明，上+0.2s延后，下-0.2s提前，中间重置恢复该句首次成功调试前的时间。每次操作原子写入，无保存/撤销/取消按钮；原点随歌曲/备份保留，重启或普通资料编辑后仍可重置。只改所选句时间，保留其他句、音频、原文、来源注音及学习记录；负时间、相邻越界、音频边界、并发原文或时间变动会提示，本次失败保留最后成功值。项目歌曲使用绑定原文与原时间的设置覆盖。",
@@ -1601,7 +1692,20 @@
         "method": "沿用本轮覆盖授权，adb install --no-incremental -r返回Success；冷启动Status ok，手机base.apk摘要一致，真机开关和三按钮/隐藏掌握操作核对通过；未调整或播放用户歌曲，原有数据保留",
         "published": false
       },
-      "releaseNote": "新增单句时间戳调试模式，支持0.2秒提前/延后、自动保存与原时间重置。"
+      "releaseNote": "新增单句时间戳调试模式，支持0.2秒提前/延后、自动保存与原时间重置。",
+      "release": {
+        "version": "1.5.2",
+        "versionCode": 26,
+        "commit": "bcb6b06adad2d2a0db86a41399d92b93d7de1fd5",
+        "tag": "v1.5.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.2",
+        "asset": "UTA-Android-1.5.2.apk",
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "publishedOn": "2026-10-19",
+        "verification": "两平台正式版本、目标提交、附件及GitHub asset digest一致；发布器匿名完整下载Gitee附件并核对SHA256成功；真实更新接口1.5.1优先选择Gitee v1.5.2，1.5.2显示最新版"
+      }
     },
     {
       "id": "FIX-20261019-036",
@@ -1616,7 +1720,7 @@
         "237/237 Node检查通过；Chromium89及Edge155验证更多/倍速弹窗盖住调节条与错误提示，翻译与时间按钮/关闭按钮可操作，弹窗操作不修改原创歌词时间",
         "小米真机开启调试后再开更多，点击右端原遮挡区域能正确关闭调试，恢复原逐句操作；最新包原证书v2/v3、调试关、保留数据覆盖及手机摘要核验成功"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-19",
       "completedOn": "2026-10-19",
       "localBuild": {
@@ -1642,6 +1746,19 @@
         "sha256": "034a6201f50b6877d5f6e23d0fc8b24e4301cc33d030393e8dc0e0fa4c1f2f24",
         "method": "沿用本轮覆盖授权，-r保留数据覆盖Success，冷启动Status ok，手机base.apk摘要一致；真机验证两组同行、复核说明删除、调试中再次打开更多并点击右端原遮挡区域可退出模式，未调整用户歌词时间或主动调用AI",
         "published": false
+      },
+      "release": {
+        "version": "1.5.2",
+        "versionCode": 26,
+        "commit": "bcb6b06adad2d2a0db86a41399d92b93d7de1fd5",
+        "tag": "v1.5.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.2",
+        "asset": "UTA-Android-1.5.2.apk",
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "publishedOn": "2026-10-19",
+        "verification": "两平台正式版本、目标提交、附件及GitHub asset digest一致；发布器匿名完整下载Gitee附件并核对SHA256成功；真实更新接口1.5.1优先选择Gitee v1.5.2，1.5.2显示最新版"
       }
     },
     {
@@ -1661,7 +1778,7 @@
         "Chromium89 392px与Edge155 360px/130%字体真实按钮坐标检查：显示选项同Y，AI主按钮同Y同高度，无横向溢出，说明不渲染；可切换翻译和调试，未调用付费AI",
         "小米原生UI树核对两组按钮分别同行（含既有生成中状态），说明小字不存在；实际右端点击成功退出调试，保留用户歌曲与时间，未点击AI操作。原签名包覆盖/冷启动/摘要成功"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-19",
       "completedOn": "2026-10-19",
       "localBuild": {
@@ -1687,6 +1804,19 @@
         "sha256": "034a6201f50b6877d5f6e23d0fc8b24e4301cc33d030393e8dc0e0fa4c1f2f24",
         "method": "沿用本轮覆盖授权，-r保留数据覆盖Success，冷启动Status ok，手机base.apk摘要一致；真机验证两组同行、复核说明删除、调试中再次打开更多并点击右端原遮挡区域可退出模式，未调整用户歌词时间或主动调用AI",
         "published": false
+      },
+      "release": {
+        "version": "1.5.2",
+        "versionCode": 26,
+        "commit": "bcb6b06adad2d2a0db86a41399d92b93d7de1fd5",
+        "tag": "v1.5.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.2",
+        "asset": "UTA-Android-1.5.2.apk",
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "publishedOn": "2026-10-19",
+        "verification": "两平台正式版本、目标提交、附件及GitHub asset digest一致；发布器匿名完整下载Gitee附件并核对SHA256成功；真实更新接口1.5.1优先选择Gitee v1.5.2，1.5.2显示最新版"
       }
     }
   ]
