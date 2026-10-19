@@ -3,6 +3,9 @@ import { correctionKey } from './ruby.js'
 // 原导入：import { prepareLyricReadings, tokenReading } from './lyricReadings.js'
 import { isLatinLyric, prepareLyricReadings, tokenReading } from './lyricReadings.js'
 
+// 旧歌曲缺省沿用上方，未知设置不能影响歌词显示。
+export function normalizeRomajiPosition(value) { return value === 'below' ? 'below' : 'above' }
+
 export function normalizeReadingStyle(style) {
   // 原二选一：return style === 'romaji' ? 'romaji' : 'hiragana'
   // 同时显示作为独立设置持久保存，旧设置仍然兼容。

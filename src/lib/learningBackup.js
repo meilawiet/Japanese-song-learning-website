@@ -1,3 +1,5 @@
+// 项目歌曲的单句时间覆盖参与备份校验；本地歌曲的时间直接保存在歌曲记录。
+import { validTimeOverrides } from './timestampTuning.js'
 const SIGNATURE = 'UTA-LEARNING-BACKUP\n'
 const VERSION = 1
 const MAX_MANIFEST_BYTES = 16 * 1024 * 1024
@@ -33,6 +35,9 @@ function checkState(manifest) {
   if (progress.songSettings != null && (!isRecord(progress.songSettings) || Object.values(progress.songSettings).some(value =>
     !isRecord(value) || value.language != null && !['zh','ja','ko','other'].includes(value.language)
     || value.readingStyle != null && !['none','hiragana','romaji','both'].includes(value.readingStyle)
+    // 新位置偏好随备份/云同步保存，兼容没有此字段的旧数据。
+    || value.romajiPosition != null && !['above','below'].includes(value.romajiPosition)
+    || value.timeOverrides != null && !validTimeOverrides(value.timeOverrides)
     || ['showTranslation','showSourceReadings','showManualReadings'].some(key=>value[key]!=null&&typeof value[key]!=='boolean')))) throw new Error('备份中的歌曲语言或显示选项无效。')
   if (manifest.artworkOverrides != null && (!isRecord(manifest.artworkOverrides)
     || Object.values(manifest.artworkOverrides).some((item) => !isRecord(item)
@@ -104,6 +109,8 @@ function checkSong(song) {
     || !Number.isSafeInteger(line.id) || typeof line.text !== 'string' || !line.text.trim() || line.text.length > 500
     // 可选罗马音随歌曲备份，兼容不含此字段的旧备份。
     || (line.romaji != null && (typeof line.romaji !== 'string' || line.romaji.length > 1000))
+    // 调试原点随歌曲备份；兼容没有该字段的旧文件，不允许损坏原点进入重置操作。
+    || line.timestampOriginalStart != null && (!Number.isFinite(line.timestampOriginalStart) || line.timestampOriginalStart<0)
     // 原来必须有限 start；null 明确表示未设置，其他非法时间仍拒绝。
     || line.start!==null&&(!Number.isFinite(line.start)||line.start<0) || typeof line.translation !== 'string' || line.translation.length > 1000)
     || new Set(song.lines.map((line) => line.id)).size !== song.lines.length) {

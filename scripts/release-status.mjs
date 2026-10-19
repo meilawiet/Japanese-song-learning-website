@@ -2,7 +2,9 @@ import { readFileSync } from 'node:fs';
 
 // 中文说明：只读取本地清单并报告数量；本脚本不修改文件、不联网、不触发发布或推送。
 const backlog = JSON.parse(readFileSync(new URL('../RELEASE_BACKLOG.json', import.meta.url), 'utf8'));
-const allowedStatuses = new Set(['planned', 'in_progress', 'verified', 'released']);
+// 用户撤销尚未发布的功能时保留历史记录，但不再将该项计入待发布数量。
+// 原状态集合：const allowedStatuses = new Set(['planned', 'in_progress', 'verified', 'released']);
+const allowedStatuses = new Set(['planned', 'in_progress', 'verified', 'released', 'cancelled']);
 if (!Number.isInteger(backlog.reminderThreshold) || backlog.reminderThreshold < 1 || !Array.isArray(backlog.items)) {
   throw new Error('累计清单格式错误：需要正整数提醒阈值及条目数组。');
 }

@@ -17,6 +17,45 @@ before(async () => {
 })
 after(async () => { await server?.close() })
 
+// 紧凑布局仍保留已有解析的管理入口、生成中禁用及调用费用提示。
+test('更多紧凑操作保留独立开关、解析管理与生成状态',async()=>{
+  const Actions=(await server.ssrLoadModule('/src/components/StudyMoreActions.jsx')).default
+  const props={language:'ja',showTranslation:true,onTranslation(){},timestampEditing:true,onTimestampEditing(){},ready:2,total:10,generating:true,hasAnalyses:true,onRegenerate(){},onDeleteAnalyses(){}}
+  const html=renderToStaticMarkup(createElement(Actions,props))
+  assert.match(html,/aria-label="显示翻译" aria-pressed="true"/)
+  assert.match(html,/aria-label="调试时间戳模式" aria-pressed="true"/)
+  assert.match(html,/disabled=""[^>]*>正在后台生成/)
+  assert.match(html,/disabled=""[^>]*>重新生成整曲解析/)
+  assert.match(html,/删除整曲解析/);assert.match(html,/可能产生调用费用/)
+  assert.doesNotMatch(html,/查看读音、分词建议及历史记录/)
+  const other=renderToStaticMarkup(createElement(Actions,{...props,language:'other'}))
+  assert.doesNotMatch(other,/复核歌词/);assert.match(other,/生成/)
+})
+
+// 上下位置只改显示布局，来源读音、校正及汉字假名必须完全一致。
+test('逐句和跟唱支持上下罗马音且保留汉字上方假名及人工读音', async () => {
+  const tokens = [{index:0,surface:'伝え',reading:'つたえ'},{index:1,surface:'は',reading:'は',part_of_speech:'助詞'}]
+  const corrections = {'s:0:0':'つたえ'}, snapshot = JSON.stringify({tokens,corrections})
+  const song = {id:'s',title:'原创',language:'ja',lines:[{id:0,text:'伝えは'}]}
+  for (const position of ['above','below']) {
+    for (const readingStyle of ['both','romaji','hiragana','none']) {
+      const props = {corrections,readingStyle,romajiPosition:position}
+      const lesson = renderToStaticMarkup(createElement(AnnotatedLine,{...props,tokens,songId:'s',lineId:0,mode:readingStyle==='none'?'original':'reading',interactive:false}))
+      const sing = renderToStaticMarkup(createElement(AndroidSingAlong,{...props,song,annotations:[{id:0,tokens}],audioReady:true}))
+      for (const html of [lesson,sing]) {
+        assert.equal(html.includes('romaji-below'),position==='below'&&readingStyle!=='none')
+        if (readingStyle==='both') {
+          assert.match(html,/grid-row:1[^>]*>つた/)
+          assert.match(html,new RegExp(`word-aligned-romaji[^>]*grid-row:${position==='below'?3:2}[^>]*>tsutae`))
+          assert.match(html,new RegExp(`grid-row:${position==='below'?2:3}[^>]*>伝`))
+        }
+        if (readingStyle==='none') assert.doesNotMatch(html,/word-aligned-(romaji|kana)/)
+      }
+    }
+  }
+  assert.equal(JSON.stringify({tokens,corrections}),snapshot)
+})
+
 // 主列表只列字体名称；颜真卿内置，其余字体及思源八档都显示按需下载入口。
 test('主题字体列表显示所有字体粗细并去除刻明朝', async () => {
   const ThemePanel = (await server.ssrLoadModule('/src/components/ThemePanel.jsx')).default

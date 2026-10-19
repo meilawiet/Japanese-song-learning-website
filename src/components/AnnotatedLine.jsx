@@ -14,6 +14,8 @@ export default function AnnotatedLine({
   mode,
   readingStyle = 'hiragana',
   importedRomaji = '',
+  // 仅安卓静态歌词使用位置偏好；旧网页交互仍按原有 ruby 渲染。
+  romajiPosition = 'above',
   selectedIndex,
   selectionRange,
   showSelectionAction,
@@ -34,7 +36,7 @@ export default function AnnotatedLine({
   if (!tokens?.length) return <span className="auto-lyric">{plainLyric(text) || '正在生成自动读音…'}</span>
 
   // 安卓逐句取消旧选词/拖选入口，静态注音仍使用同一人工校正数据；整句点击由父层播放。
-  if (!interactive) return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>{mode === 'reading' ? <ReadingLyric stacked tokens={tokens} corrections={corrections} songId={songId} lineId={lineId} readingStyle={readingStyle} importedRomaji={importedRomaji} /> : plainLyric(tokens.map(token => token.surface).join(''))}</span>
+  if (!interactive) return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>{mode === 'reading' ? <ReadingLyric romajiPosition={romajiPosition} stacked tokens={tokens} corrections={corrections} songId={songId} lineId={lineId} readingStyle={readingStyle} importedRomaji={importedRomaji} /> : plainLyric(tokens.map(token => token.surface).join(''))}</span>
 
   return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>
     {tokens.map((token) => {

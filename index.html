@@ -4,14 +4,36 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f5f2eb" />
+    <meta name="uta-version" content="%UTA_APP_VERSION%" />
     <meta name="description" content="UTA：通过逐句跟唱学习日语歌词的发音与词汇。" />
     <title>UTA｜用日语歌学会日语</title>
+    <!-- 守卫在模块和在线资源之前执行；只在启动失败时展示系统字体提示页。 -->
+    <!-- UTA_STARTUP_GUARD -->
+    <style>
+      .uta-startup-panel[hidden],#uta-starting[hidden] { display:none !important; }
+      #uta-starting { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; margin:0; background:#f5f2eb; color:#253b32; font:16px/1.8 sans-serif; }
+      .uta-startup-panel { position:fixed; z-index:9999; inset:0; box-sizing:border-box; padding:28px 20px; overflow:auto; background:#f5f2eb; color:#253b32; font:16px/1.8 sans-serif; }
+      .uta-startup-panel>div { max-width:480px; margin:10vh auto; padding:24px; border:1px solid #dbe2d3; border-radius:20px; background:white; }
+      .uta-startup-panel h1 { margin:0 0 16px; font:700 24px/1.5 sans-serif; }
+      .uta-startup-panel button { min-height:44px; margin:8px 8px 8px 0; padding:10px 14px; border:1px solid #426550; border-radius:12px; background:white; color:#426550; font:16px/1.5 sans-serif; }
+      .uta-startup-panel button:first-child { background:#426550; color:white; }
+      .uta-startup-panel textarea { box-sizing:border-box; width:100%; min-height:160px; margin-top:12px; padding:10px; border:1px solid #bfc8bf; border-radius:10px; font:13px/1.7 sans-serif; color:#253b32; background:white; }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Serif+JP:wght@500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>
+    <!-- 此提示独立于 React，脚本解析/加载失败时仍能操作。 -->
+    <p id="uta-starting" role="status">正在启动 UTA…</p>
+    <section id="uta-startup-failure" class="uta-startup-panel" role="alert" hidden>
+      <div><h1>UTA 暂时无法启动</h1><p>应用界面未能正常加载，请先点击重试。</p><p>如果仍无法打开，可在系统应用商店检查 WebView 或系统浏览器更新（如设备提供），并将诊断信息发给开发者。</p>
+        <div><button id="uta-startup-retry" type="button">重试</button><button id="uta-startup-copy" type="button">复制诊断信息</button></div>
+        <p id="uta-startup-notice" role="status"></p><textarea id="uta-startup-diagnostics" aria-label="启动诊断信息" readonly hidden></textarea>
+        <noscript>当前网页运行环境未启用 JavaScript，无法加载应用。</noscript>
+      </div>
+    </section>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

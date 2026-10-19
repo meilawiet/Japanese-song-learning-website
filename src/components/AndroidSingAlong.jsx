@@ -3,21 +3,27 @@
 import { useEffect, useRef, useState } from 'react'
 import { MoreHorizontal, RotateCcw, X } from 'lucide-react'
 import ReadingStyleOptions from './ReadingStyleOptions'
+// 兼容旧独立跟唱入口，和逐句共用歌曲位置设置。
+import RomajiPositionOptions from './RomajiPositionOptions'
 import { lineReading } from '../lib/readingDisplay'
 import { SongCoverButton } from './AndroidLessonHeader'
 import ReadingLyric from './ReadingLyric'
+// 独立跟唱入口沿用同样的5秒手动浏览保护。
+import useManualLyricScroll from '../lib/useManualLyricScroll'
 
 // 跟唱页只保留选曲、连续播放和歌词定位，避免复用逐句学习页的解析工具栏。
-export default function AndroidSingAlong({ song, songs, artwork, audioReady, audioPresent, playing, currentLineId, onSelectSong, onPlayFromStart, onPlayFromLine, onToggle, error, onChoose, annotations, corrections, readingStyle, onReadingStyle }) {
+export default function AndroidSingAlong({ song, songs, artwork, audioReady, audioPresent, playing, currentLineId, onSelectSong, onPlayFromStart, onPlayFromLine, onToggle, error, onChoose, annotations, corrections, readingStyle, onReadingStyle, romajiPosition='above', onRomajiPosition }) {
   // 跟唱更多菜单只提供注音选择；系统返回先关闭菜单。
   const [more, setMore] = useState(false)
   const container = useRef(null)
+  const manualLyricScroll = useManualLyricScroll(true, song.id, '.android-sing')
   // 当前句变化或继续播放时居中；暂停不抢滚动，关闭菜单后恢复跟随。
   useEffect(() => {
     if (!playing || more || currentLineId == null) return undefined
     const follow = () => {
       // 弹窗开启时不滚动背后的歌词；字号变化与窗口变化后重新计算位置。
-      if (document.body.style.overflow === 'hidden') return
+      // 原条件：if (document.body.style.overflow === 'hidden') return
+      if (manualLyricScroll.current?.paused() || document.body.style.overflow === 'hidden') return
       const list = container.current?.querySelector('.android-sing-lyrics')
       const first = list?.querySelector('button')
       if (first) {
@@ -30,8 +36,11 @@ export default function AndroidSingAlong({ song, songs, artwork, audioReady, aud
     }
     follow()
     window.addEventListener('resize', follow)
+    window.addEventListener('uta:study-follow', follow)
     window.addEventListener('uta:appearance-changed', follow)
-    return () => { window.removeEventListener('resize', follow); window.removeEventListener('uta:appearance-changed', follow) }
+    // 原清理只移除resize和主题事件；新增手动浏览结束后的跟随事件。
+    // return () => { window.removeEventListener('resize', follow); window.removeEventListener('uta:appearance-changed', follow) }
+    return () => { window.removeEventListener('resize', follow); window.removeEventListener('uta:appearance-changed', follow); window.removeEventListener('uta:study-follow', follow) }
   }, [song.id, currentLineId, playing, more, readingStyle])
   useEffect(() => {
     if (!more) return undefined
@@ -48,7 +57,7 @@ export default function AndroidSingAlong({ song, songs, artwork, audioReady, aud
     <p className="android-sing-hint">{audioReady ? '点一句开始跟唱；再点正在唱的句子暂停，再点从句首继续。' : audioPresent ? '当前歌词缺少时间戳，请在歌曲编辑中填写时间，或重新上传带时间戳的歌词。' : '这首歌仅有歌词，请在歌曲编辑中补充音频。'}</p>
     {error && <p className="android-sing-error" role="alert">{error}</p>}
     {/* 旧版渲染 line.text 和 line.translation；跟唱隐藏译文，并实时读取逐句页的人工注音。 */}
-    <ol className="android-sing-lyrics">{song.lines.map((line, index) => <li key={line.id}><button className={currentLineId === line.id ? 'current' : ''} type="button" disabled={!audioReady} onClick={() => onPlayFromLine(line.id)} aria-label={`从第 ${index + 1} 句开始跟唱`}><span className="android-sing-number">{String(index + 1).padStart(2, '0')}</span><span className="android-sing-text"><strong lang="ja"><ReadingLyric stacked importedRomaji={line.romaji} text={line.text} tokens={annotations?.find((item) => item.id === line.id)?.tokens} corrections={corrections} songId={song.id} lineId={line.id} readingStyle={readingStyle} /></strong>{/* 原整句读音行使用 lineReading；现已按词显示，取消重复行。 */}</span>{currentLineId === line.id && playing && <span className="android-sing-playing" aria-label="正在播放">♪</span>}</button></li>)}</ol>
-    {more && <div className="study-options-backdrop" onClick={() => setMore(false)}><section className="study-options" role="dialog" aria-modal="true" aria-label="更多跟唱选项" onClick={(event) => event.stopPropagation()}><header><h2>跟唱选项</h2><button type="button" aria-label="关闭跟唱选项" onClick={() => setMore(false)}><X size={20} /></button></header><ReadingStyleOptions readingStyle={readingStyle} onReadingStyle={onReadingStyle} name="sing-reading" /></section></div>}
+    <ol className="android-sing-lyrics">{song.lines.map((line, index) => <li key={line.id}><button className={currentLineId === line.id ? 'current' : ''} type="button" disabled={!audioReady} onClick={() => onPlayFromLine(line.id)} aria-label={`从第 ${index + 1} 句开始跟唱`}><span className="android-sing-number">{String(index + 1).padStart(2, '0')}</span><span className="android-sing-text"><strong lang="ja"><ReadingLyric romajiPosition={romajiPosition} stacked importedRomaji={line.romaji} text={line.text} tokens={annotations?.find((item) => item.id === line.id)?.tokens} corrections={corrections} songId={song.id} lineId={line.id} readingStyle={readingStyle} /></strong>{/* 原整句读音行使用 lineReading；现已按词显示，取消重复行。 */}</span>{currentLineId === line.id && playing && <span className="android-sing-playing" aria-label="正在播放">♪</span>}</button></li>)}</ol>
+    {more && <div className="study-options-backdrop" onClick={() => setMore(false)}><section className="study-options" role="dialog" aria-modal="true" aria-label="更多跟唱选项" onClick={(event) => event.stopPropagation()}><header><h2>跟唱选项</h2><button type="button" aria-label="关闭跟唱选项" onClick={() => setMore(false)}><X size={20} /></button></header><ReadingStyleOptions readingStyle={readingStyle} onReadingStyle={onReadingStyle} name="sing-reading" />{song.language==='ja'&&onRomajiPosition&&<RomajiPositionOptions position={romajiPosition} onChange={onRomajiPosition}/>}</section></div>}
   </section>
 }

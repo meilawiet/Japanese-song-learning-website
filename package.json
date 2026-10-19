@@ -1,6 +1,6 @@
 {
   "name": "uta-japanese-song-learning",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -23,6 +23,7 @@
     "@capacitor/browser": "8.0.1",
     "@capacitor/core": "8.5.3",
     "@faanau/kuromoji": "^0.2.1",
+    "core-js": "3.50.0",
     "lucide-react": "^0.468.0",
     "qrc-decoder": "1.0.2",
     "react": "^19.1.1",

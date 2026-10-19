@@ -1,8 +1,9 @@
 {
   "schemaVersion": 1,
-  "updatedOn": "2026-10-17",
+  "updatedOn": "2026-10-19",
   "reminderThreshold": 10,
   "policy": {
+    "reminderPresentation": "达到10项待发布内容时，发版提醒必须同时逐项展示当前全部verified条目的名称和简要说明；不包含released或cancelled条目。",
     "countUnit": "已完成且验证通过的一项独立用户功能或修复",
     "exclude": [
       "文档维护",
@@ -34,34 +35,32 @@
     "publishedOn": "2026-10-17"
   },
   "currentLocalInstall": {
-    "installedOn": "2026-10-17",
-    "device": "Xiaomi 23049RAD8C / Android 15",
+    "installedOn": "2026-10-19",
+    "device": "Xiaomi / Android 15",
     "package": "com.uta.songlearning",
-    "path": ".tools/releases/UTA-Android-1.5.0.apk",
-    "version": "1.5.0",
-    "versionCode": 24,
-    "size": 31331739,
-    "sha256": "c125498e7b7acc1e9094dde69d2210c0a2c8ba48c159568b3ce2fded9d0bce66",
-    "method": "用户自行更新后，ADB只读核验versionName/versionCode及手机base.apk摘要，与公开1.5.0正式包一致；本轮不安装1.5.1，供用户亲测Gitee远程更新",
-    "published": true
+    "path": ".tools/device-builds/UTA-more-compact-final.apk",
+    "version": "1.5.1",
+    "versionCode": 25,
+    "size": 31352299,
+    "sha256": "034a6201f50b6877d5f6e23d0fc8b24e4301cc33d030393e8dc0e0fa4c1f2f24",
+    "method": "沿用本轮覆盖授权，-r保留数据覆盖Success，冷启动Status ok，手机base.apk摘要一致；真机验证两组同行、复核说明删除、调试中再次打开更多并点击右端原遮挡区域可退出模式，未调整用户歌词时间或主动调用AI",
+    "published": false
   },
   "reminder": {
     "lastRemindedItemIds": [
-      "FEAT-20261016-013",
-      "FIX-20261016-014",
-      "FEAT-20261016-015",
-      "FEAT-20261016-016",
-      "FIX-20261016-017",
-      "FEAT-20261016-018",
-      "FEAT-20261016-019",
-      "FEAT-20261017-020",
-      "FIX-20261017-021",
-      "FEAT-20261017-022",
-      "FEAT-20261017-023",
-      "FIX-20261017-024"
+      "FEAT-20261017-027",
+      "FEAT-20261017-028",
+      "FEAT-20261017-029",
+      "FIX-20261018-031",
+      "FEAT-20261019-032",
+      "FEAT-20261019-033",
+      "FEAT-20261019-034",
+      "FEAT-20261019-035",
+      "FIX-20261019-036",
+      "FEAT-20261019-037"
     ],
-    "lastRemindedOn": "2026-10-17",
-    "userDecision": "用户要求此项测试后直接发1.5.1，已完成GitHub代码+APK与Gitee仅APK发布并全部核验；此项已结转，待发布0/10，正式手机仍1.5.0留给用户亲测Gitee更新"
+    "lastRemindedOn": "2026-10-19",
+    "userDecision": "用户2026-10-19明确授权打包发布1.5.2并上传代码：GitHub android-dev源码及APK，Gitee仅同一APK；本批十项在两端及提交附件核验完成后再结转。"
   },
   "items": [
     {
@@ -1120,6 +1119,574 @@
         "sha256": "a801f5508745ba19c1a8d385f26ab76e4dbf0b470b8c05d2132f879da42f3940",
         "publishedOn": "2026-10-17",
         "verification": "发布器匿名完整下载Gitee APK并核对摘要后将两端转正式；GitHub附件digest、两端公开版本与提交再次核验一致；真实更新接口从1.5.0优先选中Gitee v1.5.1"
+      }
+    },
+    {
+      "id": "FEAT-20261017-026",
+      "type": "feature",
+      "title": "日语歌词多源补全时间戳、注音和翻译",
+      "summary": "导入及编辑可分别选择已配置歌词源；全局顺序精确对齐、相邻分行合并拆分、重复段歧义拒绝自动配对，预览校对后应用。已有歌曲原文编号不变时保留人工校正及掌握，默认不覆盖已有译文。",
+      "files": [
+        "src/lib/multiSourceLyrics.js",
+        "src/components/MultiSourceLyrics.jsx",
+        "src/components/OnlineSongSearch.jsx",
+        "src/components/SongDetailsEditor.jsx",
+        "src/App.jsx",
+        "src/styles.css",
+        "tests/multiSourceLyrics.test.mjs"
+      ],
+      "verification": [
+        "228/228 Node自动检查、Android前端和原生Release构建通过；原发行证书v2/v3签名，正式包WebView调试关闭，仅内置颜真卿，无私人歌曲文件",
+        "三星SM-N9860/Android13独立测试包验证，未覆盖正式应用，未改写主应用歌曲或设置；测试包已卸载、9226转发已移除，正式应用只读核对为1.5.1/code25；未发布或推送代码",
+        "原创夹具验证重复段缺行、错字、长行拆分、汉字注音组不可拆、第三方译文、替换开关、超长输入及手工校正优先；真机合并保存后核对原文编号/人工译文/词级校正/掌握状态保留，未匹配需确认，系统返回取消不写数据库",
+        "真实网易云时间轴+UtaTen注音联测共48句，46句自动匹配、2句待校对；仅本地草稿，不保存到主应用，无付费AI调用；不代表所有歌曲或语义注音正确率，错字/多版本/不确定分行仍须人工核对",
+        "后续用户授权覆盖安装：三星Android13主应用-r安装成功，冷启动正常，手机base.apk摘要与含全部四项改动的最新本地包一致；版本仍1.5.1/code25，没有清除数据、公开发包或上传代码",
+        "同一最新本地包后续覆盖小米23049RAD8C/Android15成功；冷启动Status ok，1.5.1/code25，手机base.apk摘要与本地一致，未清除数据、未公开发布",
+        "后续授权安装最新手动拆并版本：小米Android15主应用保留数据-r覆盖成功，冷启动Status ok，手机base.apk SHA256核对一致；未公开发布或上传代码。此为安装核验，不代表手动拆并已完成真机交互测试",
+        "按用户要求删除导入与编辑入口、完整匹配及手动拆并组件/库/专属样式和测试，恢复普通搜索文件回调与编辑保存流程；保留已存来源注音/译文，不迁移或清空用户数据。219/219剩余自动检查和Android前端/原生Release构建通过，产物无多源功能标识，最新包已保留数据覆盖小米并冷启动及摘要核验成功。"
+      ],
+      "status": "cancelled",
+      "startedOn": "2026-10-17",
+      "completedOn": "2026-10-17",
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-multi-source-final.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31335835,
+        "sha256": "8054bead227e49e81636c18010635e6eded5a5c829dc7be486ee43bedcb4fbd4"
+      },
+      "localInstall": {
+        "installedOn": "2026-10-17",
+        "device": "Xiaomi 23049RAD8C / Android 15",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-manual-reading-final.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31339931,
+        "sha256": "0abc0896c7dfadbc897198835dd53e6592e2519933cdcf8948253fb77c23be1b",
+        "method": "用户本轮授权，adb install --no-incremental -r保留数据覆盖成功，冷启动Status ok，手机base.apk摘要与包含手动合并拆分的最新本地包一致",
+        "published": false
+      },
+      "cancelledOn": "2026-10-17",
+      "cancellationReason": "用户体验后认为多源歌词补全不好用，明确要求移除整个功能及手动拆并，公开发布前已撤回；不再计入待发布清单。"
+    },
+    {
+      "id": "FEAT-20261017-027",
+      "type": "feature",
+      "title": "精简歌曲导入界面并按需展开搜索、封面与歌词编辑",
+      "summary": "去除冗余导入说明，文件与AI选项简化；联网查找、封面和时间轴独立折叠，未展开不挂载联网组件，错误状态及不确定语种提示保留。",
+      "files": [
+        "src/App.jsx",
+        "src/components/ImportExtra.jsx",
+        "src/components/OnlineSongSearch.jsx",
+        "src/components/SongLanguageSelect.jsx",
+        "src/styles.css"
+      ],
+      "verification": [
+        "228/228 Node自动检查、Android前端和原生Release构建通过；原发行证书v2/v3签名，正式包WebView调试关闭，仅内置颜真卿，无私人歌曲文件",
+        "三星SM-N9860/Android13独立测试包验证，未覆盖正式应用，未改写主应用歌曲或设置；测试包已卸载、9226转发已移除，正式应用只读核对为1.5.1/code25；未发布或推送代码",
+        "三星真机检查首屏简洁、歌词与时间轴默认折叠，文件导入、多源预览、时间与译文编辑及保存正常，无页面横向溢出；截图已查看",
+        "后续用户授权覆盖安装：三星Android13主应用-r安装成功，冷启动正常，手机base.apk摘要与含全部四项改动的最新本地包一致；版本仍1.5.1/code25，没有清除数据、公开发包或上传代码",
+        "同一最新本地包后续覆盖小米23049RAD8C/Android15成功；冷启动Status ok，1.5.1/code25，手机base.apk摘要与本地一致，未清除数据、未公开发布",
+        "后续授权安装最新手动拆并版本：小米Android15主应用保留数据-r覆盖成功，冷启动Status ok，手机base.apk SHA256核对一致；未公开发布或上传代码。此为安装核验，不代表手动拆并已完成真机交互测试",
+        "后续移除已撤销的多源功能后，219/219剩余检查及原生构建通过；本项仍保留，最新包保留数据覆盖小米成功，冷启动与手机APK摘要核验通过。"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-17",
+      "completedOn": "2026-10-17",
+      "localBuild": {
+        "path": ".tools/releases/UTA-Android-1.5.2.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "webViewDebug": false,
+        "fonts": [
+          "assets/public/assets/YanZhenQingDuoBaoTaBei-B51QYR6M.woff2"
+        ],
+        "distMatchesPackagedAssets": true
+      },
+      "localInstall": {
+        "installedOn": "2026-10-17",
+        "device": "Xiaomi 23049RAD8C / Android 15",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-no-multi-source-final.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31331739,
+        "sha256": "cb2fbebcdfb60e6080de43f435fc105b152dcee91f85fde8f0ae5feb93c186fe",
+        "method": "用户明确要求移除多源功能后覆盖手机；adb install --no-incremental -r返回Success，冷启动Status ok，手机base.apk摘要与无多源补全的最新本地包一致，未清除数据",
+        "published": false
+      }
+    },
+    {
+      "id": "FEAT-20261017-028",
+      "type": "feature",
+      "title": "歌曲和歌手名称共用一个编辑折叠项",
+      "summary": "将原来歌曲名称、歌手名称合并为歌曲和歌手名称；两个输入仍分别保存，编辑页共四个折叠项，旧代码注释保留。",
+      "files": [
+        "src/components/SongDetailsEditor.jsx",
+        "tests/updateAndEditorUi.test.mjs"
+      ],
+      "verification": [
+        "228/228 Node自动检查、Android前端和原生Release构建通过；原发行证书v2/v3签名，正式包WebView调试关闭，仅内置颜真卿，无私人歌曲文件",
+        "三星SM-N9860/Android13独立测试包验证，未覆盖正式应用，未改写主应用歌曲或设置；测试包已卸载、9226转发已移除，正式应用只读核对为1.5.1/code25；未发布或推送代码",
+        "三星真机验证四项默认收起，合并项内分别修改名称与歌手、收起再展开保留草稿、保存两字段写入数据库、取消不写回；截图已查看",
+        "后续用户授权覆盖安装：三星Android13主应用-r安装成功，冷启动正常，手机base.apk摘要与含全部四项改动的最新本地包一致；版本仍1.5.1/code25，没有清除数据、公开发包或上传代码",
+        "同一最新本地包后续覆盖小米23049RAD8C/Android15成功；冷启动Status ok，1.5.1/code25，手机base.apk摘要与本地一致，未清除数据、未公开发布",
+        "后续授权安装最新手动拆并版本：小米Android15主应用保留数据-r覆盖成功，冷启动Status ok，手机base.apk SHA256核对一致；未公开发布或上传代码。此为安装核验，不代表手动拆并已完成真机交互测试",
+        "后续移除已撤销的多源功能后，219/219剩余检查及原生构建通过；本项仍保留，最新包保留数据覆盖小米成功，冷启动与手机APK摘要核验通过。"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-17",
+      "completedOn": "2026-10-17",
+      "localBuild": {
+        "path": ".tools/releases/UTA-Android-1.5.2.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "webViewDebug": false,
+        "fonts": [
+          "assets/public/assets/YanZhenQingDuoBaoTaBei-B51QYR6M.woff2"
+        ],
+        "distMatchesPackagedAssets": true
+      },
+      "localInstall": {
+        "installedOn": "2026-10-17",
+        "device": "Xiaomi 23049RAD8C / Android 15",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-no-multi-source-final.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31331739,
+        "sha256": "cb2fbebcdfb60e6080de43f435fc105b152dcee91f85fde8f0ae5feb93c186fe",
+        "method": "用户明确要求移除多源功能后覆盖手机；adb install --no-incremental -r返回Success，冷启动Status ok，手机base.apk摘要与无多源补全的最新本地包一致，未清除数据",
+        "published": false
+      }
+    },
+    {
+      "id": "FEAT-20261017-029",
+      "type": "feature",
+      "title": "停用兔小巢反馈，首页弹窗仅邀请加入QQ交流群",
+      "status": "verified",
+      "startedOn": "2026-10-17",
+      "completedOn": "2026-10-17",
+      "summary": "移除关于页及首页弹窗的反馈入口，前端不再注册或调用UtaFeedback；Android不再注册反馈插件及Activity。仅保留QQ群邀请文案、复制群号、关闭及不再提醒，原提醒周期和勿扰逻辑不变。旧代码保留注释，不新接邮件等第三方服务。",
+      "files": [
+        "src/App.jsx",
+        "src/components/AppUpdates.jsx",
+        "src/components/CommunityInvite.jsx",
+        "android/app/src/main/AndroidManifest.xml",
+        "android/app/src/main/java/com/uta/songlearning/MainActivity.java",
+        "tests/updateAndEditorUi.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "12/12关于页、交流群邀请及提醒周期相关检查通过，确认输出无反馈文案，关于页三个入口、邀请两个按钮；首次三天及每三十天逻辑未改",
+        "Android前端及原生Release构建通过；编译后前端无UtaFeedback或兔小巢产品链接，最终APK清单未注册FeedbackActivity，原发行证书v2/v3，WebView调试关闭，仅内置颜真卿，无私人歌曲",
+        "本轮未进行真机安装或界面操作；未覆盖主应用，未发布、未上传代码。此前多源等三项仍保留待发布",
+        "后续用户授权覆盖安装：三星Android13主应用-r安装成功，冷启动正常，手机base.apk摘要与含全部四项改动的最新本地包一致；版本仍1.5.1/code25，没有清除数据、公开发包或上传代码",
+        "同一最新本地包后续覆盖小米23049RAD8C/Android15成功；冷启动Status ok，1.5.1/code25，手机base.apk摘要与本地一致，未清除数据、未公开发布",
+        "后续授权安装最新手动拆并版本：小米Android15主应用保留数据-r覆盖成功，冷启动Status ok，手机base.apk SHA256核对一致；未公开发布或上传代码。此为安装核验，不代表手动拆并已完成真机交互测试",
+        "后续移除已撤销的多源功能后，219/219剩余检查及原生构建通过；本项仍保留，最新包保留数据覆盖小米成功，冷启动与手机APK摘要核验通过。"
+      ],
+      "localBuild": {
+        "path": ".tools/releases/UTA-Android-1.5.2.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "webViewDebug": false,
+        "fonts": [
+          "assets/public/assets/YanZhenQingDuoBaoTaBei-B51QYR6M.woff2"
+        ],
+        "distMatchesPackagedAssets": true
+      },
+      "localInstall": {
+        "installedOn": "2026-10-17",
+        "device": "Xiaomi 23049RAD8C / Android 15",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-no-multi-source-final.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31331739,
+        "sha256": "cb2fbebcdfb60e6080de43f435fc105b152dcee91f85fde8f0ae5feb93c186fe",
+        "method": "用户明确要求移除多源功能后覆盖手机；adb install --no-incremental -r返回Success，冷启动Status ok，手机base.apk摘要与无多源补全的最新本地包一致，未清除数据",
+        "published": false
+      }
+    },
+    {
+      "id": "FEAT-20261017-030",
+      "type": "feature",
+      "title": "多源注音支持浏览附近来源歌词并手动合并、拆分和配对",
+      "status": "cancelled",
+      "startedOn": "2026-10-17",
+      "completedOn": "2026-10-17",
+      "summary": "每句可查看附近/全部来源歌词及注音；连续来源句可合并，一句可在原文和读音字符边界拆分，完整注音词边界自动建议读音切点，汉字注音组内部需人工选择。处理后分别采用到目标句，原文差异明确确认，原句编号/时间/译文保持不变；支持恢复自动和取消，来源副本不改远端。",
+      "files": [
+        "src/lib/manualLyricReadings.js",
+        "src/components/ManualReadingMatch.jsx",
+        "src/components/MultiSourceLyrics.jsx",
+        "src/styles.css",
+        "tests/manualLyricReadings.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "233/233 Node自动检查通过；包含连续多句合并、拒绝不连续/无注音合并、完整注音组边界建议、汉字组内部拒绝猜切点、Unicode扩展字符拆分、反复拆并、原文编号时间译文保留、待处理项重算及附近定位",
+        "392 CSS像素触摸视口Edge浏览器测试真实补全组件+原创模拟来源：合并/原文差异确认/恢复自动/最终应用，一句多次拆分并分配到两个目标句，取消/系统返回不写回、重新打开无未采用拆并，UtaTen结构化词边界带出读音切点，无横向溢出/页面JS异常；截图已查看。未调用真实平台或付费AI，本轮未进行真机安装或界面测试",
+        "Android前端及原生Release构建通过，原发行证书v2/v3，com.uta.songlearning 1.5.1/code25，WebView调试关闭，仅内置颜真卿，无私人歌曲；未公开发布/上传代码，手机仍为前一轮已安装包",
+        "后续授权安装最新手动拆并版本：小米Android15主应用保留数据-r覆盖成功，冷启动Status ok，手机base.apk SHA256核对一致；未公开发布或上传代码。此为安装核验，不代表手动拆并已完成真机交互测试",
+        "按用户要求删除导入与编辑入口、完整匹配及手动拆并组件/库/专属样式和测试，恢复普通搜索文件回调与编辑保存流程；保留已存来源注音/译文，不迁移或清空用户数据。219/219剩余自动检查和Android前端/原生Release构建通过，产物无多源功能标识，最新包已保留数据覆盖小米并冷启动及摘要核验成功。"
+      ],
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-manual-reading-final.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31339931,
+        "sha256": "0abc0896c7dfadbc897198835dd53e6592e2519933cdcf8948253fb77c23be1b"
+      },
+      "localInstall": {
+        "installedOn": "2026-10-17",
+        "device": "Xiaomi 23049RAD8C / Android 15",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-manual-reading-final.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31339931,
+        "sha256": "0abc0896c7dfadbc897198835dd53e6592e2519933cdcf8948253fb77c23be1b",
+        "method": "用户本轮授权，adb install --no-incremental -r保留数据覆盖成功，冷启动Status ok，手机base.apk摘要与包含手动合并拆分的最新本地包一致",
+        "published": false
+      },
+      "cancelledOn": "2026-10-17",
+      "cancellationReason": "用户体验后认为多源歌词补全不好用，明确要求移除整个功能及手动拆并，公开发布前已撤回；不再计入待发布清单。"
+    },
+    {
+      "id": "FIX-20261018-031",
+      "type": "bugfix",
+      "title": "修复旧WebView启动空白并提供独立启动失败诊断",
+      "status": "verified",
+      "startedOn": "2026-10-18",
+      "completedOn": "2026-10-18",
+      "summary": "公开1.5.1在Chromium89复现启动时Object.hasOwn缺失致米色空白。入口先加载所需core-js补丁并安全补齐UUID，安卓构建面向Chrome80、动态视口单位提供旧值回退且不请求Google在线字体；增加独立ES5启动守卫和React错误边界，失败可重试/手动复制最小诊断，不清理或上传用户数据。",
+      "files": [
+        "src/lib/webviewCompatibility.js",
+        "src/main.jsx",
+        "src/components/StartupBoundary.jsx",
+        "src/startupGuard.js",
+        "index.html",
+        "scripts/startupCompatibility.mjs",
+        "vite.android.config.js",
+        "vite.config.js",
+        "package.json",
+        "package-lock.json",
+        "tests/webviewCompatibility.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "222/222 Node检查通过，含缺失标准方法真实导入、hasOwn继承语义、at负索引、replaceAll规则、安全UUID及原生实现保留、启动失败/超时/恢复/诊断隐私、安卓字体及视口回退",
+        "从原公开1.5.1 APK提取网页资源，Chromium89复现根节点为空且控制台TypeError: Object.hasOwn is not a function；相同条件新版Edge正常。修复后Chromium80.0.3987.0、89.0.4389.0及Edge155均正常进入安卓首页，未出现启动错误；80使用原生CDP验证，避免新版自动化协议不兼容",
+        "Chromium89验证130%主题设置无横向溢出/高度超屏，新增歌词来源实际执行UUID/replaceAll补丁，导入原创LRC保留时间戳/来源注音/译文；主脚本加载失败和React初始化故障均显示静态诊断页且不包含原始私有异常。全部浏览器验证仅本地原创夹具和模拟原生桥，无付费AI调用；截图已查看",
+        "Android前端及原生Release构建通过，原发行证书v2/v3，WebView调试关闭，仅颜真卿，无私人歌曲；APK含独立守卫和core-js许可、无Google字体请求、无已移除的多源或反馈入口。本轮未安装手机，未公开发布/上传代码",
+        "没有反馈机型的WebView版本或日志，不能确认其与复现故障同因；无华为或该反馈机型真机测试，不宣称全机型问题已解决。用户提供平板可正常使用，不能将问题归因于系统品牌或截图中的系统14.0版本。",
+        "2026-10-19用户转述：原反馈用户测试兼容修复包后，现已能够正常启动。此为反馈用户实机确认启动恢复，不代表代理亲自操作真机或所有功能/机型均已验证；未新增WebView版本或错误日志。用户要求保留为一项更新内容，后续与其他待发布项一起发包。"
+      ],
+      "localBuild": {
+        "path": ".tools/releases/UTA-Android-1.5.2.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "webViewDebug": false,
+        "fonts": [
+          "assets/public/assets/YanZhenQingDuoBaoTaBei-B51QYR6M.woff2"
+        ],
+        "distMatchesPackagedAssets": true
+      },
+      "userAcceptance": {
+        "confirmedOn": "2026-10-19",
+        "result": "原反馈用户测试后确认可以正常启动",
+        "scope": "启动问题恢复由用户转述确认，其他功能及所有厂商机型未在本次扩大验证",
+        "publicationDecision": "保留为一项更新内容，等待后续一起发包；不是本次公开发布或上传代码授权"
+      },
+      "releaseNote": "修复部分旧网页内核设备启动空白的问题，新增启动异常提示与诊断信息。"
+    },
+    {
+      "id": "FEAT-20261019-032",
+      "type": "feature",
+      "title": "按歌曲自定义罗马音显示在歌词上方或下方",
+      "summary": "学习页更多新增罗马音位置，上方为旧数据默认；日语假名仍固定汉字上方，逐句/跟唱共用，位置随备份及云同步保存，仅显示调整，不改读音及词界。兼容旧网页内核的更多弹窗可内部滚动。",
+      "files": [
+        "src/components/RomajiPositionOptions.jsx",
+        "src/components/ReadingLyric.jsx",
+        "src/components/AnnotatedLine.jsx",
+        "src/components/AndroidStudyPlayer.jsx",
+        "src/components/AndroidSingAlong.jsx",
+        "src/lib/readingDisplay.js",
+        "src/lib/learningBackup.js",
+        "src/App.jsx",
+        "src/styles.css",
+        "tests/readingComponents.test.mjs",
+        "tests/learningBackup.test.mjs"
+      ],
+      "verification": [
+        "228/228 Node检查通过；验证上下位置、汉字上方假名、人工读音不变及按歌曲备份往返，非法位置被拒绝",
+        "Chromium89真实内核392px视口验证双注音上下坐标、无横向溢出、逐句/跟唱共用与刷新持久化；小米主应用更多面板位置入口核对通过，未改用户原设置"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-19",
+      "completedOn": "2026-10-19",
+      "localBuild": {
+        "path": ".tools/releases/UTA-Android-1.5.2.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "webViewDebug": false,
+        "fonts": [
+          "assets/public/assets/YanZhenQingDuoBaoTaBei-B51QYR6M.woff2"
+        ],
+        "distMatchesPackagedAssets": true
+      },
+      "localInstall": {
+        "installedOn": "2026-10-19",
+        "device": "Xiaomi / Android 15",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-reading-paste-final.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31348203,
+        "sha256": "af21d98849a4e890356cf847b7c0a4e04f951508dda642ee99b132f3f3658438",
+        "method": "用户本轮明确授权覆盖；adb install --no-incremental -r返回Success，冷启动Status ok，手机base.apk摘要与本地一致；原有数据保留，核对更多的位置控件及导入粘贴文本框，未修改现有歌曲",
+        "published": false
+      }
+    },
+    {
+      "id": "FEAT-20261019-033",
+      "type": "feature",
+      "title": "支持直接粘贴歌词导入及替换已有歌曲歌词",
+      "summary": "导入页新增折叠粘贴歌词入口，已有歌曲重新上传分区同样可粘贴；用户使用系统粘贴、点击使用后包装UTF-8文件复用原解析/预览/保存。保留时间、译文、来源注音；普通文本不伪造时间。草稿折叠保留、关闭/成功导入清空，空白或超长提示，不主动读取剪贴板。",
+      "files": [
+        "src/components/PasteLyrics.jsx",
+        "src/lib/pastedLyrics.js",
+        "src/components/SongDetailsEditor.jsx",
+        "src/App.jsx",
+        "src/styles.css",
+        "tests/pastedLyrics.test.mjs"
+      ],
+      "verification": [
+        "228/228 Node检查通过；实际LRC文件解析保留原文/时间/来源注音/译文，普通文本无时间，空白/超长/无正文均报错",
+        "Chromium89手机尺寸完整验证空白提示、折叠保留、LRC预览并保存、已有歌曲替换普通文本且保留ID、草稿重置、解析失败保留输入；小米正式应用粘贴面板及原生EditText入口核对通过，未导入测试歌曲到主应用"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-19",
+      "completedOn": "2026-10-19",
+      "localBuild": {
+        "path": ".tools/releases/UTA-Android-1.5.2.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "webViewDebug": false,
+        "fonts": [
+          "assets/public/assets/YanZhenQingDuoBaoTaBei-B51QYR6M.woff2"
+        ],
+        "distMatchesPackagedAssets": true
+      },
+      "localInstall": {
+        "installedOn": "2026-10-19",
+        "device": "Xiaomi / Android 15",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-reading-paste-final.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31348203,
+        "sha256": "af21d98849a4e890356cf847b7c0a4e04f951508dda642ee99b132f3f3658438",
+        "method": "用户本轮明确授权覆盖；adb install --no-incremental -r返回Success，冷启动Status ok，手机base.apk摘要与本地一致；原有数据保留，核对更多的位置控件及导入粘贴文本框，未修改现有歌曲",
+        "published": false
+      }
+    },
+    {
+      "id": "FEAT-20261019-034",
+      "type": "feature",
+      "title": "手动滑动歌词后暂停自动居中5秒",
+      "summary": "手动拖动、滚轮或键盘浏览后保留5秒，持续操作及惯性滚动重新计时，松手前不自动拉回；期满按最新播放句恢复，暂停及弹窗时不滚动，切歌离页清理计时。程序跟随和普通单击不会触发或永久延长暂停，停止已经发出的平滑居中；旧内核学习页保持实际内部滚动高度。",
+      "files": [
+        "src/lib/manualLyricScroll.js",
+        "src/lib/useManualLyricScroll.js",
+        "src/App.jsx",
+        "src/components/AndroidSingAlong.jsx",
+        "src/styles.css",
+        "tests/manualLyricScroll.test.mjs"
+      ],
+      "verification": [
+        "228/228 Node检查通过；可控时钟验证持续拖动超5秒、松手/惯性后完整等待、滚轮重复延长、程序滚动不触发、离页清理不回调",
+        "Chromium89真实CDP触摸滑动及滚轮验证60行连续静音播放：跨句不拉回、继续滑动重计5秒、空闲后恢复居中，无页面异常。该交互为浏览器验证；小米本轮只做覆盖安装、冷启动及新增入口核对，未在主应用改歌/播放用户歌曲"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-19",
+      "completedOn": "2026-10-19",
+      "localBuild": {
+        "path": ".tools/releases/UTA-Android-1.5.2.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "webViewDebug": false,
+        "fonts": [
+          "assets/public/assets/YanZhenQingDuoBaoTaBei-B51QYR6M.woff2"
+        ],
+        "distMatchesPackagedAssets": true
+      },
+      "localInstall": {
+        "installedOn": "2026-10-19",
+        "device": "Xiaomi / Android 15",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-reading-paste-final.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31348203,
+        "sha256": "af21d98849a4e890356cf847b7c0a4e04f951508dda642ee99b132f3f3658438",
+        "method": "用户本轮明确授权覆盖；adb install --no-incremental -r返回Success，冷启动Status ok，手机base.apk摘要与本地一致；原有数据保留，核对更多的位置控件及导入粘贴文本框，未修改现有歌曲",
+        "published": false
+      }
+    },
+    {
+      "id": "FEAT-20261019-035",
+      "type": "feature",
+      "title": "单句时间戳调试：固定渐变调节条、即时保存及原点重置",
+      "status": "verified",
+      "startedOn": "2026-10-19",
+      "completedOn": "2026-10-19",
+      "summary": "更多新增调试时间戳模式，保留翻译开关；开启后隐藏逐句掌握/解析、停用自动居中及长按编辑/双击选段。点击歌词选中当前句，右侧固定条两端较实、中间更透明，上+0.2s延后，下-0.2s提前，中间重置恢复该句首次成功调试前的时间。每次操作原子写入，无保存/撤销/取消按钮；原点随歌曲/备份保留，重启或普通资料编辑后仍可重置。只改所选句时间，保留其他句、音频、原文、来源注音及学习记录；负时间、相邻越界、音频边界、并发原文或时间变动会提示，本次失败保留最后成功值。项目歌曲使用绑定原文与原时间的设置覆盖。",
+      "files": [
+        "src/App.jsx",
+        "src/components/AndroidStudyPlayer.jsx",
+        "src/components/TimestampTuner.jsx",
+        "src/components/SongDetailsEditor.jsx",
+        "src/lib/timestampTuning.js",
+        "src/lib/localSongStore.js",
+        "src/lib/learningBackup.js",
+        "src/styles.css",
+        "tests/timestampTuning.test.mjs",
+        "tests/learningBackup.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "236/236 Node检查通过；覆盖毫秒稳定运算、只改目标句、边界限制、原子合并冲突、学习状态保留、项目覆盖绑定、跨保存/重启重置、原点备份往返及损坏数据拒绝",
+        "Chromium89.0.4389.0及Edge155真实浏览器手机视口验证即时写入，无保存/撤销/取消、固定渐变条、原操作隐藏、原WAV媒体从调整后4.8秒起播、其他句/音频/掌握保留、退出/重启仍保持、负数拦截、130%字号无溢出、并发原文变化写入失败不覆盖；中间重置在重启后恢复首次5秒，只重置当前句。Edge另验证普通歌曲资料保存保留重置原点。原创夹具，无付费AI",
+        "Android前端及原生Release构建、原证书v2/v3签名核验通过，WebView调试关闭，仅内置颜真卿，无私人歌曲；保留数据覆盖小米成功，冷启动和手机APK摘要一致，真机核对调试开关及三按钮，掌握操作隐藏。手机未实际修改/重置用户歌曲或播放私人音频；完整交互与音频验证范围为独立浏览器"
+      ],
+      "localBuild": {
+        "path": ".tools/releases/UTA-Android-1.5.2.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "webViewDebug": false,
+        "fonts": [
+          "assets/public/assets/YanZhenQingDuoBaoTaBei-B51QYR6M.woff2"
+        ],
+        "distMatchesPackagedAssets": true
+      },
+      "localInstall": {
+        "installedOn": "2026-10-19",
+        "device": "Xiaomi / Android 15",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-timestamp-tuning-final.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31352299,
+        "sha256": "6921c499fb8bc9b0a2257a03b1bf6d6ffa7f5c1d01cb090e0b15ed47d1dd82e8",
+        "method": "沿用本轮覆盖授权，adb install --no-incremental -r返回Success；冷启动Status ok，手机base.apk摘要一致，真机开关和三按钮/隐藏掌握操作核对通过；未调整或播放用户歌曲，原有数据保留",
+        "published": false
+      },
+      "releaseNote": "新增单句时间戳调试模式，支持0.2秒提前/延后、自动保存与原时间重置。"
+    },
+    {
+      "id": "FIX-20261019-036",
+      "type": "bugfix",
+      "title": "修复时间戳调节条遮挡更多和倍速弹窗",
+      "summary": "复现播放器z-index25/独立层叠上下文内的弹窗被全局时间调节条26遮挡；保留原规则对照，用24统一覆盖调节条及其错误提示27，确保更多/倍速弹窗和遮罩接收点击，不改变时间戳或调试交互。",
+      "files": [
+        "src/styles.css"
+      ],
+      "verification": [
+        "修复前Chromium89真实浏览器elementFromPoint命中调节条，复现遮挡；修复后命中更多弹窗",
+        "237/237 Node检查通过；Chromium89及Edge155验证更多/倍速弹窗盖住调节条与错误提示，翻译与时间按钮/关闭按钮可操作，弹窗操作不修改原创歌词时间",
+        "小米真机开启调试后再开更多，点击右端原遮挡区域能正确关闭调试，恢复原逐句操作；最新包原证书v2/v3、调试关、保留数据覆盖及手机摘要核验成功"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-19",
+      "completedOn": "2026-10-19",
+      "localBuild": {
+        "path": ".tools/releases/UTA-Android-1.5.2.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "webViewDebug": false,
+        "fonts": [
+          "assets/public/assets/YanZhenQingDuoBaoTaBei-B51QYR6M.woff2"
+        ],
+        "distMatchesPackagedAssets": true
+      },
+      "localInstall": {
+        "installedOn": "2026-10-19",
+        "device": "Xiaomi / Android 15",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-more-compact-final.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31352299,
+        "sha256": "034a6201f50b6877d5f6e23d0fc8b24e4301cc33d030393e8dc0e0fa4c1f2f24",
+        "method": "沿用本轮覆盖授权，-r保留数据覆盖Success，冷启动Status ok，手机base.apk摘要一致；真机验证两组同行、复核说明删除、调试中再次打开更多并点击右端原遮挡区域可退出模式，未调整用户歌词时间或主动调用AI",
+        "published": false
+      }
+    },
+    {
+      "id": "FEAT-20261019-037",
+      "type": "feature",
+      "title": "精简更多面板：显示选项与AI主操作分别并排",
+      "summary": "显示翻译与调整时间戳改为同一行的独立选中卡片，外观接近注音选项；原文“调试时间戳模式”仍是无障碍名称。AI复核及生成整曲解析的标题和按钮分别同行，删除复核说明小字，生成进度/重新生成/删除解析与费用提示保留在下方。旧纵向布局注释保留，非日语仍不显示复核。",
+      "files": [
+        "src/components/StudyMoreActions.jsx",
+        "src/components/AndroidStudyPlayer.jsx",
+        "src/styles.css",
+        "tests/readingComponents.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "237/237 Node检查；新增组件检查独立选中态、生成中禁用、重生成/删除入口、费用提示及非日语隐藏复核",
+        "Chromium89 392px与Edge155 360px/130%字体真实按钮坐标检查：显示选项同Y，AI主按钮同Y同高度，无横向溢出，说明不渲染；可切换翻译和调试，未调用付费AI",
+        "小米原生UI树核对两组按钮分别同行（含既有生成中状态），说明小字不存在；实际右端点击成功退出调试，保留用户歌曲与时间，未点击AI操作。原签名包覆盖/冷启动/摘要成功"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-19",
+      "completedOn": "2026-10-19",
+      "localBuild": {
+        "path": ".tools/releases/UTA-Android-1.5.2.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31352299,
+        "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
+        "webViewDebug": false,
+        "fonts": [
+          "assets/public/assets/YanZhenQingDuoBaoTaBei-B51QYR6M.woff2"
+        ],
+        "distMatchesPackagedAssets": true
+      },
+      "localInstall": {
+        "installedOn": "2026-10-19",
+        "device": "Xiaomi / Android 15",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-more-compact-final.apk",
+        "version": "1.5.1",
+        "versionCode": 25,
+        "size": 31352299,
+        "sha256": "034a6201f50b6877d5f6e23d0fc8b24e4301cc33d030393e8dc0e0fa4c1f2f24",
+        "method": "沿用本轮覆盖授权，-r保留数据覆盖Success，冷启动Status ok，手机base.apk摘要一致；真机验证两组同行、复核说明删除、调试中再次打开更多并点击右端原遮挡区域可退出模式，未调整用户歌词时间或主动调用AI",
+        "published": false
       }
     }
   ]

@@ -29,6 +29,7 @@ const SITES = [
 ]
 
 // 在线搜索只替用户打开网站，音频文件由用户在网站下载后自行确认并选择。
+// 普通歌词搜索继续将完整候选转为文件，交给原导入/替换流程处理。
 export default function OnlineSongSearch({ onChooseLyrics, autoQuery = '' }) {
   const [query, setQuery] = useState('')
   const [sharedSong, setSharedSong] = useState(null)
@@ -204,11 +205,12 @@ export default function OnlineSongSearch({ onChooseLyrics, autoQuery = '' }) {
   }
 
   return <section className="online-song-search" aria-label="联网搜索歌曲和歌词">
-    <h3>联网查找歌词与歌曲</h3>
+    {/* 原标题保留：<h3>联网查找歌词与歌曲</h3> */}
+    <h3>联网查找歌词</h3>
     {/* 原说明仅介绍 LRCLIB；平台辅助轨按实际可获取情况展示。 */}
     {/* 原说明仅支持手写关键词；安卓可粘贴链接自动识别，但选用与保存仍需用户确认。 */}
     {/* <p>输入歌名或“歌名 / 歌手”，选择正确版本；只选歌词也能直接导入。获取到的原文、翻译和罗马音先进入预览，确认后才保存。</p> */}
-    <p>{native ? '输入歌名或“歌名 / 歌手”，也可粘贴网易云、QQ 音乐、酷狗、酷我的歌曲分享链接或整段分享文案，自动识别并搜索。' : '输入歌名或“歌名 / 歌手”，选择正确版本。'}只选歌词也能直接导入，确认预览后才保存。</p>
+    {/* 原说明保留：<p>{native ? '输入歌名或“歌名 / 歌手”，也可粘贴网易云、QQ 音乐、酷狗、酷我的歌曲分享链接或整段分享文案，自动识别并搜索。' : '输入歌名或“歌名 / 歌手”，选择正确版本。'}只选歌词也能直接导入，确认预览后才保存。</p> */}
     {native && <label className="online-lyrics-source">歌词来源<select aria-label="歌词来源" value={source} onChange={event => changeSource(event.target.value)}><option value="mixed">混合搜索（已配置来源）</option>{!lyricSources.length && <option value="">未配置可搜索来源</option>}{lyricSources.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
     {/* 原输入框 maxLength=160，仅提交关键词；分享文案放宽长度，歌词平台仍限制搜索词长度。 */}
     {/* <div className="online-song-search-row"><input value={query} onChange={(event) => setQuery(event.target.value)} maxLength={160} placeholder="输入歌曲名称或歌手" aria-label="在线搜索歌曲名称" /><button type="button" disabled={busy || !query.trim() || !adapter} onClick={search}>{busy ? <LoaderCircle size={15} className="spin" /> : <Search size={15} />} 搜索歌词</button></div> */}
@@ -219,8 +221,8 @@ export default function OnlineSongSearch({ onChooseLyrics, autoQuery = '' }) {
     {results.length > 0 && <div className="online-song-results"><span>{source==='mixed'?'混合搜索':lyricSources.find(item => item.id === source)?.name} · 找到 {results.length} 个结果</span><ol>{results.map((record) => <li key={record.id}><div><strong>{record.title}</strong><small>{lyricSources.find(item=>item.adapter===record.provider)?.name||record.provider} · {record.artist}{record.album ? ` · ${record.album}` : ''}{record.duration ? ` · ${Math.floor(record.duration / 60)}:${String(Math.round(record.duration) % 60).padStart(2, '0')}` : ''}</small>{record.hasAnnotation&&<small>含来源注音</small>}{record.timed===false&&<small>无时间轴 · 可先导入阅读</small>}{record.trackSummary && <small>原文 {record.trackSummary.original} 句 · 翻译 {record.trackSummary.translation} 句 · 假名 {record.trackSummary.kana||0} 句 · 罗马音 {record.trackSummary.romaji} 句</small>}</div><button type="button" disabled={Boolean(loadingId) || busy} onClick={() => chooseLyrics(record)}>{loadingId === record.id ? '获取中…' : selectedId === record.id ? '已选用' : '选用歌词'}</button></li>)}</ol></div>}
     {/* 原说明：来源可在设置 → 数据管理 → 歌曲与歌词来源中管理。含注音结果优先展示；假名、翻译和罗马音按来源实际内容导入。音乐平台仅搜索你手动配置的来源。 */}
     {/* 说明链接优先来源及未配置时的回退行为，用户仍可手动切换来源。 */}
-    {native && <p className="online-song-hint">来源可在设置 → 数据管理 → 歌曲与歌词来源中管理。分享链接优先搜索已配置的对应平台，未配置时使用混合搜索。含注音结果优先展示；假名、翻译和罗马音按来源实际内容导入。音乐平台仅搜索你手动配置的来源。</p>}
+    {/* 原说明保留：{native && <p className="online-song-hint">来源可在设置 → 数据管理 → 歌曲与歌词来源中管理。分享链接优先搜索已配置的对应平台，未配置时使用混合搜索。含注音结果优先展示；假名、翻译和罗马音按来源实际内容导入。音乐平台仅搜索你手动配置的来源。</p>} */}
     <div className="online-song-sites"><span>继续到网站查找歌曲或歌词</span><div>{sites.map((site) => <button type="button" key={site.id || site.name} onClick={() => openSite(site)}>{site.name} <ExternalLink size={13} /></button>)}</div></div>
-    <p className="online-song-hint">{native ? '网站入口按你的配置打开。下载后返回 UTA，使用文件选择按钮导入音频或歌词文本。' : '歌曲宝支持带关键词搜索；下歌吧直接打开网站，其他入口使用限定网站的网页搜索。网站下载会保存在手机中；返回 UTA 后，使用上方文件选择按钮导入音频或歌词文本。'}</p>
+    {/* 原说明保留：<p className="online-song-hint">{native ? '网站入口按你的配置打开。下载后返回 UTA，使用文件选择按钮导入音频或歌词文本。' : '歌曲宝支持带关键词搜索；下歌吧直接打开网站，其他入口使用限定网站的网页搜索。网站下载会保存在手机中；返回 UTA 后，使用上方文件选择按钮导入音频或歌词文本。'}</p> */}
   </section>
 }

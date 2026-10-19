@@ -20,7 +20,8 @@ public class MainActivity extends BridgeActivity {
         // 原独立 WebView 接入保留对照；QQ 授权的 Cookie 回到浏览器，现复用已注册的 Browser 插件。
         // registerPlugin(FeedbackPlugin.class);
         // 新方案使用官方访客登录态，应用内直接发言，不再依赖 QQ 或浏览器登录。
-        registerPlugin(FeedbackPlugin.class);
+        // 已停用兔小巢，不向前端注册原生反馈接口；原调用保留供对照。
+        // registerPlugin(FeedbackPlugin.class);
         super.onCreate(savedInstanceState);
         // 头像选图先复制到应用缓存，避免三星相册重复选图时 WebView 读不到临时文件。
         bridge.getWebView().setWebChromeClient(new AvatarWebChromeClient(bridge));

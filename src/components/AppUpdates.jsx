@@ -3,7 +3,8 @@ import {CapacitorHttp,registerPlugin} from '@capacitor/core'
 import {App} from '@capacitor/app'
 import {Browser} from '@capacitor/browser'
 // 原关于图标：import {RefreshCw,ExternalLink,Users} from 'lucide-react'
-import {RefreshCw,ExternalLink,Users,MessageSquare} from 'lucide-react'
+// 原反馈图标导入：import {RefreshCw,ExternalLink,Users,MessageSquare} from 'lucide-react'
+import {RefreshCw,ExternalLink,Users} from 'lucide-react'
 // 增加发布说明分段，避免把 Markdown 符号直接显示给手机用户。
 // import {UPDATE_API,selectAppRelease} from '../lib/appUpdate'
 // 原来只检查全仓库 Latest：import {UPDATE_API,selectAppRelease,parseUpdateNotes} from '../lib/appUpdate'
@@ -16,7 +17,8 @@ const installer=registerPlugin('UtaAppUpdate')
 // QQ 授权回到系统浏览器，改用系统 Custom Tab 共享正常登录态；不传递应用本地数据。
 // const FEEDBACK_URL='https://support.qq.com/product/802246'
 // 由原生页生成随机访客身份并以 HTTPS POST 接入，第三方页面不共享主应用插件桥。
-const feedback=registerPlugin('UtaFeedback')
+// 停用兔小巢，不再注册反馈桥；应用更新插件保持正常使用。
+// const feedback=registerPlugin('UtaFeedback')
 const PROJECT_URL='https://github.com/meilawiet/Japanese-song-learning-website/releases'
 const MANUAL_INSTALL='请尝试手动安装：到“关于 → 项目地址”下载 APK，再用手机文件管理器打开安装。'
 
@@ -98,10 +100,11 @@ export function useAppUpdates(enabled) {
 
 export function AboutPanel({updates}) {
   const [notice,setNotice]=useState(''),[linkError,setLinkError]=useState('')
-  const [openingFeedback,setOpeningFeedback]=useState(false)
+  // const [openingFeedback,setOpeningFeedback]=useState(false)
   // 原打开方式：const openFeedback=async()=>{setLinkError('');setOpeningFeedback(true);try{await feedback.open()}catch{setLinkError('无法打开建议与反馈，请稍后重试。')}finally{setOpeningFeedback(false)}}
   // 原浏览器方案：const openFeedback=async()=>{setLinkError('');setOpeningFeedback(true);try{await Browser.open({url:FEEDBACK_URL,toolbarColor:'#ffffff'})}catch{setLinkError('无法打开建议与反馈，请确认已安装可用浏览器后重试。')}finally{setOpeningFeedback(false)}}
-  const openFeedback=async()=>{setLinkError('');setOpeningFeedback(true);try{await feedback.open()}catch{setLinkError('无法打开建议与反馈，请稍后重试。')}finally{setOpeningFeedback(false)}}
+  // 停用原反馈打开逻辑，关于页只保留更新、项目和加群交流。
+  // const openFeedback=async()=>{setLinkError('');setOpeningFeedback(true);try{await feedback.open()}catch{setLinkError('无法打开建议与反馈，请稍后重试。')}finally{setOpeningFeedback(false)}}
   const openProject=async()=>{setLinkError('');try{await Browser.open({url:PROJECT_URL})}catch{setLinkError('无法打开项目地址，请检查网络后重试。')}}
   const copyGroup=async()=>{setLinkError('');try{await navigator.clipboard.writeText('1125131374');setNotice('已复制群号，请在 QQ 中搜索加入。')}catch{setNotice('请在 QQ 中搜索群号：1125131374。')}}
   // 关于页新增建议与反馈，进入带访客身份的独立原生页面。
@@ -109,7 +112,7 @@ export function AboutPanel({updates}) {
     <button className="about-check-update" type="button" disabled={updates.checking} onClick={()=>updates.check(true)}><span><RefreshCw size={19}/>检查更新</span><span>{updates.checking?'检测中…':'›'}</span></button>
     <button className="about-check-update" type="button" onClick={openProject}><span><ExternalLink size={19}/>项目地址</span><span>›</span></button>
     <button className="about-check-update" type="button" onClick={copyGroup}><span><Users size={19}/>加群交流</span><span>QQ群 1125131374</span></button>
-    <button className="about-check-update" type="button" disabled={openingFeedback} onClick={openFeedback}><span><MessageSquare size={19}/>建议与反馈</span><span>{openingFeedback?'正在打开…':'›'}</span></button>
+    {/* 停用旧入口：<button className="about-check-update" type="button" disabled={openingFeedback} onClick={openFeedback}><span><MessageSquare size={19}/>建议与反馈</span><span>{openingFeedback?'正在打开…':'›'}</span></button> */}
     {(updates.error||linkError)&&<p role="alert">{linkError||updates.error}</p>}
     {!updates.error&&updates.release&&<p role="status">{updates.release.message}{updates.release.newer?` ${updates.release.version}`:''}</p>}{notice&&<p role="status">{notice}</p>}
   </section>

@@ -77,6 +77,36 @@
 .word-aligned-romaji { min-height:1.4em; font-size:12px; white-space:pre; }
 .word-aligned-original { font-size:1em; white-space:pre-wrap; }
 .word-aligned-unresolved { flex-basis:100%; font-size:12px; line-height:1.6; }
+/* 原词组顺序为假名/罗马音/原文；下方选项只移动罗马音，假名仍在汉字上方。
+   混合汉字词使用现有网格行号，普通词使用 flex 顺序，整组仍共同换行。 */
+.romaji-below > .word-aligned-token > .word-aligned-kana { order:0; }
+.romaji-below > .word-aligned-token > .word-aligned-original { order:1; }
+.romaji-below > .word-aligned-token > .word-aligned-romaji { order:2; }
+/* 粘贴入口保持折叠式导入布局；使用系统文本框粘贴，不申请剪贴板权限。 */
+.paste-lyrics { display:grid; gap:12px; min-width:0; margin:12px 0; }
+.paste-lyrics > label { display:grid; gap:8px; }
+.paste-lyrics textarea { display:block; width:100%; min-width:0; min-height:140px; padding:12px; border:1px solid var(--line); border-radius:12px; color:var(--ink); background:transparent; font:inherit; line-height:1.7; resize:vertical; }
+.paste-lyrics > button { justify-self:start; min-height:44px; padding:10px 16px; border:0; border-radius:12px; background:#426550; color:#fff; font:inherit; }
+.paste-lyrics > p { margin:0; color:#a63830; }
+/* 调试时给固定调节条留出独立右侧空间；两端较实、中间更通透，歌词不会被条遮挡。
+   原普通歌词布局保留，退出调试后自动恢复掌握和解析所在的第三列。 */
+.unified-study-page.timestamp-debug-mode .lyrics-list { padding-right:76px; padding-bottom:24px; }
+.unified-study-page.timestamp-debug-mode .lyric-row,.unified-study-page.timestamp-debug-mode .lyric-row.active { grid-template-columns:minmax(0,1fr); column-gap:6px; padding-left:4px; padding-right:4px; }
+.unified-study-page.timestamp-debug-mode .lyric-row.active { background:transparent; }
+.unified-study-page.timestamp-debug-mode .lyric-row.timestamp-target { border-radius:12px; background:#e0ebda; box-shadow:inset 3px 0 #426550; }
+.timestamp-tuner { position:fixed; z-index:26; right:8px; top:25vh; bottom:calc(var(--study-player-height,130px) + 12px); width:72px; max-height:420px; margin:auto 0; display:flex; flex-direction:column; justify-content:space-between; align-items:stretch; gap:8px; padding:10px 3px; border:1px solid #42655033; border-radius:26px; color:#243b32; background:linear-gradient(to bottom,rgba(197,222,214,.86),rgba(197,222,214,.16) 45%,rgba(197,222,214,.16) 55%,rgba(197,222,214,.86)); box-shadow:0 3px 12px #21332612; }
+.timestamp-tuner > button { flex:none; min-height:52px; padding:8px 0; border:0; border-radius:18px; background:transparent; color:inherit; font:600 15px var(--sans); }
+.timestamp-tuner-info { display:grid; gap:7px; text-align:center; font:12px/1.4 var(--sans); overflow-wrap:anywhere; }
+.timestamp-tuner-info output { font-size:11px; font-variant-numeric:tabular-nums; }
+.timestamp-tuner-info small { font-size:11px; }
+.timestamp-tuner-info button { justify-self:center; min-height:38px; padding:4px 9px; border:1px solid #42655055; border-radius:12px; color:inherit; background:#ffffff88; font:inherit; }
+.timestamp-tuner button:disabled { opacity:.45; }
+/* 自动写入失败时在歌词底部显示原因，不占用固定调节条的按钮区域。 */
+.timestamp-tuner-error { position:fixed; z-index:27; left:12px; right:88px; bottom:calc(var(--study-player-height,130px) + 8px); margin:0; padding:10px 12px; border-radius:12px; color:#a63830; background:#fffefaed; border:1px solid #a6383044; font:13px/1.5 var(--sans); }
+/* 上方原调节条26/错误提示27保留对照。播放器以25建立独立层叠上下文，
+   更多/倍速弹窗位于该上下文内；两种调节浮层统一放到24，弹窗才能完整覆盖并接收点击。 */
+.timestamp-tuner,.timestamp-tuner-error { z-index:24; }
+@media(max-height:500px) { .timestamp-tuner { top:6px; bottom:calc(var(--study-player-height,130px) + 8px); padding:2px; gap:0; }.timestamp-tuner > button { min-height:38px; padding:4px 0; }.timestamp-tuner-info { gap:2px; }.timestamp-tuner-info small { display:none; }.timestamp-tuner-info button { min-height:30px; } }
 .line-editor-segmentation { margin:16px 0; padding:12px; border:1px solid #d5e1cf; border-radius:12px; }
 .line-editor-segment-item { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0; }
 .line-editor-segment-item strong { min-width:70px; }
@@ -1065,7 +1095,10 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .study-player-right>.study-floating-chat{position:static;z-index:auto;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2px;width:auto;min-height:44px;padding:3px 2px;box-shadow:none;font-size:11px}
 .study-player-right>.study-floating-chat svg{width:13px;height:13px;flex:none}
 .unified-options-backdrop{padding:12px 12px calc(var(--study-player-height,130px) + 8px)}
-.unified-study-options{max-height:calc(100dvh - var(--study-player-height,130px) - 32px);padding:18px}
+/* 原 max-height:calc(100dvh - var(--study-player-height,130px) - 32px) 在旧内核含var时会使vh回退失效。
+   新增位置选项后弹窗更长，必须限制高度并在卡片内部滚动。 */
+.unified-study-options{max-height:calc(100vh - var(--study-player-height,130px) - 32px);padding:18px}
+@supports(height:100dvh){.unified-study-options{max-height:calc(100dvh - var(--study-player-height,130px) - 32px)}}
 .unified-study-options header{margin-bottom:14px}
 .unified-study-options fieldset{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:12px}
 .unified-study-options fieldset label{border:1px solid #d7e2d3;border-radius:12px;min-height:42px;padding:8px;font-size:14px}
@@ -1081,7 +1114,9 @@ body[style*="overflow: hidden"] .unified-study-page .practice-layout{overflow:hi
 @media(max-height:560px){.unified-study-header .android-study-cover{width:70px;height:70px}.unified-study-page .unified-study-header{padding:8px 0}.unified-study-header .android-study-song h1{font-size:20px}}
 
 /* 原统一页固定页头、仅歌词滚动的规则保留在上方；改为页头和歌词共同滚动。 */
-.android-main.unified-study-page{display:block;height:calc(100dvh - var(--study-player-height,130px));overflow:auto;overscroll-behavior:contain;scrollbar-width:none;padding:0 16px 18px}
+/* 原 height:calc(100dvh - var(--study-player-height,130px))；旧内核含var的声明需用supports隔离，才能保留内部滚动高度。 */
+.android-main.unified-study-page{display:block;height:calc(100vh - var(--study-player-height,130px));overflow:auto;overscroll-behavior:contain;scrollbar-width:none;padding:0 16px 18px}
+@supports(height:100dvh){.android-main.unified-study-page{height:calc(100dvh - var(--study-player-height,130px))}}
 .unified-study-page .practice-layout{display:block;overflow:visible;min-height:0;padding:0;margin:0 auto}
 /* 底部预留按整个播放器实际高度计算，提示文字也完全包含在不透明底板内。 */
 .unified-study-player{box-sizing:border-box;isolation:isolate}
@@ -1199,6 +1234,20 @@ body[style*="overflow: hidden"] .unified-study-page .practice-layout{overflow:vi
 /* 整曲解析三个按钮等宽分配整行，两端对齐；字色统一白色，大字号可自然换行。 */
 .study-analysis-actions { display:flex; justify-content:space-between; align-items:stretch; gap:10px; width:100%; }
 .study-analysis-actions > button { flex:1 1 0; min-width:0; padding:10px 6px; color:white; text-align:center; line-height:1.6; overflow-wrap:anywhere; }
+/* 更多页的两个独立开关与注音卡片一致：两列、圆角边框、选中底色和圆形标记。
+   显式selected兼容旧内核，不依赖:has；时间戳使用简短可见名称避免大字号挤占宽度。 */
+.study-display-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; padding:12px; margin:8px 0 6px; border-top:1px solid #d7e2d3; }
+.study-display-options.single,.study-ai-grid.single { grid-template-columns:minmax(0,1fr); }
+.study-display-options .study-setting-card { display:flex; justify-content:center; align-items:center; gap:7px; min-width:0; min-height:46px; padding:9px 7px; border:1px solid #d7e2d3; border-radius:12px; background:transparent; color:#426550; font:14px/1.5 var(--sans); }
+.study-display-options .study-setting-card.selected { background:#e6ede3; }
+.study-setting-marker { position:relative; width:17px; height:17px; flex:none; border:1.5px solid currentColor; border-radius:50%; }
+.study-setting-card.selected .study-setting-marker:after { content:""; position:absolute; inset:3px; border-radius:50%; background:currentColor; }
+.study-ai-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.study-ai-grid .study-ai { display:flex; flex-direction:column; min-width:0; gap:12px; margin:0; padding-top:14px; }
+.study-ai-grid .study-ai > strong { font-size:14px; line-height:1.5; }
+.study-ai-grid .study-ai > button { width:100%; min-height:46px; margin-top:auto; padding:9px 6px; font:13px/1.5 var(--sans); overflow-wrap:anywhere; }
+.study-ai.study-ai-details { border-top:0; margin-top:0; padding-top:12px; }
+.study-ai-details > p { margin:0 0 12px; }
 .profile-japanese-level { display:grid; gap:10px; margin:24px 0; color:var(--ink); font-size:16px; }
 .profile-japanese-level select { width:100%; min-height:48px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:#fffdf8; color:inherit; font:inherit; }
 .profile-japanese-level small { font-size:13px; line-height:1.6; }
@@ -1216,3 +1265,11 @@ body[style*="overflow: hidden"] .unified-study-page .practice-layout{overflow:vi
 .japanese-level-dialog button:last-child { color:#fff; background:#426550; }
 .japanese-level-dialog button:disabled { opacity:.55; }
 .japanese-level-dialog>small { display:block; margin-top:14px; color:var(--muted); font-size:13px; line-height:1.6; }
+
+/* 导入首屏只保留文件、操作与状态，长内容由用户按需展开。 */
+.import-extra { margin:16px 0; padding:12px 0; border-top:1px solid #e4eade; }
+.import-extra>summary { cursor:pointer; font-size:15px; font-weight:600; padding:8px 0; }
+.import-extra .online-song-search { padding:12px 0; margin:0; border:0; }
+.import-extra .artwork-picker-heading p,.import-extra .online-song-search>h3 { display:none; }
+.song-import-dialog .song-file-field { padding:16px; min-height:0; margin-bottom:12px; }
+.song-import-actions button { border-radius:12px; }

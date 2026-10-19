@@ -29,6 +29,36 @@ const song = {
   audioBlob: new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'audio/mpeg' }),
 }
 
+// 新显示偏好必须随歌曲学习设置恢复，同时拒绝无法识别的位置值。
+test('罗马音位置按歌曲备份往返并校验，兼容没有位置设置的旧备份', async () => {
+  for (const romajiPosition of ['above','below']) {
+    const next = {...state,progress:{...state.progress,songSettings:{'local-test':{romajiPosition,readingStyle:'both'}}}}
+    const result = await inspectLearningBackup(createLearningBackup([song],next))
+    assert.equal(result.manifest.progress.songSettings['local-test'].romajiPosition,romajiPosition)
+  }
+  const bad = {...state,progress:{...state.progress,songSettings:{'local-test':{romajiPosition:'side'}}}}
+  assert.throws(()=>createLearningBackup([song],bad), /显示选项无效/)
+})
+
+// 项目歌曲的时间覆盖随备份恢复，损坏的覆盖记录不能进入学习数据。
+test('单句时间覆盖备份往返，拒绝负数与错误结构',async()=>{
+  const timeOverrides={0:{text:'夢ならば',baseStart:1.5,start:1.7}}
+  const next={...state,progress:{...state.progress,songSettings:{'folder-test':{timeOverrides}}}}
+  const result=await inspectLearningBackup(createLearningBackup([song],next))
+  assert.deepEqual(result.manifest.progress.songSettings['folder-test'].timeOverrides,timeOverrides)
+  for(const bad of [{0:{text:'夢',baseStart:0,start:-1}},[],{invalid:{text:'夢',baseStart:0,start:1}}]){
+    assert.throws(()=>createLearningBackup([song],{...state,progress:{...state.progress,songSettings:{s:{timeOverrides:bad}}}}),/显示选项无效/)
+  }
+})
+
+test('歌曲时间戳重置原点可备份恢复，拒绝损坏原点',async()=>{
+  const edited={...song,lines:song.lines.map(line=>({...line,start:1.7,timestampOriginalStart:1.5}))}
+  const inspection=await inspectLearningBackup(createLearningBackup([edited],state))
+  const [restored]=songsFromLearningBackup(inspection)
+  assert.equal(restored.lines[0].timestampOriginalStart,1.5)
+  assert.throws(()=>createLearningBackup([{...edited,lines:edited.lines.map(line=>({...line,timestampOriginalStart:-1}))}],state),/歌词格式/)
+})
+
 // 云备份和恢复既支持旧的纯歌词覆盖，也支持新翻译和空翻译。
 test('单句翻译覆盖记录备份往返且兼容旧字符串', async () => {
   const next = { ...state, progress: { ...state.progress, lyricEditsBySong: { demo: { 0: { text: '夢', translation: '梦' }, 1: { text: '歌', translation: '' }, 2: '明日' } } } }

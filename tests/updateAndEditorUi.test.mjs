@@ -17,12 +17,16 @@ before(async()=>{
   CommunityInviteDialog=(await server.ssrLoadModule('/src/components/CommunityInvite.jsx')).CommunityInviteDialog
 })
 after(async()=>{await server?.close()})
-test('交流邀请有正确群号、两个主动入口以及关闭和永久忽略选项',()=>{
+// 旧断言要求两个入口；停用兔小巢后仅保留加群文案和群号复制。
+test('交流邀请仅邀请加群，保留关闭和永久忽略选项',()=>{
   const html=renderToStaticMarkup(createElement(CommunityInviteDialog,{onClose:()=>{}}))
-  for(const text of ['欢迎来聊聊','1125131374','复制群号','建议与反馈','暂时不用','不再提醒'])assert.ok(html.includes(text))
+  // for(const text of ['欢迎来聊聊','1125131374','复制群号','建议与反馈','暂时不用','不再提醒'])assert.ok(html.includes(text))
+  for(const text of ['欢迎来聊聊','1125131374','复制群号','分享喜欢的歌曲和学习心得','暂时不用','不再提醒'])assert.ok(html.includes(text))
+  assert.doesNotMatch(html,/反馈|兔小巢/)
   assert.match(html,/role="dialog"/);assert.match(html,/aria-modal="true"/)
   assert.match(html,/type="checkbox"/)
-  assert.equal((html.match(/<button /g)||[]).length,3)
+  // assert.equal((html.match(/<button /g)||[]).length,3)
+  assert.equal((html.match(/<button /g)||[]).length,2)
 })
 // 校验用户看见的入口，避免旧安装方式或多余按钮再次出现在更新界面。
 test('下载前、下载中和安装失败时更新弹窗都只保留取消与更新',()=>{
@@ -36,18 +40,23 @@ test('下载前、下载中和安装失败时更新弹窗都只保留取消与�
     assert.doesNotMatch(html,/选择其他安装方式|保存安装包|选择已下载/)
   }
 })
-test('关于页面四项入口包含建议与反馈，交流群号正确',()=>{
+test('关于页面停用反馈入口，保留更新、项目地址和正确交流群号',()=>{
   const html=renderToStaticMarkup(createElement(AboutPanel,{updates:{version:'1.0.2',check:()=>{}}}))
   // 原只有检查更新、项目地址、加群交流三个按钮；现在增加兔小巢入口。
   // assert.equal((html.match(/<button /g)||[]).length,3)
-  assert.equal((html.match(/<button /g)||[]).length,4)
-  for(const text of ['检查更新','项目地址','加群交流','建议与反馈','1125131374']) assert.ok(html.includes(text))
+  // 原反馈版要求四个入口：assert.equal((html.match(/<button /g)||[]).length,4)
+  // for(const text of ['检查更新','项目地址','加群交流','建议与反馈','1125131374']) assert.ok(html.includes(text))
+  assert.equal((html.match(/<button /g)||[]).length,3)
+  for(const text of ['检查更新','项目地址','加群交流','1125131374']) assert.ok(html.includes(text))
+  assert.doesNotMatch(html,/建议与反馈|兔小巢/)
   assert.doesNotMatch(html,/每次启动自动检测/)
 })
-test('歌曲编辑提供五个可收起分区且默认不挂载联网搜索',()=>{
+test('歌曲编辑合并名称分区为四项且默认不挂载联网搜索',()=>{
   const html=renderToStaticMarkup(createElement(Editor,{song:{id:'test',title:'原创测试',artist:'UTA',lines:[{id:0,start:0,text:'歌'}]},onClose:()=>{},onSave:()=>{}}))
-  assert.equal((html.match(/<details /g)||[]).length,5)
-  for(const text of ['歌曲名称','歌手名称','编辑歌曲封面','重新上传歌曲或歌词','编辑歌词与时间轴']) assert.ok(html.includes(text))
+  // 原来名称与歌手各占一项，共五项；现在合并为一个折叠项。
+  // assert.equal((html.match(/<details /g)||[]).length,5)
+  assert.equal((html.match(/<details /g)||[]).length,4)
+  for(const text of ['歌曲和歌手名称','编辑歌曲封面','重新上传歌曲或歌词','编辑歌词与时间轴']) assert.ok(html.includes(text))
   assert.doesNotMatch(html,/online-song-search|artwork-picker/)
   assert.match(html,/>保存修改<\/button>/)
 })

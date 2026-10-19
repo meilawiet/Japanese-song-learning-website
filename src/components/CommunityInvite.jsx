@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { registerPlugin } from '@capacitor/core'
+// 停用付费反馈服务，交流邀请不再注册或调用兔小巢插件。
+// import { registerPlugin } from '@capacitor/core'
 import { App } from '@capacitor/app'
 import useModalScrollLock from '../lib/useModalScrollLock'
 import { QQ_GROUP, INVITE_IDLE_DELAY, readInvitePreference, inviteDueAt, claimInviteDisplay, setInviteOptOut } from '../lib/communityInvite'
 
 // 复用关于页的原生内置反馈页，不跳转浏览器或 QQ，也不自动加入群聊。
-const feedback = registerPlugin('UtaFeedback')
+// const feedback = registerPlugin('UtaFeedback')
 const otherDialog = () => Boolean(document.querySelector('[aria-modal="true"],[role="dialog"],[role="alertdialog"]'))
 const mediaPlaying = () => [...document.querySelectorAll('audio,video')].some(media => !media.paused && !media.ended)
 
@@ -13,7 +14,7 @@ export function CommunityInviteDialog({ onClose }) {
   const root = useRef(null)
   const [optedOut, setOptedOut] = useState(false)
   const [notice, setNotice] = useState('')
-  const [opening, setOpening] = useState(false)
+  // const [opening, setOpening] = useState(false)
   useModalScrollLock()
   useEffect(() => {
     const previous = document.activeElement
@@ -38,23 +39,24 @@ export function CommunityInviteDialog({ onClose }) {
     try { await navigator.clipboard.writeText(QQ_GROUP); setNotice('已复制群号，请在 QQ 中搜索加入。') }
     catch { setNotice(`请在 QQ 中搜索群号：${QQ_GROUP}。`) }
   }
-  const openFeedback = async () => {
-    if (opening) return
-    setOpening(true); setNotice('')
-    try { await feedback.open(); onClose() }
-    catch { setOpening(false); setNotice('无法打开建议与反馈，请稍后重试。') }
-  }
+  // 旧反馈打开逻辑保留对照；现在仅邀请加入 QQ 群。
+  // const openFeedback = async () => {
+  //   if (opening) return
+  //   setOpening(true); setNotice('')
+  //   try { await feedback.open(); onClose() }
+  //   catch { setOpening(false); setNotice('无法打开建议与反馈，请稍后重试。') }
+  // }
   return <div className="community-invite-backdrop" onClick={onClose}>
     <section ref={root} className="community-invite-dialog" role="dialog" aria-modal="true" aria-labelledby="community-invite-title" aria-describedby="community-invite-description" onClick={event => event.stopPropagation()}>
       <h2 id="community-invite-title">欢迎来聊聊</h2>
       <div id="community-invite-description">
         <p>欢迎加入 UTA 交流群，分享喜欢的歌曲和学习心得。</p>
-        <p>遇到问题，或者有想要的功能，也欢迎通过「建议与反馈」告诉我们。</p>
+        {/* 停用旧反馈邀请：<p>遇到问题，或者有想要的功能，也欢迎通过「建议与反馈」告诉我们。</p> */}
         <p className="community-invite-group">QQ 群：{QQ_GROUP}</p>
       </div>
       <div className="community-invite-actions">
         <button type="button" onClick={copyGroup}>复制群号</button>
-        <button type="button" onClick={openFeedback} disabled={opening}>{opening ? '正在打开…' : '建议与反馈'}</button>
+        {/* 停用旧入口：<button type="button" onClick={openFeedback} disabled={opening}>{opening ? '正在打开…' : '建议与反馈'}</button> */}
       </div>
       <p className="community-invite-notice" role="status">{notice}</p>
       <div className="community-invite-bottom">

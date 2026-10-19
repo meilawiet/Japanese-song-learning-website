@@ -3,6 +3,8 @@ import { decodeLrcBytes } from './lrcEncoding.js'
 import { parseTimedLyrics } from './timedLyrics.js'
 // 原来仅允许时间轴歌词；改为统一读取有/无时间轴的文本及来源注音 JSON。
 import {parseLyricDocument,lyricDuration} from './lyricDocument.js'
+// 时间戳独立保存，原子核对编辑基线，避免覆盖同时同步的新歌词。
+import { mergeTimestampChanges } from './timestampTuning.js'
 
 const DATABASE_NAME = 'uta-local-song-library'
 const DATABASE_VERSION = 1
@@ -165,6 +167,27 @@ export async function updateLocalSongArtworkIfUrl(songId, expectedUrl, metadata)
 
 export async function deleteLocalSong(songId) {
   await runTransaction('readwrite', (store) => store.delete(songId))
+}
+
+export async function updateLocalSongTimings(songId, before, draft) {
+  let updated=null, failure=null
+  try {
+    await runTransaction('readwrite',store=>{
+      const request=store.get(songId)
+      request.onsuccess=()=>{
+        try {
+          if (!request.result) throw new Error('找不到当前歌曲，请重新打开歌曲库。')
+          const lines=mergeTimestampChanges(request.result.lines,before,draft)
+          updated={...request.result,lines,duration:lyricDuration(lines)}
+          // 时间轴已经改变，旧云附件摘要不再代表本地歌曲。
+          delete updated.cloudAsset
+          store.put(updated)
+        } catch (reason) { failure=reason; store.transaction.abort() }
+      }
+      return request
+    })
+  } catch (reason) { throw failure || reason }
+  return updated
 }
 
 export async function replaceLocalSongs(records) {

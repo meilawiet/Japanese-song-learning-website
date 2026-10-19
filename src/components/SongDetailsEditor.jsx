@@ -3,6 +3,8 @@ import { ChevronDown, Plus, Trash2, X } from 'lucide-react'
 import { parseLrcFile } from '../lib/localSongStore'
 import ArtworkPicker from './ArtworkPicker'
 import OnlineSongSearch from './OnlineSongSearch'
+// 已有歌曲同样可粘贴替换，仍需点击保存修改才写入本机。
+import PasteLyrics from './PasteLyrics'
 import { insertLyricLine } from '../lib/songTimeline'
 import {orderLyricLines} from '../lib/lyricDocument.js'
 
@@ -24,6 +26,7 @@ export default function SongDetailsEditor({ song, artwork, onClose, onSave, busy
   const [lines, setLines] = useState(song.lines.map((line) => ({ ...line, time: timeText(line.start) })))
   const [audioFile, setAudioFile] = useState(null)
   const [sourceFile, setSourceFile] = useState(song.sourceFile)
+  const [pasteText, setPasteText] = useState('')
   const [error, setError] = useState('')
   const [selectedArtwork, setSelectedArtwork] = useState(artwork || song)
   const [artworkChanged, setArtworkChanged] = useState(false)
@@ -59,7 +62,9 @@ export default function SongDetailsEditor({ song, artwork, onClose, onSave, busy
       if (line.time.trim()&&start == null || !line.text.trim()) { setError(`第 ${index + 1} 句的时间或歌词无效。时间可留空。`); return }
       // 原保存字段不包含罗马音；同时保留用户导入和编辑的罗马音。
       // prepared.push({ id: line.id, start, text: line.text.trim(), translation: String(line.translation || '').trim() })
-      prepared.push({ id: line.id, start, text: line.text.trim(), translation: String(line.translation || '').trim(), romaji: String(line.romaji || '').trim() })
+      // 原保存只含id/start/text/translation/romaji；普通资料编辑也保留调试原点，重新上传歌词自然使用新原点。
+      // prepared.push({ id: line.id, start, text: line.text.trim(), translation: String(line.translation || '').trim(), romaji: String(line.romaji || '').trim() })
+      prepared.push({ id: line.id, start, text: line.text.trim(), translation: String(line.translation || '').trim(), romaji: String(line.romaji || '').trim(), ...(Number.isFinite(line.timestampOriginalStart) && line.timestampOriginalStart>=0 ? {timestampOriginalStart:line.timestampOriginalStart} : {}) })
     }
     // 原 prepared.sort(...) 会移动未设置时间的句子。
     const ordered=orderLyricLines(prepared)
@@ -74,14 +79,17 @@ export default function SongDetailsEditor({ song, artwork, onClose, onSave, busy
     {/* 原滚动容器：<fieldset className="song-editor-scroll" disabled={blocked}>；真机上内容会越过底部操作区。
         使用独立滚动容器，避免 Android WebView 的 fieldset 内容溢出遮挡底部按钮。 */}
     <div className="song-editor-scroll"><fieldset className="song-editor-fields" disabled={blocked}>
-      <EditorSection title="歌曲名称"><div className="song-editor-meta"><label>歌曲名称<input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={160} /></label></div></EditorSection>
-      <EditorSection title="歌手名称"><div className="song-editor-meta"><label>歌手名称<input value={artist} onChange={(event) => setArtist(event.target.value)} maxLength={160} /></label></div></EditorSection>
+      {/* 原来分成两个折叠项，保留对照：<EditorSection title="歌曲名称"><div className="song-editor-meta"><label>歌曲名称<input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={160} /></label></div></EditorSection>
+      <EditorSection title="歌手名称"><div className="song-editor-meta"><label>歌手名称<input value={artist} onChange={(event) => setArtist(event.target.value)} maxLength={160} /></label></div></EditorSection> */}
+      {/* 歌曲名和歌手共用一个折叠项，仍分别编辑、保存。 */}
+      <EditorSection title="歌曲和歌手名称"><div className="song-editor-meta"><label>歌曲名称<input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={160} /></label><label>歌手名称<input value={artist} onChange={(event) => setArtist(event.target.value)} maxLength={160} /></label></div></EditorSection>
       <EditorSection title="编辑歌曲封面"><ArtworkPicker title={title} artist={artist} selected={selectedArtwork} onUploading={setArtworkUploading} onSelect={(choice) => {setSelectedArtwork(choice);setArtworkChanged(true)}} /></EditorSection>
-      <EditorSection title="重新上传歌曲或歌词"><div className="song-editor-files"><label>重新上传歌曲音频<input type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.webm" onChange={(event) => setAudioFile(event.target.files?.[0] || null)} /><small>{audioFile?.name || `当前文件：${song.audioName || '尚未添加音频'}`}</small></label><label>重新上传歌词（支持无时间戳文本）<input type="file" onChange={(event) => replaceLyrics(event.target.files?.[0])} /><small>{sourceFile || '也可以直接修改每一句。'}</small></label></div>{/* 原歌词限定 LRC；现在读取所有可识别的歌词文本，音频缺少时可在此补充。 */}{(audioFile||song.audioName)&&lines.some(line=>!line.time.trim())&&<p className="song-editor-note" role="status">当前歌词没有完整时间戳。音频可以保存，但逐句试听和跟唱需先手动编辑时间戳，或重新上传带时间戳的歌词文件。</p>}<OnlineSongSearch onChooseLyrics={replaceLyrics} autoQuery={[title, artist].filter(Boolean).join(' / ')} /></EditorSection>
+      <EditorSection title="重新上传歌曲或歌词"><div className="song-editor-files"><label>重新上传歌曲音频<input type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.webm" onChange={(event) => setAudioFile(event.target.files?.[0] || null)} /><small>{audioFile?.name || `当前文件：${song.audioName || '尚未添加音频'}`}</small></label><label>重新上传歌词（支持无时间戳文本）<input type="file" onChange={(event) => replaceLyrics(event.target.files?.[0])} /><small>{sourceFile || '也可以直接修改每一句。'}</small></label></div>{/* 原歌词限定 LRC；现在读取所有可识别的歌词文本，音频缺少时可在此补充。 */}{(audioFile||song.audioName)&&lines.some(line=>!line.time.trim())&&<p className="song-editor-note" role="status">当前歌词没有完整时间戳。音频可以保存，但逐句试听和跟唱需先手动编辑时间戳，或重新上传带时间戳的歌词文件。</p>}<EditorSection title="粘贴歌词"><PasteLyrics value={pasteText} onChange={setPasteText} onChooseLyrics={replaceLyrics} disabled={blocked}/></EditorSection><OnlineSongSearch onChooseLyrics={replaceLyrics} autoQuery={[title, artist].filter(Boolean).join(' / ')} /></EditorSection>
       <EditorSection title="编辑歌词与时间轴">
+        {/* 多源补全已移除，继续逐句编辑当前歌曲的歌词与时间轴。 */}
         <div className="song-editor-lines-head"><strong>共 {lines.length} 句</strong></div>
         <div className="song-editor-insert"><label>添加位置<select value={Math.min(insertAt, lines.length)} onChange={(event) => setInsertAt(Number(event.target.value))}><option value={0}>第1句之前</option>{lines.map((line,index)=><option key={line.id} value={index+1}>第{index+1}句之后{index===lines.length-1?'（最后）':''}</option>)}</select></label><button type="button" onClick={() => {try{setLines(insertLyricLine(lines, Math.min(insertAt,lines.length), parseTime, timeText));setError('')}catch(reason){setError(reason.message)}}}><Plus size={15}/>添加一句</button></div>
-        <ol className="song-editor-lines">{lines.map((line, index) => <li key={line.id}><span>{String(index + 1).padStart(2, '0')}</span><div><label>时间<input value={line.time} onChange={(event) => changeLine(line.id, 'time', event.target.value)} placeholder="00:12.345" /></label><label>原文歌词<input value={line.text} onChange={(event) => changeLine(line.id, 'text', event.target.value)} lang={song.language==='ja'?'ja':undefined} /></label><label>中文译文<input value={line.translation || ''} onChange={(event) => changeLine(line.id, 'translation', event.target.value)} /></label>{/* 罗马音与原文、译文同属当前句，可随时修正或清空。 */}{song.language!=='zh'&&<label>{!song.language||song.language==='ja'?'罗马音':'来源发音标注'}<input value={line.romaji || ''} maxLength={1000} lang={!song.language||song.language==='ja'?'ja-Latn':undefined} onChange={(event) => changeLine(line.id, 'romaji', event.target.value)} placeholder={!song.language||song.language==='ja'?'留空使用自动注音':'来源标注按原样保留'} /></label>}</div><button type="button" onClick={() => setLines((previous) => previous.filter((item) => item.id !== line.id))} aria-label={`删除第 ${index + 1} 句`}><Trash2 size={15} /></button></li>)}</ol>
+        <ol className="song-editor-lines">{lines.map((line, index) => <li key={line.id}><span>{String(index + 1).padStart(2, '0')}</span><div><label>时间<input value={line.time} onChange={(event) => changeLine(line.id, 'time', event.target.value)} placeholder="00:12.345" /></label><label>原文歌词<input value={line.text} onChange={(event) => changeLine(line.id, 'text', event.target.value)} lang={song.language==='ja'?'ja':undefined} /></label><label>中文译文<input value={line.translation || ''} onChange={(event) => changeLine(line.id, 'translation', event.target.value)} /></label>{/* 罗马音与原文、译文同属当前句，可随时修正或清空。 */}{song.language!=='zh'&&<label>{!song.language||song.language==='ja'?'来源注音':'来源发音标注'}<input value={line.romaji || ''} maxLength={1000} lang={!song.language||song.language==='ja'?'ja-Latn':undefined} onChange={(event) => changeLine(line.id, 'romaji', event.target.value)} placeholder={!song.language||song.language==='ja'?'留空使用自动注音':'来源标注按原样保留'} /></label>}</div><button type="button" onClick={() => setLines((previous) => previous.filter((item) => item.id !== line.id))} aria-label={`删除第 ${index + 1} 句`}><Trash2 size={15} /></button></li>)}</ol>
         <p className="song-editor-note">新增句子先填入相邻时间，请按实际演唱调整；保存时按时间排序。修改歌词后，本歌逐句掌握记录与 AI 解析会重新计算。</p>
       </EditorSection>
     </fieldset></div>
