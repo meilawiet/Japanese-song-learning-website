@@ -84,15 +84,23 @@ test('跟唱模式选段仍只播一次，底部播放完成后重播段首，�
   t.setMode('sentence'); assert.equal(t.state.range, null); assert.equal(t.state.playing, false)
 })
 
-test('拖动到段内保留边界，段外拖动、切歌、离页清除临时范围；缺时间戳不能选择', () => {
+// 原要求“缺时间戳不能选择”；收藏入口统一后允许阅读选区，但不允许播放或伪造时间。
+test('拖动、切歌及离页清除临时范围；纯歌词可选择收藏但不能播放', () => {
   const {t} = fixture()
   t.doubleTapLine(12); t.doubleTapLine(41); t.seek(4)
   assert.ok(t.state.range); assert.equal(t.state.time, 4)
   t.seek(7); assert.equal(t.state.range, null)
   t.doubleTapLine(12); t.doubleTapLine(5); t.configure({song, enabled:false})
   assert.equal(t.state.range, null); assert.equal(t.state.rangeAnchorId, null)
-  t.configure({song:{lines:[{id:1,start:null}]},enabled:true}); t.doubleTapLine(1)
-  assert.equal(t.state.rangeAnchorId, null)
+  t.doubleTapLine(12); assert.equal(t.state.rangeAnchorId, null)
+  t.configure({song:{lines:[{id:1,start:null},{id:9,start:null}]},enabled:true}); t.doubleTapLine(9)
+  // 原断言：assert.equal(t.state.rangeAnchorId, null)
+  assert.equal(t.state.rangeAnchorId, 9)
+  t.doubleTapLine(1)
+  assert.deepEqual(t.state.range,{startIndex:0,endIndex:1,startId:1,endId:9})
+  t.playRange(); t.toggle()
+  assert.equal(t.state.playing,false); assert.equal(t.state.ready,false); assert.equal(t.state.time,0)
+  t.doubleTapLine(9); assert.equal(t.state.range,null)
 })
 
 test('真实音频从段首开始、按真实段尾暂停；最后一句以实际媒体时长结束', async () => {

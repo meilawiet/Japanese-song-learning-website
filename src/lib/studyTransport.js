@@ -84,7 +84,9 @@ export class StudyTransport {
   }
   // 第一次双击仅选起点；第二次双击仅确定并高亮范围，按用户要求不自动播放。
   doubleTapLine = id => {
-    if (!this.state.ready) return
+    // 原来无完整时间戳时不能选段：if (!this.state.ready) return
+    // 阅读收藏只依赖歌词顺序；播放与音频定位仍需完整时间轴，离页禁用时不能新建选区。
+    if (!this.enabled) return
     const index = this.song.lines.findIndex(line => line.id === id)
     if (index < 0) return
     if (this.inRange(id) || this.state.rangeAnchorId === id) { this.clearRange(); return }
@@ -101,8 +103,10 @@ export class StudyTransport {
     this.finished = false
     this.segmentId = range.startId
     this.select(range.startId)
-    this.audioTime(this.song.lines[startIndex].start)
-    this.publish({ range, rangeAnchorId: null, time: this.song.lines[startIndex].start })
+    // 原无条件定位：this.audioTime(this.song.lines[startIndex].start)
+    // this.publish({ range, rangeAnchorId: null, time: this.song.lines[startIndex].start })
+    if (this.state.ready) this.audioTime(this.song.lines[startIndex].start)
+    this.publish({ range, rangeAnchorId: null, ...(this.state.ready ? { time: this.song.lines[startIndex].start } : {}) })
   }
   // 段内任一句都是同一热区：播放中单击暂停，否则从段首播放一次。
   playRange = () => {

@@ -49,7 +49,9 @@ export default function AndroidStudyPlayer({ transport, rate, onRate, onChooseSo
   return <footer className="unified-study-player" ref={root} aria-label="学习播放器">
     {/* 原时间轴提示只区分未就绪/静音；复用此位置显示起点和选段说明，不额外弹窗。 */}
     {/* <p className="study-timeline-note" role="status">{!state.ready ? '歌词缺少完整时间戳，可阅读和编辑，补全后可跟随播放。' : state.silent ? `仅歌词 · ${state.mode === 'continuous' ? '静音跟唱' : '静音计时'}` : '\u00a0'}</p> */}
-    <p id="study-range-note" className="study-timeline-note" role="status">{!state.ready ? '歌词缺少完整时间戳，可阅读和编辑，补全后可跟随播放。' : state.rangeAnchorId != null ? `已选第 ${song.lines.findIndex(line => line.id === state.rangeAnchorId) + 1} 句，请双击另一句确定范围` : state.range ? `选段播放 · 第 ${state.range.startIndex + 1}～${state.range.endIndex + 1} 句 · 单击播放或暂停，双击退出` : state.silent ? `仅歌词 · ${state.mode === 'continuous' ? '静音跟唱' : '静音计时'}` : '\u00a0'}</p>
+    {/* 原提示先判断时间轴，保留对照：<p id="study-range-note" className="study-timeline-note" role="status">{!state.ready ? '歌词缺少完整时间戳，可阅读和编辑，补全后可跟随播放。' : state.rangeAnchorId != null ? `已选第 ${song.lines.findIndex(line => line.id === state.rangeAnchorId) + 1} 句，请双击另一句确定范围` : state.range ? `选段播放 · 第 ${state.range.startIndex + 1}～${state.range.endIndex + 1} 句 · 单击播放或暂停，双击退出` : state.silent ? `仅歌词 · ${state.mode === 'continuous' ? '静音跟唱' : '静音计时'}` : '\u00a0'}</p> */}
+    {/* 收藏可用于纯歌词；说明当前起点/选段，避免误导为未选中或可以播放。 */}
+    <p id="study-range-note" className="study-timeline-note" role="status">{state.rangeAnchorId != null ? `已选第 ${song.lines.findIndex(line => line.id === state.rangeAnchorId) + 1} 句，可收藏本句，或双击另一句选段` : state.range ? `已选第 ${state.range.startIndex + 1}～${state.range.endIndex + 1} 句，可收藏本段${state.ready ? '；单击播放或暂停，双击退出' : '；补全时间戳后可播放'}` : !state.ready ? '歌词缺少完整时间戳，可双击收藏，补全后可跟随播放。' : state.silent ? `仅歌词 · ${state.mode === 'continuous' ? '静音跟唱' : '静音计时'}` : '\u00a0'}</p>
     {/* 原拖动预览事件保留对照：
       <input type="range" value={scrub ?? state.time} onPointerDown={() => setScrub(state.time)}
         onChange={event => { const time = Number(event.target.value); setScrub(time); transport.seek(time) }}

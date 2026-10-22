@@ -8,12 +8,14 @@ function readView() {
   try { return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid' } catch { return 'grid' }
 }
 
-// 安卓歌曲库独立呈现，保留网页端原有卡片作为对照；长按封面打开操作菜单。
+// 安卓歌曲库独立呈现，封面、歌名、歌手和学习进度共用长按操作菜单。
 export default function AndroidSongLibrary({ songs, total, search, onSearch, onImport, artworkFor, learnedBySong, onOpen, onDelete, onArtwork, onEdit, deletingSongId, activeSongId, selectionMode = false }) {
   const [view, setView] = useState(readView)
   const [menuSong, setMenuSong] = useState(null)
   const pressTimer = useRef(null)
   const longPressed = useRef(false)
+  // 长按覆盖整张卡片，移动超出阈值就取消，避免上下滚动时误弹菜单。
+  const pressStart = useRef(null)
 
   useEffect(() => () => window.clearTimeout(pressTimer.current), [])
   // 菜单关闭后清除长按标记，下一次轻点可以正常打开歌曲。
@@ -32,7 +34,10 @@ export default function AndroidSongLibrary({ songs, total, search, onSearch, onI
     setMenuSong(null)
   }
 
-  function beginPress(song) {
+  // 原参数仅song；记录本次手势起点用于区分长按与滑动。
+  function beginPress(song, event) {
+    if (event.button !== 0 || !event.isPrimary) return
+    pressStart.current = { x:event.clientX, y:event.clientY }
     longPressed.current = false
     window.clearTimeout(pressTimer.current)
     pressTimer.current = window.setTimeout(() => {
@@ -41,7 +46,9 @@ export default function AndroidSongLibrary({ songs, total, search, onSearch, onI
     }, 500)
   }
 
-  function endPress() { window.clearTimeout(pressTimer.current) }
+  // 原只取消计时：function endPress() { window.clearTimeout(pressTimer.current) }
+  function endPress() { window.clearTimeout(pressTimer.current); pressStart.current=null }
+  function movePress(event) { if (pressStart.current && Math.hypot(event.clientX-pressStart.current.x,event.clientY-pressStart.current.y)>12) endPress() }
 
   function openSong(song) {
     // 原操作菜单只按 isLocal 判断可编辑；未下载的歌曲先下载，避免把占位歌词保存成原文。
@@ -68,9 +75,12 @@ export default function AndroidSongLibrary({ songs, total, search, onSearch, onI
         const learned = (learnedBySong[song.id] || []).filter((lineId) => song.lines.some((line) => line.id === lineId)).length
         // 未下载歌曲仍显示封面、名称和进度，暗色封面提示需要按首下载。
         return <article className={`android-library-song ${song.cloudPending?'cloud-pending':''} ${song.id === activeSongId ? 'current' : ''}`} key={song.id}>
-          <button className="android-library-song-main" type="button" onClick={() => openSong(song)} aria-label={`学习 ${song.title}，${song.artist}`}>
-            {/* 仅封面承接长按；轻点卡片其他区域仍直接进入歌曲。 */}
+          {/* 长按从封面扩大到整个主按钮；选歌弹层保持轻点选歌，不弹编辑菜单。 */}
+          <button className="android-library-song-main" type="button" onPointerDown={!selectionMode ? event=>beginPress(song,event) : undefined} onPointerMove={movePress} onPointerUp={endPress} onPointerCancel={endPress} onPointerLeave={endPress} onContextMenu={event=>{event.preventDefault();if(!selectionMode){endPress();longPressed.current=true;setMenuSong(song)}}} onClick={() => openSong(song)} aria-label={`学习 ${song.title}，${song.artist}`}>
+            {/* 原仅封面承接长按的实现保留对照：
             <span className="android-library-cover" onPointerDown={view === 'grid' && !selectionMode ? () => beginPress(song) : undefined} onPointerUp={endPress} onPointerCancel={endPress} onPointerLeave={endPress} onContextMenu={(event) => { event.preventDefault(); if (!selectionMode) { endPress(); longPressed.current = true; setMenuSong(song) } }}><span aria-hidden="true">{song.title.slice(0, 2)}</span>{artwork?.artworkUrl && <img src={artwork.artworkUrl} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true }} />}</span>
+            */}
+            <span className="android-library-cover"><span aria-hidden="true">{song.title.slice(0, 2)}</span>{artwork?.artworkUrl && <img src={artwork.artworkUrl} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true }} />}</span>
             <span className="android-library-song-copy"><strong>{song.title}</strong><small>{song.artist || '未知歌手'}{song.cloudPending?' · 待下载':song.lyricsOnly?' · 仅歌词':''}</small><span className="android-library-progress"><BookOpenCheck size={14} /> {learned} / {song.lines.length} 句已掌握</span></span>
           </button>
           {view === 'list' && !selectionMode && <button className="android-library-more" type="button" onClick={() => setMenuSong(song)} aria-label={`更多操作：${song.title}`} aria-haspopup="dialog"><MoreVertical size={20} /></button>}

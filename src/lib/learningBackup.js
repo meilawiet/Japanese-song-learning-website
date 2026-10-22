@@ -1,5 +1,7 @@
 // 项目歌曲的单句时间覆盖参与备份校验；本地歌曲的时间直接保存在歌曲记录。
 import { validTimeOverrides } from './timestampTuning.js'
+// 新复习单元与旧单句均可备份；额外行编号、原文和复习进度须通过结构校验。
+import {validReviewItem} from './reviewBook.js'
 const SIGNATURE = 'UTA-LEARNING-BACKUP\n'
 const VERSION = 1
 const MAX_MANIFEST_BYTES = 16 * 1024 * 1024
@@ -23,6 +25,14 @@ function validArtworkUrl(value) {
 
 function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+// 兼容旧快照；新增的人工词界保护及待核对记录必须是受控数据，不能把损坏记录当成自动缓存应用。
+function validManualSnapshot(snapshot) {
+  const annotations=snapshot.manualAnnotations,pending=snapshot.unresolvedCorrections
+  if(annotations!=null&&(!isRecord(annotations)||Object.entries(annotations).some(([id,line])=>!isRecord(line)||String(line.id)!==id||!Number.isSafeInteger(line.id)||typeof line.text!=='string'||!Array.isArray(line.tokens)||line.tokens.some(token=>!isRecord(token)||!Number.isSafeInteger(token.index)||typeof token.surface!=='string'||typeof token.reading!=='string')||line.tokens.map(token=>token.surface).join('')!==line.text)))return false
+  // 待核对记录可附带原词界证据，验证规则与活动人工快照相同。
+  return pending==null||isRecord(pending)&&Object.values(pending).every(history=>Array.isArray(history)&&history.every(item=>isRecord(item)&&typeof item.reading==='string'&&(item.text===null||typeof item.text==='string')&&(item.annotation==null||isRecord(item.annotation)&&validManualSnapshot({manualAnnotations:{[item.annotation.id]:item.annotation}}))))
 }
 
 function checkState(manifest) {
@@ -50,7 +60,8 @@ function checkState(manifest) {
     throw new Error('备份中的学习进度格式不正确。')
   }
   if (Object.values(progress.learnedBySong).some((ids) => !Array.isArray(ids) || ids.some((id) => !Number.isSafeInteger(id)))
-    || progress.reviewItems.some((item) => !isRecord(item) || typeof item.songId !== 'string' || !Number.isSafeInteger(item.lineId))
+    // 原仅校验songId/lineId：|| progress.reviewItems.some((item) => !isRecord(item) || typeof item.songId !== 'string' || !Number.isSafeInteger(item.lineId))
+    || progress.reviewItems.some(item=>!validReviewItem(item))
     || progress.favoriteSongIds.some((id) => typeof id !== 'string')
     || Object.values(progress.corrections).some((reading) => typeof reading !== 'string')
     || Object.values(progress.meaningOverrides).some((meaning) => typeof meaning !== 'string')
@@ -71,7 +82,8 @@ function checkState(manifest) {
     || (progress.readingStyle != null && !['hiragana', 'romaji', 'both', 'none'].includes(progress.readingStyle))
     || (progress.lyricSnapshots != null && (!isRecord(progress.lyricSnapshots)
       || Object.values(progress.lyricSnapshots).some((snapshot) => !isRecord(snapshot) || !Array.isArray(snapshot.lines)
-        || snapshot.lines.some((line) => !isRecord(line) || !Number.isSafeInteger(line.id) || typeof line.text !== 'string'))))
+        || snapshot.lines.some((line) => !isRecord(line) || !Number.isSafeInteger(line.id) || typeof line.text !== 'string')
+        || !validManualSnapshot(snapshot))))
     || Object.values(manifest.annotations).some((lines) => !Array.isArray(lines)
       || lines.some((line) => !isRecord(line) || !Number.isSafeInteger(line.id) || !Array.isArray(line.tokens)
         || line.tokens.some((token) => !isRecord(token) || !Number.isSafeInteger(token.index)

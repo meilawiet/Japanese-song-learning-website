@@ -11,7 +11,9 @@
     <!-- UTA_STARTUP_GUARD -->
     <style>
       .uta-startup-panel[hidden],#uta-starting[hidden] { display:none !important; }
-      #uta-starting { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; margin:0; background:#f5f2eb; color:#253b32; font:16px/1.8 sans-serif; }
+      /* 原“正在启动”全屏提示已移除；安卓脚本加载期间只接续原生启动底色。 */
+      /* #uta-starting { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; margin:0; background:#f5f2eb; color:#253b32; font:16px/1.8 sans-serif; } */
+      html[data-uta-platform="android"] #root:empty { position:fixed; inset:0; background:#1e1e23; }
       .uta-startup-panel { position:fixed; z-index:9999; inset:0; box-sizing:border-box; padding:28px 20px; overflow:auto; background:#f5f2eb; color:#253b32; font:16px/1.8 sans-serif; }
       .uta-startup-panel>div { max-width:480px; margin:10vh auto; padding:24px; border:1px solid #dbe2d3; border-radius:20px; background:white; }
       .uta-startup-panel h1 { margin:0 0 16px; font:700 24px/1.5 sans-serif; }
@@ -25,8 +27,7 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- 此提示独立于 React，脚本解析/加载失败时仍能操作。 -->
-    <p id="uta-starting" role="status">正在启动 UTA…</p>
+    <!-- 正常启动不插入文字提示页；下面的失败重试页仍独立于React运行。 -->
     <section id="uta-startup-failure" class="uta-startup-panel" role="alert" hidden>
       <div><h1>UTA 暂时无法启动</h1><p>应用界面未能正常加载，请先点击重试。</p><p>如果仍无法打开，可在系统应用商店检查 WebView 或系统浏览器更新（如设备提供），并将诊断信息发给开发者。</p>
         <div><button id="uta-startup-retry" type="button">重试</button><button id="uta-startup-copy" type="button">复制诊断信息</button></div>

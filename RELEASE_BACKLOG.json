@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedOn": "2026-10-19",
+  "updatedOn": "2026-10-22",
   "reminderThreshold": 10,
   "policy": {
     "reminderPresentation": "达到10项待发布内容时，发版提醒必须同时逐项展示当前全部verified条目的名称和简要说明；不包含released或cancelled条目。",
@@ -35,32 +35,33 @@
     "branch": "android-dev"
   },
   "currentLocalInstall": {
-    "installedOn": "2026-10-19",
-    "device": "Xiaomi / Android 15",
+    "installedOn": "2026-10-22",
+    "device": "Samsung SM-N9860 / Android 13",
     "package": "com.uta.songlearning",
-    "path": ".tools/device-builds/UTA-more-compact-final.apk",
-    "version": "1.5.1",
-    "versionCode": 25,
-    "size": 31352299,
-    "sha256": "034a6201f50b6877d5f6e23d0fc8b24e4301cc33d030393e8dc0e0fa4c1f2f24",
-    "method": "沿用本轮覆盖授权，-r保留数据覆盖Success，冷启动Status ok，手机base.apk摘要一致；真机验证两组同行、复核说明删除、调试中再次打开更多并点击右端原遮挡区域可退出模式，未调整用户歌词时间或主动调用AI",
-    "published": false
+    "path": ".tools/conversation-artifacts/20261022-manual-reading/startup-loading/UTA-startup-no-loading.apk",
+    "version": "1.5.2",
+    "versionCode": 26,
+    "size": 31372779,
+    "sha256": "f06656eecb9263599ea0f7def72f00550df17af324c722a5e9a1d52d6addafe7",
+    "signed": true,
+    "published": false,
+    "method": "原发行证书v2/v3，调试关闭、前端资源逐字节一致；保留数据-r安装Success，COLD Status ok，UID与首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常；包含038至058本地改动，非公开1.5.2原包"
   },
   "reminder": {
     "lastRemindedItemIds": [
-      "FEAT-20261017-027",
-      "FEAT-20261017-028",
-      "FEAT-20261017-029",
-      "FIX-20261018-031",
-      "FEAT-20261019-032",
-      "FEAT-20261019-033",
-      "FEAT-20261019-034",
-      "FEAT-20261019-035",
-      "FIX-20261019-036",
-      "FEAT-20261019-037"
+      "FEAT-20261019-038",
+      "FIX-20261019-039",
+      "FEAT-20261019-040",
+      "FEAT-20261019-041",
+      "FEAT-20261019-042",
+      "FIX-20261020-043",
+      "FEAT-20261020-044",
+      "FEAT-20261020-045",
+      "FEAT-20261020-046",
+      "FIX-20261020-047"
     ],
-    "lastRemindedOn": "2026-10-19",
-    "userDecision": "用户明确授权本批发布1.5.2并上传代码，GitHub android-dev源码+APK与Gitee仅同APK已成功；十项全部结转，待发布0/10。后续达到10项提醒并展示全部具体清单；下一批发布仍需当批授权。"
+    "lastRemindedOn": "2026-10-20",
+    "userDecision": "用户2026-10-22重新明确授权上传源码并打包发布1.6.0，取代此前暂停。GitHub android-dev源码+APK、Gitee仅同APK；21项在两端正式发布、提交及附件核验成功前保持待发布。"
   },
   "items": [
     {
@@ -1817,6 +1818,704 @@
         "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
         "publishedOn": "2026-10-19",
         "verification": "两平台正式版本、目标提交、附件及GitHub asset digest一致；发布器匿名完整下载Gitee附件并核对SHA256成功；真实更新接口1.5.1优先选择Gitee v1.5.2，1.5.2显示最新版"
+      }
+    },
+    {
+      "id": "FEAT-20261019-038",
+      "type": "feature",
+      "title": "WebDAV原始音频独立存储，修改歌词和时间戳不重复上传音频",
+      "status": "verified",
+      "startedOn": "2026-10-19",
+      "completedOn": "2026-10-19",
+      "summary": "音频以自身字节SHA256命名保存为独立.bin；快照保存完整歌词、翻译、注音、时间戳、重置原点、封面及学习资料。相同音频复用，替换音频或云端缺失时上传。恢复复用音频但始终应用新资料，纯歌词直接恢复。用户明确不再维护旧云备份，采用外层v3/目录v2，旧格式拒绝并提示重新上传；本机删歌仍不自动删除云文件。",
+      "files": [
+        "src/lib/cloudSongBackup.js",
+        "src/lib/cloudBackup.js",
+        "src/lib/cloudData.js",
+        "src/lib/webDav.js",
+        "src/lib/localSongStore.js",
+        "src/components/WebDavPanel.jsx",
+        "src/App.jsx",
+        "android/app/src/main/java/com/uta/songlearning/WebDavPlugin.java",
+        "tests/cloudSongBackup.test.mjs",
+        "tests/cloudBackup.test.mjs",
+        "tests/lyricsOnly.test.mjs",
+        "tests/webDavAudioSplit.test.mjs",
+        "README.md",
+        "docs/WEBDAV_BACKUP_FORMAT.md"
+      ],
+      "verification": [
+        "243/243 Node检查通过，Android前端与原生assembleRelease构建通过；原生仅允许固定SHA256音频文件名，保留目录约束",
+        "执行产品上传函数及分块/摘要适配器：abc首次3段音频，bcde第二次仅上传de，bc歌词/时间/封面/名称变化不重传；学习记录变化仅传快照，a及历史备份保留",
+        "原始音频替换才生成新摘要，同内容重选/不同歌曲引用不重传；云端缺失补传；等长损坏音频/分块缺失拒绝，上传中断不提交快照且释放临时文件；纯歌词和空库没有音频上传",
+        "Chromium89实际页面流程：下载快照并确认恢复、复用本地b音频并应用新歌词/1.2秒时间及原点、c保留完整歌词但音频待下载、纯歌词直接可用；按需GET仅c原始音频且校验，再通过上传按钮仅PUT一份资料快照并提示复用2段音频，无JS异常，截图已查看",
+        "使用独立原创WAV/歌词及模拟WebDAV原生桥；未访问真实云盘、未调用AI、未改动手机数据。当前小米只读版本/摘要核验为公开1.5.2/code26；本轮未安装本次改动，未签名发行或公开发布"
+      ],
+      "localBuild": {
+        "path": "android/app/build/outputs/apk/release/app-release-unsigned.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31306284,
+        "sha256": "1f8ed166370bcac0be6ea006daed3d402e00531433208f639037bd2ffd444ad8",
+        "signed": false,
+        "method": "assembleRelease构建验证，不是正式发行附件"
+      }
+    },
+    {
+      "id": "FIX-20261019-039",
+      "type": "bugfix",
+      "title": "修复跨端最小复习条目缺少原文时在恢复或下载后丢失",
+      "status": "verified",
+      "startedOn": "2026-10-19",
+      "completedOn": "2026-10-19",
+      "summary": "协议允许仅有songId/lineId的复习条目。旧重整强制比较text而清空合法记录；新逻辑仅在歌曲及行ID和原文身份能够确认时补齐text并保留附加字段。待下载期间保留，音频补齐后同样核对；显式原文失配和不存在行沿用原有清理，不按重复原文猜测。未知歌曲引用保持，不新增协议字段或容器版本。",
+      "files": [
+        "src/lib/learningIdentity.js",
+        "tests/reviewItemInterop.test.mjs",
+        "docs/UTA_CROSS_PLATFORM_DATA_PROTOCOL.md",
+        "docs/CROSS_PLATFORM_AUDIT_RESPONSE.md",
+        "README.md"
+      ],
+      "verification": [
+        "修复前4项新增回归均复现丢失；修复后全套247/247检查通过，Android前端及原生assembleRelease通过",
+        "实际新云快照写入/读取/重整/再次备份保持最小条目；覆盖纯歌词、精确/稀疏行ID、同原文重复行、已有快照、显式原文失配、音频待下载到补齐、未知歌曲引用，以及输入不变和重复重整稳定",
+        "Chromium89真实页面配原创WAV及模拟WebDAV桥：恢复后3条复习保留，已复用音频和纯歌词先补原文，待下载一条补齐音频后补原文；重启和再次上传保留3条，无JS异常，未访问真实云盘或用户歌曲",
+        "三星按用户要求仅安装与小米相同的公开1.5.2，未安装本修复；Windows差异依据用户提供审查文档与安卓源码核对，未修改Windows分支或宣称跨端同步实机验收"
+      ],
+      "localBuild": {
+        "path": "android/app/build/outputs/apk/release/app-release-unsigned.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31306344,
+        "sha256": "33dca4ddcb5497238a573226223e8a6ad31f5ff9d77c3376f92727db1efe6908",
+        "signed": false,
+        "method": "assembleRelease构建验证，不是发行或手机安装包"
+      }
+    },
+    {
+      "id": "FEAT-20261019-040",
+      "type": "feature",
+      "title": "细化六档日语AI教学，区分歌词表达与日常用法",
+      "status": "verified",
+      "startedOn": "2026-10-19",
+      "completedOn": "2026-10-19",
+      "summary": "按零基础至N1细化学习重点；解释省略/跨行/文体时区分证据与推测，新增日常使用建议、非原文日常示例及学习重点，词汇增加常规读音/原形/用法。选词讲解也使用个人等级。教学版本独立，旧解析可读但手动重生成才更新；非日语保持简洁结构，日语两句一批，缺关键字段不覆盖旧记录。",
+      "files": [
+        "src/lib/japaneseLevel.js",
+        "src/lib/sentenceTeachingPrompt.js",
+        "src/lib/sentenceAnalysis.js",
+        "src/lib/mobileAi.js",
+        "src/components/SentenceAnalysis.jsx",
+        "src/App.jsx",
+        "src/styles.css",
+        "tests/sentenceAnalysis.test.mjs",
+        "tests/sentenceTeaching.test.mjs",
+        "README.md",
+        "docs/UTA_CROSS_PLATFORM_DATA_PROTOCOL.md"
+      ],
+      "verification": [
+        "252/252 Node检查通过，前端和原生Debug/Release构建、原发行签名及正式APK调试关闭核对通过",
+        "三星独立.dev包11项页面检查：六档个人资料切换、旧记录不自动调用、手动重新生成、缺字段拒绝且保留旧记录、两句批次/重复句绑定、重启缓存、100%/130%字号无横向溢出；已查看截图，无JS异常，测试包已卸载",
+        "使用原创测试歌词与模拟AI响应；手机没有AI服务配置，没有调用付费模型，不能将提示词/流程检查当成真实模型回答质量验收",
+        "按用户新要求在正式应用保存WebDAV，系统Keystore加密、自动同步关闭且不包含AI Key；真实目录连接和重载后再次连接成功，未上传/恢复，原歌曲/资料/AI配置/学习进度未变；凭据不记录到仓库",
+        "保留数据覆盖安装关闭调试的同签名开发包，仍显示1.5.2/code26，包含038/039/040；没有发布或推送授权，未修改远端"
+      ],
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-sentence-teaching.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31356395,
+        "sha256": "b32a7bb885b40015d552f3f777eac2e8592fe35841800239c79d1021f547fb35",
+        "signed": true,
+        "published": false,
+        "method": "三星SM-N9860保留数据-r覆盖Success，原发行签名v2/v3，冷启动Status ok，WebView调试关闭；本机开发包，包含038/039/040，不是公开1.5.2原包"
+      }
+    },
+    {
+      "id": "FEAT-20261019-041",
+      "type": "feature",
+      "title": "初版复习本：单句/多句收藏、按歌复习与单词语法讲解",
+      "status": "verified",
+      "startedOn": "2026-10-19",
+      "completedOn": "2026-10-19",
+      "summary": "学习页长按收藏单句或选择连续多句，也可收藏已选播放范围；仅展示有复习内容的歌曲，按歌曲→单元→详情进入，使用“单词”“语法”独立折叠。支持理解/听力、整段一次播放与调速、重点/笔记、今日到期队列、三档熟悉程度、确认移出；收藏与掌握独立。复用已有适用单句解析，多句手动按完整原文生成并校验，离页取消，错位不覆盖。复习条目沿用原学习备份扩展字段，旧单句可读，歌词变更时保留新收藏并提示。",
+      "files": [
+        "src/App.jsx",
+        "src/components/ReviewBook.jsx",
+        "src/components/ReviewCollector.jsx",
+        "src/lib/reviewBook.js",
+        "src/lib/useReviewAudio.js",
+        "src/lib/learningIdentity.js",
+        "src/lib/learningBackup.js",
+        "src/styles.css",
+        "tests/reviewBook.test.mjs",
+        "README.md",
+        "docs/UTA_CROSS_PLATFORM_DATA_PROTOCOL.md"
+      ],
+      "verification": [
+        "259/259 Node检查通过，Android前端与原生Debug/Release构建通过；APK前端JS/CSS与dist一致，原签名v2/v3及调试关闭核对通过",
+        "7项新增策略回归覆盖稀疏ID/重复副歌/范围去重、旧最小单句、歌词改删/插入、整段AI身份/上下文/等级、调度、真实音频边界、读音/词义人工覆盖和备份往返/损坏拒绝",
+        "三星SM-N9860独立.dev应用完成15项UI检查，原创静音WAV实测1秒至7秒播放一次后暂停；单/多句收藏、已选范围收藏、纯歌词阅读、AI整段请求/迟到取消/错位保留、已有解析复用、笔记与评价/重启、今日重练/完成、确认移出、100%/130%文字排版及系统逐层返回通过，无JS异常",
+        "AI响应模拟，没有调用真实付费模型或用户WebDAV；截图及原生屏幕截图已查看，测试应用已卸载。手机没有AI配置，真实模型内容质量未验收",
+        "用户已明确授权本轮开发和覆盖安装，最终同签名包-r保留数据覆盖三星并冷启动成功，手机base.apk SHA256一致；未清数据、未修改WebDAV凭据、未发布/上传源码"
+      ],
+      "localBuild": {
+        "path": ".tools/device-builds/UTA-review-book.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31364587,
+        "sha256": "60b174c1c09c21748833213e2ad25755e8561333640ac5d71106841038565b43",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3，WebView调试关闭，三星SM-N9860保留数据-r覆盖Success/COLD Status ok，手机base.apk摘要一致；本机开发包含038/039/040/041，不是公开1.5.2原包"
+      }
+    },
+    {
+      "id": "FEAT-20261019-042",
+      "type": "feature",
+      "title": "统一双击收藏入口：首次收藏本句，选好范围后收藏本段",
+      "status": "verified",
+      "startedOn": "2026-10-19",
+      "completedOn": "2026-10-19",
+      "summary": "移除长按菜单的单句/多句收藏选项，长按仅保留编辑和取消；首次双击歌词后直接收藏本句，第二次双击另一句后收藏本段。收藏后保留选择且不自动播放，重复范围去重；无时间戳纯歌词也能双击收藏，播放继续禁用。",
+      "files": [
+        "src/App.jsx",
+        "src/components/AndroidStudyPlayer.jsx",
+        "src/lib/studyTransport.js",
+        "tests/lyricRangePlayback.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "28/28选段、播放器和复习策略检查通过，更新纯歌词可选但不可播放及离页禁选回归；Android前端构建通过",
+        "独立Chromium89和模拟原生桥7项交互检查通过：长按仅编辑/取消、首次双击收藏单句/保留起点、重复去重、第二次双击收藏整段/不播放、双击退出、纯歌词单多句收藏/禁播放、段外单击退出；原创数据、阻断外网、无JS异常，截图已查看",
+        "本轮只验证代码及独立浏览器流程，未构建新APK或覆盖手机；currentLocalInstall仍记录此前实际安装包，未发布/推送代码",
+        "2026-10-20 随038至044最新开发包保留数据覆盖三星；此前仅本地代码状态已更新，公开发行包仍未改变。"
+      ]
+    },
+    {
+      "id": "FIX-20261020-043",
+      "type": "bugfix",
+      "title": "修复多句复习无法读取学习页已有词义和语法解析",
+      "status": "verified",
+      "startedOn": "2026-10-20",
+      "completedOn": "2026-10-20",
+      "summary": "多句复习在没有独立整段解析时，按本歌实际行ID和原文逐句复用学习解析，显示词义、用法、语法及句意，标注来源行号与复用数量；不重新调用AI、不存为伪造整段结果。单句优先适用的新学习解析，空原形不再显示标签。缺失或错位记录不串行，旧等级内容保留但提示。",
+      "files": [
+        "src/lib/reviewBook.js",
+        "src/components/ReviewBook.jsx",
+        "tests/reviewBook.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "261/261 Node检查通过，新增两项覆盖多句复用/部分缺失/错位/重复副歌/等级变化/整段优先/单句新结果优先；Android前端和Debug/Release构建通过",
+        "三星SM-N9860 Android13隔离.dev应用实测两句及单句已有解析直接显示、句意、听力揭晓、重启；原创数据与模拟已缓存解析，付费AI调用0，不能称真实模型质量验收",
+        "与左滑功能共9项原生交互检查通过，无JS异常，原生截图已查看；最终同签名包保留数据覆盖三星并回读摘要一致"
+      ],
+      "localBuild": {
+        "installedOn": "2026-10-20",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-review-reuse.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31368683,
+        "sha256": "8560b2737954d8f6d60a15f67e920281abef26cf3497095fc71229df8b00d6ff",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3，WebView调试关闭；三星保留数据-r覆盖Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至044，不是公开1.5.2原包"
+      }
+    },
+    {
+      "id": "FEAT-20261020-044",
+      "type": "feature",
+      "title": "复习歌词左滑显示四角圆角的红色垃圾桶并移出单元",
+      "status": "verified",
+      "startedOn": "2026-10-20",
+      "completedOn": "2026-10-20",
+      "summary": "复习列表和详情歌词卡片可左滑露出红色垃圾桶，删除区域四角独立圆角。水平滑动不触发进入详情，竖向滚动不展开删除；点击垃圾桶后确认，仅移出对应复习收藏及记录，原歌曲、学习解析、掌握和其他收藏不变。",
+      "files": [
+        "src/components/ReviewSwipeCard.jsx",
+        "src/components/ReviewBook.jsx",
+        "src/styles.css",
+        "README.md"
+      ],
+      "verification": [
+        "三星隔离.dev包用CDP真实触摸验证详情/列表左滑、竖向滚动不误触、取消保留、确认删除范围、其他收藏/学习解析/掌握不变；共9项流程通过，无JS异常",
+        "Android前端与Debug/Release构建及原发行签名核对通过；原生截图已查看，长截图拼接重复不作为视觉证据。用户补充四角圆角后重新构建Release，APK资源确认border-radius为17px",
+        "最终同签名、关闭调试的开发包保留数据-r覆盖三星Success、冷启动Status ok，手机base.apk与本机SHA256一致；独立测试应用已卸载，未公开发布/推送"
+      ],
+      "localBuild": {
+        "installedOn": "2026-10-20",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-review-reuse.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31368683,
+        "sha256": "8560b2737954d8f6d60a15f67e920281abef26cf3497095fc71229df8b00d6ff",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3，WebView调试关闭；三星保留数据-r覆盖Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至044，不是公开1.5.2原包"
+      }
+    },
+    {
+      "id": "FEAT-20261020-045",
+      "type": "feature",
+      "title": "精简复习详情，单词默认收起并移除表达用法及学习重点展示",
+      "status": "verified",
+      "startedOn": "2026-10-20",
+      "completedOn": "2026-10-20",
+      "summary": "进入及切换复习单元时单词栏默认收起，可手动展开；移除复习页独立的表达与用法、生成按钮下AI学习重点，保留个人复习笔记和已有解析数据。修正歌词卡片与笔记重复React key导致换句残留旧卡片的问题。",
+      "files": [
+        "src/components/ReviewBook.jsx",
+        "README.md"
+      ],
+      "verification": [
+        "Android前端及原生Release构建通过，7项Chromium89独立页面检查通过：默认收起/手动展开/换句复位、移除两栏、语法仍可展开、连续换句仅一个歌词卡片、已有解析缓存保留，无JS异常",
+        "原生未重复测试完整流程；沿用原创数据和模拟原生桥，不调用AI或用户云盘。最终含045/046同签名关闭调试APK保留数据覆盖三星，冷启动正常且安装回读摘要一致"
+      ],
+      "localBuild": {
+        "installedOn": "2026-10-20",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-library-card-longpress.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31364587,
+        "sha256": "4593f88e633a7276cc5be02436e69618ad89807e4bd0d26a993da27690df5f9a",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发包含038至046，不是公开1.5.2原包"
+      }
+    },
+    {
+      "id": "FEAT-20261020-046",
+      "type": "feature",
+      "title": "歌曲库歌名、歌手与学习进度区域也支持长按编辑菜单",
+      "status": "verified",
+      "startedOn": "2026-10-20",
+      "completedOn": "2026-10-20",
+      "summary": "长按操作从仅封面扩大到歌曲主卡片，歌名、歌手及学习进度均可弹出同一编辑菜单，列表文字也支持；移动超过12px取消长按，避免滑动误触，轻点保持进入学习，选歌弹层仍不弹编辑菜单。",
+      "files": [
+        "src/components/AndroidSongLibrary.jsx",
+        "README.md"
+      ],
+      "verification": [
+        "Android前端及原生Release构建通过，7项Chromium89独立页面检查通过：歌名/歌手/进度/封面长按不误打开歌曲、可进入实际编辑窗口、移动取消、列表长按及取消后轻点正常，无JS异常",
+        "两组共14项独立浏览器页面检查，不夸大为真机手势实测；同签名APK保留数据-r覆盖三星Success、COLD Status ok、手机base.apk与本机SHA256一致，资源与dist一致且WebView调试关闭"
+      ],
+      "localBuild": {
+        "installedOn": "2026-10-20",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-library-card-longpress.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31364587,
+        "sha256": "4593f88e633a7276cc5be02436e69618ad89807e4bd0d26a993da27690df5f9a",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发包含038至046，不是公开1.5.2原包"
+      }
+    },
+    {
+      "id": "FIX-20261020-047",
+      "type": "bugfix",
+      "title": "移除复习删除确认框按钮区误继承的深色底块",
+      "status": "verified",
+      "startedOn": "2026-10-20",
+      "completedOn": "2026-10-20",
+      "summary": "为复习移出确认框单独重置footer背景、内边距及边框，让按钮区与白色圆角弹窗一体；不改网页页脚或确认/取消行为。",
+      "files": [
+        "src/styles.css"
+      ],
+      "verification": [
+        "Chromium89独立页面4项检查通过：按钮区背景透明且无多余内边距/边框、弹窗白底24px圆角、取消保留、确认仅移出对应单元；截图已查看，无JS异常",
+        "Android前端及原生Release构建、原发行签名v2/v3通过；包内JS/CSS与dist一致，WebView调试关闭",
+        "保留数据覆盖三星Success，COLD/Status ok，手机base.apk摘要与本机一致；页面交互为独立浏览器验证，未夸大为本轮原生完整流程实测"
+      ],
+      "localBuild": {
+        "installedOn": "2026-10-20",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-review-confirm.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31364587,
+        "sha256": "cf66581ab2ce0f9450ad8cff71d809592d85f26f335d8495b2c84b9c9e0f7561",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3，WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至047，不是公开1.5.2原包"
+      }
+    },
+    {
+      "id": "FEAT-20261020-048",
+      "type": "feature",
+      "title": "复习点击歌曲直接进入歌词详情，移除中间歌曲复习列表",
+      "status": "verified",
+      "startedOn": "2026-10-20",
+      "completedOn": "2026-10-20",
+      "summary": "复习本点击封面或列表歌曲直接进入首个收藏单元，返回一次回到复习本；右上角继续切换同歌单元，移出当前单元后继续下一条，移出最后单元回到复习本，不再出现中间歌词列表。",
+      "files": [
+        "src/components/ReviewBook.jsx",
+        "README.md"
+      ],
+      "verification": [
+        "首轮8项Chromium89独立页面验证覆盖封面/列表直达、切换、按钮/返回事件、确认框优先关闭、删除后继续/空歌隐藏、今日重练删除完成，无JS异常；后续049将本歌复习统一成队列，删除最后一个待复习项可进入本轮完成页，空队列返回复习本",
+        "后续三星隔离.dev包的先听后理解10项流程再次覆盖直达、真实系统返回、取消/确认移出后的下一条与今日队列；最终包保留数据覆盖三星并核验摘要一致"
+      ],
+      "localBuild": {
+        "installedOn": "2026-10-20",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-review-listen-first.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31364587,
+        "sha256": "41e59301a3d3c943699c47bd2280a9a61a36f96edbad5fa0686f59737de207e4",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至049，不是公开1.5.2原包"
+      }
+    },
+    {
+      "id": "FEAT-20261020-049",
+      "type": "feature",
+      "title": "复习合并为先听后理解，评价后自动切句并采用简洁布局",
+      "status": "verified",
+      "startedOn": "2026-10-20",
+      "completedOn": "2026-10-20",
+      "summary": "参考用户给出的简洁复习截图，移除理解/听力页签；每个单元先手动播放，主动进入理解后展示原文、句意和默认折叠的单词/语法。听力阶段隐藏歌词、解析、笔记、前后文及评价，避免答案泄露。熟悉/模糊/不认识以固定绿黄红短线区分，保留原调度；评价后自动下一条，本歌和今日均使用队列，不认识稍后重练，完成显示本轮完成页。无音频或时间戳可直接进入理解。",
+      "files": [
+        "src/components/ReviewBook.jsx",
+        "src/styles.css",
+        "README.md"
+      ],
+      "verification": [
+        "Android前端及Debug/Release构建通过，原发行签名v2/v3核对通过，最终JS/CSS与dist一致且WebView调试关闭",
+        "三星SM-N9860 Android13独立.dev包10项流程通过：直达听力/隐藏全部答案、真实原创静音WAV1秒至7秒截段一次、手动进入理解停止音频、已有单词语法复用和三档语义色、熟悉保存后自动下一条、模糊与不认识调度/重练完成、真实系统返回、取消/确认移出、今日队列、无音频无时间戳进入理解，无JS异常",
+        "采用原创测试数据及模拟已有解析；AI请求0，未访问用户真实云盘，不能当作真实AI内容质量验收。原生听力/理解整屏截图已查看，隔离测试应用已卸载",
+        "首次真机色值检查发现主题转换覆盖熟悉绿色；改用行内语义变量及显式background-color后全部10项通过。最终同签名包保留数据-r覆盖三星Success、COLD Status ok、回读base.apk摘要一致，未清原数据或复制测试数据到正式应用"
+      ],
+      "localBuild": {
+        "installedOn": "2026-10-20",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-review-listen-first.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31364587,
+        "sha256": "41e59301a3d3c943699c47bd2280a9a61a36f96edbad5fa0686f59737de207e4",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至049，不是公开1.5.2原包"
+      }
+    },
+    {
+      "id": "FEAT-20261020-050",
+      "type": "feature",
+      "title": "按标注稿重排复习详情，单词语法笔记共用面板并支持上一条",
+      "status": "verified",
+      "startedOn": "2026-10-20",
+      "completedOn": "2026-10-20",
+      "summary": "顶部左侧返回及进度、右侧上一条；按歌词、播放行、独立歌词大意、知识面板顺序展示。单词/语法/笔记在同一面板底部切换，单词与对应释义并排，切换保留未保存笔记；上一条仅返回查看、不撤销评价。保留先听后理解与底部三档评价，次要操作收纳更多菜单，面板随剩余屏幕高度调整以免遮住页签。",
+      "files": [
+        "src/components/ReviewBook.jsx",
+        "src/styles.css",
+        "README.md"
+      ],
+      "verification": [
+        "前端及Android Debug/Release构建通过，原签名v2/v3、版本1.5.2/code26、包内5个JS/CSS资源与dist一致，WebView调试关闭。",
+        "三星Android13隔离.dev应用10项实测通过：版式顺序、真实音频启动及进入理解暂停、单词对应释义、单面板切换、笔记草稿保留/保存、键盘页签与内容滚动、评价后下一条/上一条不撤销、真实系统返回优先关闭更多、次要操作、100%/130%字号无横向溢出。",
+        "大字号原生截图发现页签被评价栏遮住后，增加剩余高度自适应，再跑全部10项并严格验证页签底部高于固定评价栏至少7px；原生截图已查看。原创歌词和静音WAV、模拟已有解析，真实AI调用0，未访问用户云盘。",
+        "最终原签名正式包保留数据-r覆盖三星Success、COLD Status ok，手机base.apk摘要与本地一致；独立.dev测试应用已卸载，未清理正式数据或注入测试歌曲。"
+      ],
+      "localBuild": {
+        "installedOn": "2026-10-20",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-review-layout.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31368683,
+        "sha256": "3d1e697e021c81f5a3ac9d13320b7f97c08fafbf1c45db4bf68c3ed7ac2fa23d",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至050，不是公开1.5.2原包"
+      }
+    },
+    {
+      "id": "FEAT-20261020-051",
+      "type": "feature",
+      "title": "精简复习翻译与知识排版，关键表达注音同步歌词设置",
+      "status": "verified",
+      "startedOn": "2026-10-20",
+      "completedOn": "2026-10-20",
+      "summary": "复习只显示歌词文件自带翻译，在对应原文下方小字号展示，无译文留空，移除AI句意卡及已复用学习页提示。关键表达按“单词：释义；用法”紧凑排列，复用歌词注音渲染器，假名仅注汉字、罗马音覆盖所有有读音词，四种注音在更多自由切换并与该歌曲学习设置同步。缩小表达、语法与笔记字号和间距，去除评价栏顶部横线。页签改为关键表达/语法与语境/笔记。",
+      "files": [
+        "src/components/ReviewBook.jsx",
+        "src/App.jsx",
+        "src/styles.css",
+        "README.md"
+      ],
+      "verification": [
+        "前端、Android Debug/Release构建和原发行签名v2/v3通过；包内5个JS/CSS与dist一致、WebView调试关闭、版本1.5.2/code26。",
+        "三星Android13隔离.dev应用13项通过：文件译文与原文对应且缺译文不显示、无AI句意和复用提示、8条简短讲解完整显示、字体覆盖旧19px规则、四种注音生效及歌曲设置保存、评价栏无顶线、语法/笔记切换与草稿保存、上一条/评价队列、真实系统返回、更多操作、100%/130%字号页签完整无横向溢出。",
+        "初次注音测试误点顶部返回按钮，改为点击菜单自身收起后通过；字体断言考虑主题0.9倍缩放修正，最终全部13项重跑通过。测试为原创歌词/静音WAV和模拟已有解析，AI请求0，未访问用户云盘。原生截图已查看。",
+        "最终正式签名包保留数据-r覆盖三星Success/COLD Status ok，回读手机base.apk摘要一致；隔离.dev应用已卸载，正式数据未清理，未注入测试资料。"
+      ],
+      "localBuild": {
+        "installedOn": "2026-10-20",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-review-density.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31368683,
+        "sha256": "7dfa4234a7706e5f2455ce2fd9c1e0bbf0cd466df9b4049ba3780577ec3f15b0",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至051，不是公开1.5.2原包"
+      }
+    },
+    {
+      "type": "feature",
+      "status": "verified",
+      "startedOn": "2026-10-20",
+      "completedOn": "2026-10-20",
+      "files": [
+        "src/components/ReviewBook.jsx",
+        "src/styles.css",
+        "README.md"
+      ],
+      "localBuild": {
+        "installedOn": "2026-10-20",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-review-list.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31368683,
+        "sha256": "8642d5c7609d699d35e09968ddb9f1e03dc2af17cfdd89fe2e92b4e1a3cf7e81",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至053，不是公开1.5.2原包"
+      },
+      "id": "FEAT-20261020-052",
+      "title": "复习详情固定整页，底部融入背景并可点提示区播放",
+      "summary": "进入理解复习改为进入复习，缩小播放图标，听力提示区域支持点按/键盘播放及暂停；复习详情使用视口内布局，整页不再上下移动，长歌词、知识和前后文在各自内容区域内部滚动。进入复习与熟悉/模糊/不认识按钮去掉白色托底，直接置于页面背景。返回列表释放滚动限制。",
+      "verification": [
+        "前端与Android Debug/Release构建通过，原发行签名v2/v3、版本1.5.2/code26、调试关闭，包内5个JS/CSS与dist一致。",
+        "三星Android13隔离.dev应用10项通过：程序滚动与真实竖滑不移动整页、提示区点击/Enter/空格播放暂停、图标缩小、footer为静态透明布局、进入复习/评价自动下一条、长语法内部滚动、笔记保存、前后文与系统返回、大字号130%布局、离开释放限制。按后续053要求更新了左滑停用检查。",
+        "原创歌词、静音WAV和模拟已有解析，AI0、无用户云盘访问，原生听力及130%理解截图已查看。最终同签名APK保留数据覆盖三星Success，COLD Status ok，手机回读摘要一致。"
+      ]
+    },
+    {
+      "type": "feature",
+      "status": "verified",
+      "startedOn": "2026-10-20",
+      "completedOn": "2026-10-20",
+      "files": [
+        "src/components/ReviewBook.jsx",
+        "src/styles.css",
+        "README.md"
+      ],
+      "localBuild": {
+        "installedOn": "2026-10-20",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/device-builds/UTA-review-list.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31368683,
+        "sha256": "8642d5c7609d699d35e09968ddb9f1e03dc2af17cfdd89fe2e92b4e1a3cf7e81",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至053，不是公开1.5.2原包"
+      },
+      "id": "FEAT-20261020-053",
+      "title": "复习本统一列表与完整封面，支持长按歌曲及歌词管理",
+      "summary": "移除复习本搜索和封面/列表切换，显示x首歌曲待复习，开始今日复习放列表最上方；正方形封面留边并完整显示。点歌曲仍直达复习，长按歌曲可编辑或批量移出该歌复习内容；编辑页列出本歌全部复习单元，点按进入指定歌词，长按确认移出。停用复习页左滑删除，返回详情后仍可回编辑页，删除仅作用复习收藏及记录。",
+      "verification": [
+        "三星隔离.dev应用11项通过：统一列表与今日排序、原创矩形封面完整显示、单击直达、封面/文字区域真实长按编辑及删除、点按指定单元/系统返回、长按歌词删除确认/取消、整歌移出范围、今日队列与无音频、移出最后单元回空页。保留原歌曲音频、学习解析、掌握状态及其他歌复习。",
+        "首次真机长按发现菜单弹出后抬起的兼容click可能误点删除；增加window捕获消费该次click，下一次主动按下立即释放，不用延时吞正常点击，全部11项重跑通过。原生列表与编辑截图已查看，无JS异常，原创歌词/封面/WAV/模拟缓存，真实AI0。",
+        "最终APK保留数据-r覆盖三星并回读摘要一致，正式数据未清理或注入测试歌曲，独立.dev应用已卸载；未公开发布或上传源码。"
+      ]
+    },
+    {
+      "id": "FIX-20261022-054",
+      "type": "bugfix",
+      "title": "修复自动注音缓存缺失时清除手动读音，增加人工词界保护",
+      "status": "verified",
+      "startedOn": "2026-10-22",
+      "completedOn": "2026-10-22",
+      "summary": "确认旧启动重整把自动缓存缺失当成人工校正失效并直接删除。人工词界证据现随已有lyricSnapshots保护，缓存缺失或自动词界变化时按同歌同行同原文恢复；无可靠证据的旧校正隔离保留，不盲套新索引。支持人工留空、旧括号合并legacy索引及显示缓存刷新，主动编辑和采用AI分词会更新保护快照，备份往返并校验可选扩展。",
+      "files": [
+        "src/lib/learningIdentity.js",
+        "src/lib/lyricEditing.js",
+        "src/lib/lyricAiReview.js",
+        "src/lib/lyricReadings.js",
+        "src/lib/learningBackup.js",
+        "tests/manualReadingUpgrade.test.mjs",
+        "tests/learningIdentity.test.mjs",
+        "README.md",
+        "docs/UTA_CROSS_PLATFORM_DATA_PROTOCOL.md"
+      ],
+      "verification": [
+        "原创最小数据复现旧逻辑：原文和行ID不变、缺少注音缓存即清空手动corrections；未取得反馈用户备份，不能据此断言个案触发路径。",
+        "71/71针对性Node回归通过，新增12项涵盖缺缓存恢复、自动变词界、人工留空、无证据隔离/不串词、原文及语种变化、主动取消/编辑/AI分词、时间翻译变化、legacy索引显示更新、备份兼容及损坏拒绝。",
+        "初次71项代码检查及Android前端构建后，用户授权真机测试并覆盖安装；已在三星隔离.dev包用原创歌词模拟旧结构读音，真实-r覆盖新包、删除测试缓存、强制结束冷启动及再次加载均保持人工あす、空值和掌握状态，未发生付费AI调用。",
+        "正式Release采用原发行签名v2/v3，WebView调试关闭、23项前端资源一致；保留数据-r覆盖三星Success/COLD Status ok、手机base.apk摘要相同、进程运行且无该进程AndroidRuntime致命异常。正式数据未清理，按用户保留规则测试应用及构建衍生物未自动删除。"
+      ],
+      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading",
+      "localBuild": {
+        "installedOn": "2026-10-22",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/conversation-artifacts/20261022-manual-reading/UTA-manual-reading-fix.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31368683,
+        "sha256": "151005b535bc61ce96579e3b00929155011d3c24dc4ebefe38f773f51659f377",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3、WebView调试关闭，23项前端资源与本轮构建一致；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至054，不是公开1.5.2原包"
+      }
+    },
+    {
+      "id": "FEAT-20261022-055",
+      "type": "feature",
+      "title": "复习笔记移除分类勾选，扩大文本框",
+      "status": "verified",
+      "startedOn": "2026-10-22",
+      "completedOn": "2026-10-22",
+      "summary": "移除听力、词汇、语法、表达勾选项，仅保留我的笔记文本框与保存按钮。文本框随复习知识面板剩余高度扩展，小屏仍可内部滚动。只保存note，不覆盖旧focus或其他复习字段；草稿跨页签保留，保存后重载可读取。",
+      "files": [
+        "src/components/ReviewBook.jsx",
+        "src/styles.css",
+        "README.md"
+      ],
+      "verification": [
+        "Android前端构建通过。独立Chromium89模拟原生桥6项检查通过：单文本框无分类勾选、392×851下文本框329px、草稿跨页签保留、多行保存保留旧分类及其他单元、页面重载持久化、360×640及392×851可触达与无横向溢出。截图已检查，无JS异常。",
+        "仅原创歌词及本机隔离浏览器资料，未访问用户云盘或调用AI；本次未生成APK、未真机覆盖安装。",
+        "随后与启动页改动合并，在三星隔离.dev真机验证无分类勾选、文本框扩大与保存正常，并随最终原签名正式包保留数据覆盖安装。"
+      ],
+      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading",
+      "localBuild": {
+        "installedOn": "2026-10-22",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/conversation-artifacts/20261022-manual-reading/startup-lyrics/UTA-startup-lyrics.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31372779,
+        "sha256": "7bff3c03350436841d97b32d4d6becfb06547f2f726678ca5a5d784c91bd3c10",
+        "signed": true,
+        "published": false,
+        "method": "原发行证书v2/v3，调试关闭、前端资源逐字节一致；保留数据-r安装Success，COLD Status ok，UID与首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常；包含038至057本地改动，非公开1.5.2原包"
+      }
+    },
+    {
+      "status": "verified",
+      "startedOn": "2026-10-22",
+      "completedOn": "2026-10-22",
+      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/startup-lyrics",
+      "localBuild": {
+        "installedOn": "2026-10-22",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/conversation-artifacts/20261022-manual-reading/startup-lyrics/UTA-startup-lyrics.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31372779,
+        "sha256": "7bff3c03350436841d97b32d4d6becfb06547f2f726678ca5a5d784c91bd3c10",
+        "signed": true,
+        "published": false,
+        "method": "原发行证书v2/v3，调试关闭、前端资源逐字节一致；保留数据-r安装Success，COLD Status ok，UID与首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常；包含038至057本地改动，非公开1.5.2原包"
+      },
+      "id": "FEAT-20261022-056",
+      "type": "feature",
+      "title": "启动页随机歌词与同歌已保存封面",
+      "summary": "每次启动仅抽取一次真实歌曲库中的非空正文，歌词居中，歌名在下方以小字号右对齐；使用同歌已保存的本机封面，未保存、主动默认或图损坏时回退原启动图，启动页不请求远程封面。空库与仅演示曲保留原两行文案。",
+      "files": [
+        "src/components/AndroidLaunchScreen.jsx",
+        "src/lib/launchQuote.js",
+        "src/App.jsx",
+        "src/styles.css",
+        "tests/launchQuote.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "5项Node边界检查通过，涵盖空库/演示/空行、原文空格及译文排除、抽样覆盖、待下载歌曲、歌曲身份及本机封面协议。",
+        "最终三星SM-N9860 Android13隔离.dev完整检查5项通过，包含空库、真实下载字体+同歌原创封面、导入字体+损坏封面回退、无封面回退及笔记回归。原生封面及默认图截图已查看，首次可见文字及图片来源逐帧核对，无JS异常。",
+        "原发行证书v2/v3，调试关闭、前端资源逐字节一致；保留数据-r安装Success，COLD Status ok，UID与首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常；包含038至057本地改动，非公开1.5.2原包"
+      ]
+    },
+    {
+      "status": "verified",
+      "startedOn": "2026-10-22",
+      "completedOn": "2026-10-22",
+      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/startup-lyrics",
+      "localBuild": {
+        "installedOn": "2026-10-22",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/conversation-artifacts/20261022-manual-reading/startup-lyrics/UTA-startup-lyrics.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31372779,
+        "sha256": "7bff3c03350436841d97b32d4d6becfb06547f2f726678ca5a5d784c91bd3c10",
+        "signed": true,
+        "published": false,
+        "method": "原发行证书v2/v3，调试关闭、前端资源逐字节一致；保留数据-r安装Success，COLD Status ok，UID与首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常；包含038至057本地改动，非公开1.5.2原包"
+      },
+      "id": "FIX-20261022-057",
+      "type": "bugfix",
+      "title": "启动文字等待所选字体恢复，避免先默认后换字形",
+      "summary": "启动文字先隐藏，待歌曲库、本机下载或导入字体恢复及实际文案字族加载完成后再一次显示，完整展示1.8秒；异常总兜底6秒结束启动页，不闪现随后可能替换的字形。正常读取只访问本机缓存，不自动下载字体。",
+      "files": [
+        "src/components/AndroidLaunchScreen.jsx",
+        "src/App.jsx",
+        "README.md"
+      ],
+      "verification": [
+        "三星隔离.dev用本机已存在的真实猫啃字体与导入字体，调试脚本故意增加900ms加载延迟，逐帧确认所有可见文字均晚于字体加载、所选字族已注册并loaded，单次启动不换文案。",
+        "纯字体阶段Chromium89模拟桥曾通过4项；加入封面后的HTTP模拟因内置字体在6秒兜底前未完成而未获得文字可见帧，保留browser-last-failure.json，不宣称该模拟通过。最终以完整真机检查5项与真实冷启动为本机安装验收；调试页面load事件错过短启动、旧脚本重复延迟与更新弹窗遮挡等测试问题均记录并改为新进程逐帧采样，正式包不含测试脚本。",
+        "原发行证书v2/v3，调试关闭、前端资源逐字节一致；保留数据-r安装Success，COLD Status ok，UID与首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常；包含038至057本地改动，非公开1.5.2原包"
+      ]
+    },
+    {
+      "id": "FIX-20261022-058",
+      "type": "bugfix",
+      "title": "移除正常启动时的正在启动UTA文字页",
+      "status": "verified",
+      "startedOn": "2026-10-22",
+      "completedOn": "2026-10-22",
+      "summary": "移除网页入口在主程序前显示的正在启动UTA段落；安卓构建静态标识和空根节点同色背景衔接原生启动画面，再进入现有歌曲封面/歌词。保留独立启动失败守卫、重试和诊断，不新增人为延迟或改写歌曲数据。",
+      "files": [
+        "index.html",
+        "scripts/startupCompatibility.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "7/7现有启动及引句Node检查通过，Android前端构建成功。",
+        "Chromium89阻止业务JS的预加载/故障检查4项通过：无提示段落、空根节点深色同原生、脚本失败仍可重试诊断、超时恢复就绪可关闭失败页，无JS异常。",
+        "三星SM-N9860 Android13隔离.dev冷启动3项通过：逐帧无旧提示节点、已有封面/歌词正常显示并到首页、实际APK入口无旧段落；无JS异常。",
+        "原发行证书v2/v3，调试关闭、前端资源逐字节一致；保留数据-r安装Success，COLD Status ok，UID与首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常；包含038至058本地改动，非公开1.5.2原包"
+      ],
+      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/startup-loading",
+      "localBuild": {
+        "installedOn": "2026-10-22",
+        "device": "Samsung SM-N9860 / Android 13",
+        "package": "com.uta.songlearning",
+        "path": ".tools/conversation-artifacts/20261022-manual-reading/startup-loading/UTA-startup-no-loading.apk",
+        "version": "1.5.2",
+        "versionCode": 26,
+        "size": 31372779,
+        "sha256": "f06656eecb9263599ea0f7def72f00550df17af324c722a5e9a1d52d6addafe7",
+        "signed": true,
+        "published": false,
+        "method": "原发行证书v2/v3，调试关闭、前端资源逐字节一致；保留数据-r安装Success，COLD Status ok，UID与首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常；包含038至058本地改动，非公开1.5.2原包"
       }
     }
   ]

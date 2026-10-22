@@ -8,7 +8,9 @@ import {prepareSentenceRequest,validateSentenceResult,visibleSentenceEntry,curre
 
 // 原创重复句回归，公开测试不包含用户提交的歌词、录屏或密钥。
 const lines=[{id:12,text:'きょうも歌うよ'},{id:5,text:'きょうも歌うよ'},{id:30,text:'あしたへ歩こう'},{id:41,text:'風がそっと笑う'}]
-const response=payload=>({explanations:payload.lines.map(line=>({line_id:line.id,line_key:line.line_key,source_text:line.text,meaning:'本句的原创测试释义',grammar:['语法提示'],vocabulary:[{surface:line.text,meaning:'表达说明'}],pronunciation_tip:''}))})
+// 原fixture不包含教学信息；增加日语新版最小有效字段，仍用于验证真实移动入口。
+// const response=payload=>({explanations:payload.lines.map(line=>({line_id:line.id,line_key:line.line_key,source_text:line.text,meaning:'本句的原创测试释义',grammar:['语法提示'],vocabulary:[{surface:line.text,meaning:'表达说明'}],pronunciation_tip:''}))})
+const response=payload=>({explanations:payload.lines.map(line=>({line_id:line.id,line_key:line.line_key,source_text:line.text,meaning:'本句的原创测试释义',grammar:['语法提示'],vocabulary:[{surface:line.text,meaning:'表达说明'}],pronunciation_tip:'',...(payload.language==='ja'?{expression_notes:[],usage_note:'这是熟人间的普通表达。',everyday_example:{sentence:'一緒に歌おう。',meaning:'一起唱吧。'},learning_focus:['掌握邀请表达。']}:{})}))})
 
 test('重复歌词逐条保留独立标识，乱序返回可按原编号匹配，不按显示位置重编号',()=>{
   const request=prepareSentenceRequest(lines,'ja','N4')

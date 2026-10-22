@@ -7,6 +7,10 @@ import AnnotatedLine from './components/AnnotatedLine'
 import ComputerImportDialog from './components/ComputerImportDialog'
 import ArtworkPicker from './components/ArtworkPicker'
 import AndroidHome, { AndroidBottomNav } from './components/AndroidHome'
+// 初版复习本支持单句/连续多句；收藏与掌握状态独立，沿用学习备份存储。
+import ReviewBook from './components/ReviewBook'
+// 原长按多句选择已移除：import ReviewCollector from './components/ReviewCollector'
+import {addReviewUnit,createReviewUnit,reviewKey} from './lib/reviewBook.js'
 import AndroidSongLibrary from './components/AndroidSongLibrary'
 import DeleteSongDialog from './components/DeleteSongDialog'
 import AndroidSingAlong from './components/AndroidSingAlong'
@@ -53,6 +57,8 @@ import { songArtworkBySource } from './data/songArtwork'
 import twilightStation from './assets/uta-twilight-station.png'
 // 安卓启动页沿用用户提供的原图，图标另使用加上「うた」背景字样的版本。
 import androidLaunchPortrait from './assets/uta-launch-portrait.png'
+// 启动文字按本机歌曲随机抽取，等待字体恢复后才显示。
+import AndroidLaunchScreen from './components/AndroidLaunchScreen'
 import { annotateSongLines, explainSelectionWithAi, explainSentenceBatchWithAi, reviewSongWithAi, searchSongArtwork } from './lib/annotationApi'
 import { createAndStoreLocalSong, deleteLocalSong, loadLocalSongs, parseLrcFile, replaceLocalSongs, storeTransferredSong, updateLocalSongArtworkIfUrl, updateLocalSongMetadata } from './lib/localSongStore'
 import { downloadComputerSong, mergeTransferredLearning, startComputerTransfer } from './lib/computerSongTransfer'
@@ -68,10 +74,11 @@ import { annotationMatchesLine, reconcileLearningState } from './lib/learningIde
 import PasteLyrics from './components/PasteLyrics'
 import { displayReading, lineReading as getLineReading, normalizeReadingStyle } from './lib/readingDisplay'
 import { inspectCloudBackup } from './lib/cloudBackup'
-// 原完整云包 wrapCloudBackup 保留在 cloudData；WebDAV 改为目录与独立歌曲附件。
+// WebDAV 新目录保存完整非音频资料，原始音频附件独立复用。
 import { collectCloudExtras,restoreCloudData } from './lib/cloudData'
 import { markCloudDirty,loadWebDavSettings,validateWebDav,webDavDownload,withWebDavLock } from './lib/webDav'
-import {readCloudSongAsset} from './lib/cloudSongBackup'
+// 旧整曲下载装配：import {readCloudSongAsset} from './lib/cloudSongBackup'
+import {readCloudAudioAsset} from './lib/cloudSongBackup'
 import WebDavAutoSync from './components/WebDavAutoSync'
 import {useAppUpdates,AppUpdatePrompt} from './components/AppUpdates'
 
@@ -195,6 +202,7 @@ export default function App() {
   // 三个主页面双击返回才退出；切换页面会清除上一次返回提示。
   const androidExitAttemptRef = useRef(0)
   const [androidLaunchVisible, setAndroidLaunchVisible] = useState(IS_ANDROID_APP)
+  const [androidFontReady, setAndroidFontReady] = useState(!IS_ANDROID_APP)
   const [activeLineId, setActiveLineId] = useState(0)
   const [mode, setMode] = useState('reading')
   const [practiceActive, setPracticeActive] = useState(false)
@@ -216,20 +224,21 @@ export default function App() {
     const savedAppearance = readAppearance()
     applyAppearance(savedAppearance)
     // 已下载的远程字重从本机缓存恢复，冷启动无需再次联网。
-    restoreRemoteFont(savedAppearance.font).then(ready => {
-      if (ready) applyAppearance(readAppearance())
-    }).catch(() => { /* 缓存损坏时保留系统回退字形，设置页提供重新下载入口。 */ })
+    // 原恢复后直接换字形：restoreRemoteFont(savedAppearance.font).then(ready => { if (ready) applyAppearance(readAppearance()) })
     // 本机导入字体同样在冷启动时注册；文件缺失时保留内置字形回退和设置入口。
-    if (isCustomFont(savedAppearance.font)) restoreCustomFont(savedAppearance.font).then(ready => {
-      if (ready) applyAppearance(readAppearance())
-    }).catch(() => { /* 设置页可删除损坏字体并重新导入，不影响歌曲数据。 */ })
-    return () => document.documentElement.classList.remove('uta-android-font')
+    // 原自定义字体也是独立异步恢复；现在统一通知启动页等待完成，不提前显示默认字体。
+    let disposed=false
+    Promise.all([
+      restoreRemoteFont(savedAppearance.font).catch(()=>false),
+      isCustomFont(savedAppearance.font)?restoreCustomFont(savedAppearance.font).catch(()=>false):Promise.resolve(false),
+    ]).then(()=>{if(!disposed){applyAppearance(readAppearance());setAndroidFontReady(true)}})
+    return () => {disposed=true;document.documentElement.classList.remove('uta-android-font')}
   }, [])
   useEffect(() => {
     if (!IS_ANDROID_APP) return undefined
-    // 等网页界面准备好后，短暂显示完整启动图和两行日文，再进入学习首页。
-    const timer = window.setTimeout(() => setAndroidLaunchVisible(false), 1800)
-    return () => window.clearTimeout(timer)
+    // 原固定计时会在本机歌曲/字体尚未准备好时退出；现在由AndroidLaunchScreen在文字就绪后计时。
+    // const timer = window.setTimeout(() => setAndroidLaunchVisible(false), 1800)
+    // return () => window.clearTimeout(timer)
   }, [])
   // 原标签仅区分两种；新增双注音提示。
   // const readingLabel = readingStyle === 'romaji' ? '罗马音' : '平假名'
@@ -292,6 +301,8 @@ export default function App() {
   const [editingDetailsSong, setEditingDetailsSong] = useState(null)
   const [editingDetailsBusy, setEditingDetailsBusy] = useState(false)
   const [lyricEditMenu, setLyricEditMenu] = useState(null)
+  // 原长按收藏弹窗状态：const [reviewCollection,setReviewCollection]=useState(null)
+  const [reviewDetailOpen,setReviewDetailOpen]=useState(false)
   const [editingLyric, setEditingLyric] = useState(null)
   const [lyricEditSaving, setLyricEditSaving] = useState(false)
   const lyricPressRef = useRef(null)
@@ -318,6 +329,8 @@ export default function App() {
   const [toast, setToast] = useState('')
   const [cloudSongRequest,setCloudSongRequest]=useState(null),[cloudSongBusy,setCloudSongBusy]=useState(false),[cloudSongProgress,setCloudSongProgress]=useState(0),[cloudSongError,setCloudSongError]=useState('')
   // 歌词长按菜单与其他安卓弹层也锁住背景；组件内弹窗共享同一计数，支持叠加。
+  // 原锁定条件不含收藏范围弹窗；新增后同样禁止背景歌词滚动。
+  // useModalScrollLock(IS_ANDROID_APP && Boolean(lyricEditMenu||editingDetailsSong||editingArtworkSong||importOpen||songPickerOpen||backupPreview||computerShare||cloudSongRequest))
   useModalScrollLock(IS_ANDROID_APP && Boolean(lyricEditMenu||editingDetailsSong||editingArtworkSong||importOpen||songPickerOpen||backupPreview||computerShare||cloudSongRequest))
   const dragSelectionRef = useRef(null)
   const suppressNextTokenClick = useRef(false)
@@ -369,6 +382,8 @@ export default function App() {
   }
 
   function goBackAndroid() {
+    // 收藏入口已统一为双击选区，原歌词编辑/系统返回优先顺序保留。
+    // 原长按收藏弹窗返回处理：if(reviewCollection){setReviewCollection(null);return}
     if(cloudSongRequest){if(!cloudSongBusy)setCloudSongRequest(null);return}
     // 封面选歌作为当前练习页的弹层，系统返回只关闭选歌页。
     if (lyricAiReviewSong) { setLyricAiReviewSong(null); return }
@@ -578,9 +593,16 @@ export default function App() {
     if (!unifiedStudy) return undefined
     const gesture = new LyricTapGesture({
       // 无时间轴仍允许阅读选句；可播放时由控制器决定段首，不能用被点句覆盖它。
-      onSingle: id => { if (!study.transport.state.ready) setActiveLineId(id); else study.transport.playLine(id) },
+      // 纯歌词也能双击收藏；选区外单击仅退出，不同时选中或播放另一句。
+      onSingle: id => {
+        if (!study.transport.state.ready) {
+          if (study.transport.state.range || study.transport.state.rangeAnchorId != null) study.transport.clearRange()
+          else setActiveLineId(id)
+        } else study.transport.playLine(id)
+      },
       onDouble: id => {
-        if (!study.transport.state.ready) { setToast('歌词缺少完整时间戳，补全后可选段播放。'); return }
+        // 原缺时间戳时直接返回；现在允许选句/选段收藏，播放仍由ready严格限制。
+        // if (!study.transport.state.ready) { setToast('歌词缺少完整时间戳，补全后可选段播放。'); return }
         setSentenceExplanationOpen(null)
         study.transport.doubleTapLine(id)
       },
@@ -985,6 +1007,8 @@ export default function App() {
       return { ...previous, [activeSong.id]: [...next] }
     })
     setReviewItems((previous) => {
+      // 安卓“还要再练”加入复习本，学会也不自动移除已收藏单元；网页旧逻辑保留。
+      if(IS_ANDROID_APP)return learned?previous:addReviewUnit(previous,createReviewUnit(activeSong,lineId))
       const remaining = previous.filter((item) => !(item.songId === activeSong.id && item.lineId === lineId))
       return learned ? remaining : [...remaining, { songId: activeSong.id, lineId, text: line.text }]
     })
@@ -1335,7 +1359,9 @@ export default function App() {
     onProgress?.(force?0:countReady(),song.lines.length)
     let failure=''
     // 日语小批处理减少重复歌词导致的漏句/错配，也为零基础讲解保留足够输出长度。
-    const batchSize=IS_ANDROID_APP&&language==='ja'?4:SENTENCE_BATCH_SIZE
+    // 原日语每批4句；新增教学内容后缩为2句，降低输出截断并缩短单批等待。
+    // const batchSize=IS_ANDROID_APP&&language==='ja'?4:SENTENCE_BATCH_SIZE
+    const batchSize=IS_ANDROID_APP&&language==='ja'?2:SENTENCE_BATCH_SIZE
     try{
       for(let offset=0;offset<pending.length;offset+=batchSize){
         if(cancelled())return cancelledResult()
@@ -1459,9 +1485,10 @@ export default function App() {
     try{
       const record=await withWebDavLock(async()=>{
         const config=validateWebDav(await loadWebDavSettings())
-        if(request.song.cloudAsset.origin&&request.song.cloudAsset.origin!==config.url)throw new Error('请在WebDAV设置中配置这份备份原来的云目录后重试。')
-        const blob=await webDavDownload(config,request.song.cloudAsset.name,setCloudSongProgress,{sha256:request.song.cloudAsset.sha256})
-        return readCloudSongAsset(blob,request.song)
+        if(request.song.cloudAudio.origin&&request.song.cloudAudio.origin!==config.url)throw new Error('请在WebDAV设置中配置这份备份原来的云目录后重试。')
+        const blob=await webDavDownload(config,request.song.cloudAudio.name,setCloudSongProgress,{sha256:request.song.cloudAudio.sha256})
+        // 音频单独下载校验，歌词等资料已随目录恢复。
+        return readCloudAudioAsset(blob,request.song)
       })
       await storeTransferredSong(record)
       const url=record.audioBlob instanceof Blob?URL.createObjectURL(record.audioBlob):'',{audioBlob,...metadata}=record
@@ -1758,11 +1785,12 @@ export default function App() {
       const { audioBlob, ...visibleSong } = updated
       setLocalSongs((previous) => previous.map((item) => item.id === song.id ? visibleSong : item))
       if (lyricsChanged) {
-        // 歌词或时间轴改变后，旧的逐句读音、掌握状态和 AI 结果不能沿用。
+        // 歌词改变后逐句读音/掌握/AI清理；新收藏单元保留，复习页显示原文变化提示。
+        // 原reviewItems过滤：filter(item=>item.songId!==song.id)，现额外保留unitVersion===1。
         setLearningState((previous) => {
           const withoutSong = (value) => { const { [song.id]: removed, ...remaining } = value || {}; return remaining }
           const progress = previous.progress
-          return { ...previous, annotations: withoutSong(previous.annotations), aiReviews: withoutSong(previous.aiReviews), sentenceExplanations: withoutSong(previous.sentenceExplanations), progress: { ...progress, learnedBySong: withoutSong(progress.learnedBySong), lyricSnapshots: withoutSong(progress.lyricSnapshots), reviewItems: (progress.reviewItems || []).filter((item) => item.songId !== song.id), corrections: Object.fromEntries(Object.entries(progress.corrections || {}).filter(([key]) => !key.startsWith(`${song.id}:`))) } }
+          return { ...previous, annotations: withoutSong(previous.annotations), aiReviews: withoutSong(previous.aiReviews), sentenceExplanations: withoutSong(previous.sentenceExplanations), progress: { ...progress, learnedBySong: withoutSong(progress.learnedBySong), lyricSnapshots: withoutSong(progress.lyricSnapshots), reviewItems: (progress.reviewItems || []).filter((item) => item.songId !== song.id || item.unitVersion===1), corrections: Object.fromEntries(Object.entries(progress.corrections || {}).filter(([key]) => !key.startsWith(`${song.id}:`))) } }
         })
         const pending = loadLocal(PENDING_AI_IMPORT_KEY, [])
         localStorage.setItem(PENDING_AI_IMPORT_KEY, JSON.stringify((Array.isArray(pending) ? pending : []).filter((id) => id !== song.id)))
@@ -1957,7 +1985,9 @@ export default function App() {
       else next.delete(lineId)
       return { ...previous, [activeSong.id]: [...next] }
     })
-    if (willLearn) setReviewItems((previous) => previous.filter((item) => !(item.songId === activeSong.id && item.lineId === lineId)))
+    // 原自动从复习移出仅在网页沿用；安卓复习收藏与是否掌握互不修改。
+    // if (willLearn) setReviewItems((previous) => previous.filter((item) => !(item.songId === activeSong.id && item.lineId === lineId)))
+    if (!IS_ANDROID_APP&&willLearn) setReviewItems((previous) => previous.filter((item) => !(item.songId === activeSong.id && item.lineId === lineId)))
     setToast(willLearn ? '本句已标记为掌握。' : '本句已改为未掌握。')
   }
 
@@ -1968,12 +1998,22 @@ export default function App() {
   }
 
   function toggleReview() {
+    if(IS_ANDROID_APP){collectReview(createReviewUnit(activeSong,activeLine.id));return}
     setReviewItems((previous) => hasReview
       ? previous.filter((item) => !(item.songId === activeSong.id && item.lineId === activeLine.id))
       : [...previous, { songId: activeSong.id, lineId: activeLine.id, text: activeLine.text }])
     if (!hasReview) setLearnedBySong((previous) => ({ ...previous, [activeSong.id]: (previous[activeSong.id] || []).filter((lineId) => lineId !== activeLine.id) }))
     setToast(hasReview ? '已移出复习清单。' : '本句已加入今日复习。')
   }
+
+  // 精确匹配所选行编号去重，不按歌词文字合并重复副歌，也不取消原有掌握记录。
+  function collectReview(unit){
+    const exists=reviewItems.some(item=>reviewKey(item)===reviewKey(unit))
+    setReviewItems(previous=>addReviewUnit(previous,unit))
+    setToast(exists?'这个复习单元已在复习本中。':`已将${unit.lineIds.length>1?unit.lineIds.length+'行歌词':'本句'}加入复习本。`)
+  }
+  // 现有播放选段可以超过收藏上限；超限只提示，不让事件异常影响学习页面。
+  function collectReviewRange(song,start,end){try{collectReview(createReviewUnit(song,start,end))}catch(error){setToast(error.message||'无法收藏这段歌词。')}}
 
   function saveCorrection() {
     const nextReading = draftReading.trim()
@@ -2123,7 +2163,9 @@ export default function App() {
         line_text: targetLine.text,
         previous_line: activeSong.lines[lineIndex - 1]?.text || '',
         next_line: activeSong.lines[lineIndex + 1]?.text || '',
-        learner_level: 'N3',
+        // 原固定N3；安卓选词也跟随个人水平，网页后端仍沿用其现有请求协议。
+        // learner_level: 'N3',
+        learner_level: IS_ANDROID_APP&&activeLanguage==='ja'?readJapaneseLevel():'N3',
         token: getAiTargetToken(target),
       })
       setAiExplanation(result)
@@ -2141,17 +2183,19 @@ export default function App() {
 
   return <>
     {/* 云目录歌曲按首确认下载，完整校验和本机保存完成后再取消暗色状态。 */}
-    {cloudSongRequest&&<div className="line-editor-backdrop" onClick={()=>{if(!cloudSongBusy)setCloudSongRequest(null)}}><section className="line-editor cloud-song-download" role="dialog" aria-modal="true" aria-labelledby="cloud-song-download-title" onClick={event=>event.stopPropagation()}><header><h2 id="cloud-song-download-title">下载歌曲数据</h2></header><p>《{cloudSongRequest.song.title}》的封面和学习进度已恢复。是否下载这首歌的音频与歌词？约 {(cloudSongRequest.song.cloudAsset.size/1048576).toFixed(1)} MB。</p>{cloudSongBusy&&<p role="status">正在下载与校验…{cloudSongProgress}%</p>}{cloudSongError&&<p role="alert" className="line-editor-error">{cloudSongError}</p>}<footer><button type="button" disabled={cloudSongBusy} onClick={()=>setCloudSongRequest(null)}>取消</button><button type="button" disabled={cloudSongBusy} onClick={downloadRequestedCloudSong}>{cloudSongBusy?'下载中…':'确认下载'}</button></footer></section></div>}
+    {cloudSongRequest&&<div className="line-editor-backdrop" onClick={()=>{if(!cloudSongBusy)setCloudSongRequest(null)}}><section className="line-editor cloud-song-download" role="dialog" aria-modal="true" aria-labelledby="cloud-song-download-title" onClick={event=>event.stopPropagation()}><header><h2 id="cloud-song-download-title">下载歌曲音频</h2></header><p>《{cloudSongRequest.song.title}》的歌词、封面和学习进度已恢复。是否下载这首歌的音频？约 {(cloudSongRequest.song.cloudAudio.size/1048576).toFixed(1)} MB。</p>{cloudSongBusy&&<p role="status">正在下载与校验…{cloudSongProgress}%</p>}{cloudSongError&&<p role="alert" className="line-editor-error">{cloudSongError}</p>}<footer><button type="button" disabled={cloudSongBusy} onClick={()=>setCloudSongRequest(null)}>取消</button><button type="button" disabled={cloudSongBusy} onClick={downloadRequestedCloudSong}>{cloudSongBusy?'下载中…':'确认下载'}</button></footer></section></div>}
     {IS_ANDROID_APP && songPickerOpen && <div className="study-song-picker" role="dialog" aria-modal="true" aria-label="选择歌曲"><button className="study-picker-close" type="button" onClick={() => setSongPickerOpen(false)} aria-label="返回当前练习">‹ 返回</button><AndroidSongLibrary selectionMode songs={allSongs.filter((song) => !song.isDemo && normalizeSongSearch(`${song.title}${song.artist}`).includes(normalizeSongSearch(songPickerSearch)))} total={androidLibraryTotal} search={songPickerSearch} onSearch={setSongPickerSearch} artworkFor={artworkForSong} learnedBySong={learnedBySong} activeSongId={activeSong.id} onOpen={(id) => { if(askCloudSong(id,ready=>{chooseSong(ready,true);setSongPickerOpen(false)}))return;chooseSong(id); setSongPickerOpen(false); window.scrollTo({ top: 0, behavior: 'instant' }) }} /></div>}
     {/* 长按后只露出编辑入口；完整编辑窗口按需打开。 */}
     {/* 长按抬手会产生一次兼容点击；短暂忽略背景点击，避免刚弹出的菜单自动关闭。 */}
-    {lyricEditMenu && <div className="lyric-edit-menu-backdrop" onClick={() => { if (Date.now() >= lyricPressSuppressionRef.current) setLyricEditMenu(null) }}><div className="lyric-edit-menu" role="dialog" aria-label="歌词操作" onClick={(event) => event.stopPropagation()}><button type="button" onClick={() => { setEditingLyric(lyricEditMenu); setLyricEditMenu(null) }}><Pencil size={18} />编辑</button><button type="button" onClick={() => setLyricEditMenu(null)}>取消</button></div></div>}
+    {/* 长按只用于编辑；单句和多句收藏统一放在双击选区工具栏。 */}
+    {lyricEditMenu && <div className="lyric-edit-menu-backdrop" onClick={() => { if (Date.now() >= lyricPressSuppressionRef.current) setLyricEditMenu(null) }}><div className="lyric-edit-menu" role="dialog" aria-label="歌词操作" onClick={event=>event.stopPropagation()}><button type="button" onClick={()=>{setEditingLyric(lyricEditMenu);setLyricEditMenu(null)}}><Pencil size={18}/>编辑</button><button type="button" onClick={()=>setLyricEditMenu(null)}>取消</button></div></div>}
     {editingLyric && (() => {
       const song = allSongs.find((item) => item.id === editingLyric.songId)
       const line = song?.lines.find((item) => item.id === editingLyric.lineId)
       return line ? <LyricLineEditor key={`${song.id}:${line.id}`} song={song} line={line} annotation={annotationsBySong[song.id]?.find((item) => item.id === line.id)} corrections={corrections} onClose={() => { if (!lyricEditSaving) setEditingLyric(null) }} onSave={saveEditedLyric} /> : null
     })()}
-    {IS_ANDROID_APP && androidLaunchVisible && <div className="android-launch-screen" role="img" aria-label="UTA 启动图：私のうた，聴いてください"><img src={androidLaunchPortrait} alt="" /><div className="android-launch-title" lang="ja"><span>私のうた</span><span>聴いてください</span></div></div>}
+    {/* 原启动页固定展示“私のうた／聴いてください”；无真实歌曲时继续使用该文案。 */}
+    {IS_ANDROID_APP && androidLaunchVisible && <AndroidLaunchScreen image={androidLaunchPortrait} songs={allSongs} songsReady={localSongsReady} fontReady={androidFontReady} artworkFor={artworkForSong} onComplete={setAndroidLaunchVisible}/>}
     <div className="page-grain" aria-hidden="true" />
     {/* 删除框独立于歌曲操作菜单，只有点击中文“删除”按钮才进入原有删除流程。 */}
     {IS_ANDROID_APP&&songToDelete&&<DeleteSongDialog song={songToDelete} onCancel={()=>setSongToDelete(null)} onConfirm={()=>{const song=songToDelete;setSongToDelete(null);void removeImportedSong(song,true)}}/>}
@@ -2172,7 +2216,7 @@ export default function App() {
     {sentenceDeleteTarget&&<SentenceDeleteDialog whole={sentenceDeleteTarget.lineId==null} onCancel={()=>setSentenceDeleteTarget(null)} onConfirm={()=>deleteSentenceAnalysis(sentenceDeleteTarget)}/>}
     {/* 首页连续空闲才允许提醒；更新、导入、编辑、练习与各类面板均优先。 */}
     {IS_ANDROID_APP && <CommunityInvite routeKey={`${activePage}:${mobileTab}`} eligible={
-      !needsJapaneseLevel && activePage.startsWith('mobile-') && localSongsReady && !androidLaunchVisible &&
+      !reviewDetailOpen && !needsJapaneseLevel && activePage.startsWith('mobile-') && localSongsReady && !androidLaunchVisible &&
       !practiceActive && !study.playing && !study.busy && playingLineId === null && !singAlongPlaying &&
       !settingsOpen && !importOpen && !importBusy && !importPreparing && !importDraft &&
       !songPickerOpen && !songToDelete && !deletingSongId && !backupBusy && !backupPreview && !computerShare &&
@@ -2187,7 +2231,12 @@ export default function App() {
     {/* <main id="top" className={...} data-reading-style={readingStyle}> */}
     <main id="top" className={IS_ANDROID_APP ? `android-main ${activePage.startsWith('mobile-') ? 'android-home-main' : ''} ${activePage === 'lesson' ? `android-lesson-page ${unifiedStudy ? `unified-study-page ${timestampEditing?'timestamp-debug-mode':''}` : ''}` : ''}` : ''} data-reading-style={readingStyle} onScrollCapture={unifiedStudy ? () => { lyricTapRef.current?.cancel(); cancelLyricPress() } : undefined}>
       {/* 安卓三屏首页按确认稿呈现，模式卡片只负责进入现有功能。 */}
+    {/* 复习主页接入三层复习本，其他主页保持原入口；原实现保留：
       {IS_ANDROID_APP && activePage.startsWith('mobile-') && <AndroidHome tab={mobileTab} recentLearn={recentLearnSong ? { song: recentLearnSong, artwork: artworkForSong(recentLearnSong) } : null} recentSing={recentSingSong ? { song: recentSingSong, artwork: artworkForSong(recentSingSong) } : null} onEnterLearn={enterRecentLearning} onEnterSingAlong={showSingAlong} onEnterReview={showReviewQueue} onOpenLibrary={() => showLibraryPage()} onOpenSettings={() => setSettingsOpen(true)} />}
+    */}
+      {IS_ANDROID_APP && activePage.startsWith('mobile-') && activePage!=='mobile-review' && <AndroidHome tab={mobileTab} recentLearn={recentLearnSong?{song:recentLearnSong,artwork:artworkForSong(recentLearnSong)}:null} recentSing={recentSingSong?{song:recentSingSong,artwork:artworkForSong(recentSingSong)}:null} onEnterLearn={enterRecentLearning} onEnterSingAlong={showSingAlong} onEnterReview={showReviewQueue} onOpenLibrary={()=>showLibraryPage()} onOpenSettings={()=>setSettingsOpen(true)}/>}
+      {/* 复习按歌曲ID读写同一songSettings，不能套用另一首当前学习歌曲的注音偏好。 */}
+      {IS_ANDROID_APP&&(activePage==='mobile-review'||activePage==='review-list')&&<ReviewBook songs={allSongs} items={reviewItems} onItemsChange={setReviewItems} artworkFor={artworkForSong} audioFor={song=>song.isLocal?localAudioUrls[song.id]||'':song.audioFile?import.meta.env.BASE_URL+song.audioFile.split('/').map(encodeURIComponent).join('/'):''} sentenceCache={sentenceExplanationsBySong} annotations={annotationsBySong} meaningOverrides={meaningOverrides} corrections={corrections} level={japaneseLevel} songSettings={songSettings} defaultReadingStyle={defaultReadingStyle} onReadingSettings={(id,patch)=>updateLearningMap('songSettings',previous=>({...previous,[id]:{...previous?.[id],...patch}}),true)} onDetailChange={setReviewDetailOpen} onOpenSong={(id,lineId)=>{chooseSongFromLibrary(id);setActiveLineId(lineId)}}/>}
       {/* 原独立界面实现保留供对照：
       {IS_ANDROID_APP && activePage === 'sing-along' && <AndroidSingAlong romajiPosition={activeSongSettings.romajiPosition} onRomajiPosition={romajiPosition=>updateSongSettings({romajiPosition})} song={activeSong} songs={allSongs} artwork={artworkForSong(activeSong)} audioReady={playbackReady} audioPresent={Boolean(audioUrl)} playing={singAlongPlaying} currentLineId={singAlongLineId} onSelectSong={chooseSong} onPlayFromStart={() => startContinuousPlayback(0, activeSong.lines[0]?.id ?? null)} onPlayFromLine={playSingAlongFromLine} onToggle={toggleSingAlong} error={audioError} onChoose={openStudySongPicker} annotations={annotations} corrections={corrections} readingStyle={readingStyle} onReadingStyle={setReadingStyle} />}
       */}
@@ -2278,6 +2327,10 @@ export default function App() {
           {reviewNeeded > 0 && <p className="annotation-tip warn"><CircleAlert size={13} /> 有 {reviewNeeded} 个词典未能确定读音，请优先人工校对。</p>}
           {aiError && <p className="annotation-tip ai-error"><CircleAlert size={13} /> {aiError}</p>}
           {aiReview && <p className="ai-review-summary"><Sparkles size={13} /> AI 已复核 {aiReview.reviewed_token_count} 个词素：{pendingAiSuggestions.length ? <>还有 {pendingAiSuggestions.length} 处待处理建议，<button type="button" onClick={() => document.getElementById('ai-review-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>查看全部</button></> : aiReview.suggestions?.length ? '所有建议均已处理。' : '未发现明显异常；仍建议以原唱为准。'}</p>}
+          {/* 已选播放范围可一键收藏，长按段内仍不触发编辑或掌握操作。 */}
+          {/* 原工具栏只在完整范围出现：{unifiedStudy&&study.range&&<div className="review-range-collect"><span>第{study.range.startIndex+1}–{study.range.endIndex+1}行</span><button type="button" onClick={()=>collectReviewRange(activeSong,study.range.startId,study.range.endId)}><Plus size={16}/>收藏本段</button></div>} */}
+          {/* 首次双击显示收藏本句；第二次双击确定范围后改为收藏本段，不自动播放或退出选区。 */}
+          {unifiedStudy&&(study.range||study.rangeAnchorId!=null)&&<div className="review-range-collect"><span>{study.range?`第${study.range.startIndex+1}–${study.range.endIndex+1}行`:`第${activeSong.lines.findIndex(line=>line.id===study.rangeAnchorId)+1}行`}</span><button type="button" onClick={()=>collectReviewRange(activeSong,study.range?.startId??study.rangeAnchorId,study.range?.endId??study.rangeAnchorId)}><Plus size={16}/>{study.range?'收藏本段':'收藏本句'}</button></div>}
           <div className="lyrics-list">
             {/* 原 map 只接收 line；数组位置用于判断选段，不能假定句子 id 连续。 */}
             {activeSong.lines.map((line, lineIndex) => {
@@ -2347,7 +2400,8 @@ export default function App() {
 
       </>}
 
-      {IS_ANDROID_APP && activePage === 'review-list' && <section className="android-review-detail" aria-labelledby="review-queue-title">
+      {/* 旧安卓待复习句列表由上方ReviewBook接管；保留旧结构便于对照。 */}
+      {false && IS_ANDROID_APP && activePage === 'review-list' && <section className="android-review-detail" aria-labelledby="review-queue-title">
         <button className="android-detail-back" type="button" onClick={goBackAndroid}>‹　返回复习</button>
         <p className="android-home-eyebrow">REVIEW / 复习</p>
         <h1 id="review-queue-title">待复习的句子 <span>{reviewQueue.length}</span></h1>
@@ -2402,7 +2456,10 @@ export default function App() {
       {/* 原独立界面实现保留供对照：
     {IS_ANDROID_APP && <AndroidBottomNav activeTab={mobileTab} onSelect={showMobileTab} />}
       */}
+    {/* 复习详情用评价栏，歌曲和单元列表保留原底部导航；原实现保留：
     {IS_ANDROID_APP && !unifiedStudy && <AndroidBottomNav activeTab={mobileTab} onSelect={showMobileTab} />}
+    */}
+    {IS_ANDROID_APP&&!unifiedStudy&&!(reviewDetailOpen&&(activePage==='mobile-review'||activePage==='review-list'))&&<AndroidBottomNav activeTab={mobileTab} onSelect={showMobileTab}/>}
 
     {/* 旧调用未传入当前封面：
     {editingDetailsSong && <SongDetailsEditor key={editingDetailsSong.id} song={editingDetailsSong} onClose={() => { if (!editingDetailsBusy) setEditingDetailsSong(null) }} onSave={saveSongDetails} busy={editingDetailsBusy} />}
@@ -2428,7 +2485,10 @@ export default function App() {
       <p className="backup-file-name">{backupPreview.file.name || 'UTA 备份文件'}</p>
       {backupPreview.extras && <p className="backup-cloud-note">包含个人资料、头像和历史对话。{backupPreview.extras.ai?.api_key ? <strong role="alert">此备份包含 API Key，请妥善保管。</strong> : '不含 API Key；恢复后需重新填写 AI 密钥。'}</p>}
       {/* 原预览统一标记“含音频”；云目录明确说明音频与歌词按首下载。 */}
-      <dl className="backup-summary"><div><dt>备份时间</dt><dd>{new Date(backupPreview.manifest.createdAt).toLocaleString('zh-CN')}</dd></div><div><dt>导入歌曲</dt><dd>{backupPreview.manifest.songs.length} 首（{backupPreview.cloudCatalog?'音频与歌词按首下载':'含音频'}）</dd></div><div><dt>读音修正</dt><dd>{Object.keys(backupPreview.manifest.progress.corrections).length} 处</dd></div><div><dt>待复习句</dt><dd>{backupPreview.manifest.progress.reviewItems.length} 句</dd></div><div><dt>文件大小</dt><dd>{(backupPreview.cloudFile?.size??backupPreview.file.size)/1048576 < .1 ? '< 0.1' : ((backupPreview.cloudFile?.size??backupPreview.file.size)/1048576).toFixed(1)} MB</dd></div></dl>
+      {/* 原备份按单句计数；现在改为复习单元，旧实现保留：
+      <dl className="backup-summary"><div><dt>备份时间</dt><dd>{new Date(backupPreview.manifest.createdAt).toLocaleString('zh-CN')}</dd></div><div><dt>导入歌曲</dt><dd>{backupPreview.manifest.songs.length} 首（{backupPreview.cloudCatalog?'歌词已包含，音频按首下载':'含音频'}）</dd></div><div><dt>读音修正</dt><dd>{Object.keys(backupPreview.manifest.progress.corrections).length} 处</dd></div><div><dt>待复习句</dt><dd>{backupPreview.manifest.progress.reviewItems.length} 句</dd></div><div><dt>文件大小</dt><dd>{(backupPreview.cloudFile?.size??backupPreview.file.size)/1048576 < .1 ? '< 0.1' : ((backupPreview.cloudFile?.size??backupPreview.file.size)/1048576).toFixed(1)} MB</dd></div></dl>
+      */}
+      <dl className="backup-summary"><div><dt>备份时间</dt><dd>{new Date(backupPreview.manifest.createdAt).toLocaleString('zh-CN')}</dd></div><div><dt>导入歌曲</dt><dd>{backupPreview.manifest.songs.length} 首（{backupPreview.cloudCatalog?'歌词已包含，音频按首下载':'含音频'}）</dd></div><div><dt>读音修正</dt><dd>{Object.keys(backupPreview.manifest.progress.corrections).length} 处</dd></div><div><dt>复习单元</dt><dd>{backupPreview.manifest.progress.reviewItems.length} 个</dd></div><div><dt>文件大小</dt><dd>{(backupPreview.cloudFile?.size??backupPreview.file.size)/1048576 < .1 ? '< 0.1' : ((backupPreview.cloudFile?.size??backupPreview.file.size)/1048576).toFixed(1)} MB</dd></div></dl>
       <p className="backup-warning"><CircleAlert size={16} /> 恢复会替换当前浏览器中的网页导入歌曲和学习数据，包括已掌握句子、读音修正与复习清单。建议先导出当前数据。</p>
       {backupError && <p className="library-backup-error" role="alert">{backupError}</p>}
       <div className="backup-dialog-actions"><button type="button" disabled={backupBusy === 'restore'} onClick={() => { setBackupPreview(null); setBackupError('') }}>取消</button><button type="button" disabled={backupBusy === 'restore'} onClick={restoreLearningData}>{backupBusy === 'restore' ? <LoaderCircle className="spin" size={14} /> : <Upload size={14} />}{backupBusy === 'restore' ? '正在恢复…' : '覆盖当前数据并恢复'}</button></div>
@@ -2542,3 +2602,11 @@ export default function App() {
 // '可留空；来源标注按原样保留'} /></label>
 // maxLength={1000} lang="ja-Latn" aria-label={`第 ${index + 1} 句罗马音`}
 // setToast('已切换歌词，正在准备自动读音。')
+
+// 音频拆分前的代码行保留对照（不执行）。
+// import {readCloudSongAsset} from './lib/cloudSongBackup'
+//         if(request.song.cloudAsset.origin&&request.song.cloudAsset.origin!==config.url)throw new Error('请在WebDAV设置中配置这份备份原来的云目录后重试。')
+//         const blob=await webDavDownload(config,request.song.cloudAsset.name,setCloudSongProgress,{sha256:request.song.cloudAsset.sha256})
+//         return readCloudSongAsset(blob,request.song)
+//     {cloudSongRequest&&<div className="line-editor-backdrop" onClick={()=>{if(!cloudSongBusy)setCloudSongRequest(null)}}><section className="line-editor cloud-song-download" role="dialog" aria-modal="true" aria-labelledby="cloud-song-download-title" onClick={event=>event.stopPropagation()}><header><h2 id="cloud-song-download-title">下载歌曲数据</h2></header><p>《{cloudSongRequest.song.title}》的封面和学习进度已恢复。是否下载这首歌的音频与歌词？约 {(cloudSongRequest.song.cloudAsset.size/1048576).toFixed(1)} MB。</p>{cloudSongBusy&&<p role="status">正在下载与校验…{cloudSongProgress}%</p>}{cloudSongError&&<p role="alert" className="line-editor-error">{cloudSongError}</p>}<footer><button type="button" disabled={cloudSongBusy} onClick={()=>setCloudSongRequest(null)}>取消</button><button type="button" disabled={cloudSongBusy} onClick={downloadRequestedCloudSong}>{cloudSongBusy?'下载中…':'确认下载'}</button></footer></section></div>}
+//       <dl className="backup-summary"><div><dt>备份时间</dt><dd>{new Date(backupPreview.manifest.createdAt).toLocaleString('zh-CN')}</dd></div><div><dt>导入歌曲</dt><dd>{backupPreview.manifest.songs.length} 首（{backupPreview.cloudCatalog?'音频与歌词按首下载':'含音频'}）</dd></div><div><dt>读音修正</dt><dd>{Object.keys(backupPreview.manifest.progress.corrections).length} 处</dd></div><div><dt>待复习句</dt><dd>{backupPreview.manifest.progress.reviewItems.length} 句</dd></div><div><dt>文件大小</dt><dd>{(backupPreview.cloudFile?.size??backupPreview.file.size)/1048576 < .1 ? '< 0.1' : ((backupPreview.cloudFile?.size??backupPreview.file.size)/1048576).toFixed(1)} MB</dd></div></dl>

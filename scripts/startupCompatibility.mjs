@@ -8,7 +8,11 @@ export function startupCompatibility({android=false}={}){
     const guard=readFileSync(new URL('../src/startupGuard.js',import.meta.url),'utf8')
     const version=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version
     let output=html.replace('<!-- UTA_STARTUP_GUARD -->',`<script>${guard}</script>`).replace('%UTA_APP_VERSION%',version)
-    if(android)output=output.replace(/\s*<link\b[^>]*href=["']https:\/\/fonts\.(?:googleapis|gstatic)\.com[^>]*>/gi,'')
+    // 原安卓处理只移除在线字体：if(android)output=output.replace(/\s*<link\b[^>]*href=["']https:\/\/fonts\.(?:googleapis|gstatic)\.com[^>]*>/gi,'')
+    if(android){
+      // 静态标识在主脚本执行前生效；空根节点与原生启动底色一致，网页外观不受影响。
+      output=output.replace(/<html\b/i,'<html data-uta-platform="android"').replace(/\s*<link\b[^>]*href=["']https:\/\/fonts\.(?:googleapis|gstatic)\.com[^>]*>/gi,'')
+    }
     return output
   }},writeBundle(options){
     // 标准库补丁的许可随 APK/网页分发，压缩时不会丢失。

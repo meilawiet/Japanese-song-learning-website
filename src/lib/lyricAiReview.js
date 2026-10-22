@@ -2,6 +2,8 @@ import { toHiragana } from 'wanakana'
 import { correctionKey, hasKanji } from './ruby.js'
 import { lyricSurface, plainLyric, prepareLyricReadings, sourceRomajiKana, tokenReading } from './lyricReadings.js'
 import { replaceLyricTokenRange, tokenRanges } from './lyricSegmentation.js'
+// 明确采用AI词界后同步人工保护快照，不允许缓存恢复回滚本次用户选择。
+import { refreshManualReadingSnapshots } from './learningIdentity.js'
 
 // 复核按完整活用词组理解，但应用仍使用原词索引，不改变用户已有分词缓存。
 function analysisUnits(tokens) {
@@ -353,5 +355,6 @@ export function applyLyricReview(state,song,snapshot,selected,{historical=false}
     annotations[position]={...annotations[position],tokens:changed.tokens}
     changedRanges.push({id:target.id,start:anchor.start,end:anchor.end})
   }
-  return {...state,progress:{...state.progress,corrections},annotations:{...state.annotations,[song.id]:annotations}}
+  // 原直接return上述state；分词发生变化时同时更新可靠绑定证据。
+  return refreshManualReadingSnapshots({...state,progress:{...state.progress,corrections},annotations:{...state.annotations,[song.id]:annotations}},song.id,changedRanges.map(range=>range.id))
 }

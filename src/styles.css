@@ -1039,6 +1039,10 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .theme-stored-fonts li button { min-height:40px; padding:7px 12px; border:1px solid #c03932; border-radius:9px; background:#fffdf8; color:#a5312a; font:inherit; font-size:13px; white-space:nowrap; }
 /* 原启动页单独指定颜真卿字体；安卓端已选字体优先，网页规则仍保留。 */
 .uta-android-font .android-launch-title { font-family:var(--serif); }
+/* 随机歌词居中，歌名独立换行右对齐；长歌词可换行，不改变原歌词数据。 */
+.android-launch-title.has-quote { width:min(88vw,560px); max-height:32vh; overflow:auto; font-size:clamp(18px,5vw,28px); letter-spacing:.04em; overflow-wrap:anywhere; }
+.android-launch-quote { text-align:center; white-space:pre-wrap; }
+.android-launch-song { display:block; text-align:right; font-size:.65em; line-height:1.6; letter-spacing:.02em; }
 .theme-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:18px 0; }
 .theme-options button { padding:16px 8px; border:1px solid #dbe2d3; border-radius:14px; background:#fffdf8; color:#426550; font-size:16px; }
 .theme-options button[aria-pressed=true] { border:2px solid #426550; background:#e6ede3; }
@@ -1225,6 +1229,67 @@ body[style*="overflow: hidden"] .unified-study-page .practice-layout{overflow:vi
 .sentence-inline-analysis .sentence-analysis-source { margin:12px 0; padding:10px 12px; border-radius:10px; background:#eaf3e7; color:#1f2827; font-size:15px; line-height:1.7; overflow-wrap:anywhere; }
 .sentence-inline-analysis .sentence-analysis-level { margin:8px 0; color:#707874; font-size:13px; line-height:1.6; }
 .sentence-inline-analysis .sentence-analysis-warning { padding:10px 12px; border:1px solid #c5a452; border-radius:10px; color:#73521b; font-size:14px; line-height:1.7; }
+/* 日语新增教学信息允许窄屏、大字号换行；文体说明默认折叠，日常示例明确独立。 */
+.sentence-inline-analysis .sentence-analysis-section { min-width:0; overflow-wrap:anywhere; }
+.sentence-word-reading { display:block; margin-top:3px; font-size:.85em; font-weight:400; }
+.sentence-inline-analysis .sentence-analysis-section dd p { margin-top:5px; }
+.sentence-expression-notes summary { min-height:44px; cursor:pointer; font-weight:600; font-size:12px; line-height:1.7; }
+.sentence-expression-notes[open] summary { margin-bottom:6px; }
+.sentence-everyday-example { margin-top:10px; padding:10px 12px; border:1px solid #e4dfd4; border-radius:10px; }
+/* 首版复习本：使用现有主题基础色，由外观设置统一映射；歌词正文保持黑色。 */
+.android-review-book { padding:28px 20px 18px; max-width:780px; margin:auto; overflow-wrap:anywhere; }
+.android-review-book h1 { margin:0; font:700 30px/1.4 var(--serif); color:#426550; }
+.review-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:22px 0; }
+.review-heading p,.review-song-identity p { margin:8px 0 0; font-size:13px; color:#7b837d; }
+.review-view-toggle { display:flex; flex:none; padding:4px; gap:3px; border-radius:12px; background:#e6ede3; }
+.review-view-toggle button { display:grid; place-items:center; padding:8px; border:0; border-radius:9px; background:none; color:#92998f; }
+.review-view-toggle button.selected { background:#fff; color:#426550; }
+.review-search { display:block; margin-bottom:18px; font-size:13px; color:#7b837d; }
+.review-search input { display:block; width:100%; min-height:44px; padding:10px 13px; margin-top:7px; border:1px solid #d7e2d3; border-radius:12px; font:inherit; color:#1f2827; background:white; }
+.review-albums { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.review-album { display:block; padding:0; min-width:0; text-align:left; border:1px solid #dce4d6; border-radius:19px; background:white; overflow:hidden; }
+.review-cover { display:flex; position:relative; flex:none; width:100%; aspect-ratio:1; align-items:center; justify-content:center; overflow:hidden; background:linear-gradient(145deg,#e6ede3,#b6cdbb); color:#426550; font:28px var(--serif); }
+.review-cover img { width:100%; height:100%; object-fit:cover; }
+.review-album-info { display:flex; flex-direction:column; gap:8px; padding:14px 12px 17px; }
+.review-album-info strong { font:600 20px/1.4 var(--serif); color:#1f2827; }
+.review-album-info small,.review-album-info span { font-size:12px; color:#808a80; }
+.review-album-info em { font-size:12px; color:#426550; font-style:normal; }
+.review-albums.list { display:flex; flex-direction:column; }
+.review-albums.list .review-album { display:flex; align-items:center; }
+.review-albums.list .review-cover { width:88px; height:108px; aspect-ratio:auto; align-self:stretch; }
+.review-today { width:100%; display:flex; align-items:center; gap:13px; margin-top:24px; padding:17px 15px; text-align:left; border:1px solid #d7e2d3; border-radius:15px; background:#e6ede3; color:#426550; }
+.review-today span { flex:1; }.review-today strong { font:600 17px var(--serif); }.review-today small { display:block; margin-top:7px; font-size:12px; color:#7b837d; }
+.review-today:disabled { opacity:.6; }
+.review-empty { display:flex; flex-direction:column; align-items:center; gap:15px; padding:60px 15px; color:#7b837d; text-align:center; }
+.review-empty h2 { margin:0; font:600 23px var(--serif); color:#426550; }.review-empty p { margin:0; line-height:1.8; font-size:14px; }
+.review-page-header { display:flex; align-items:center; gap:12px; margin:0 0 22px; min-height:46px; }
+.review-page-header h1 { font-size:24px; }.review-page-header button { display:flex; align-items:center; padding:8px 2px; border:0; color:#426550; background:none; }
+.review-position { margin-left:auto; display:flex; align-items:center; gap:6px; color:#808a80; font-size:13px; }
+.review-song-identity { display:flex; align-items:center; gap:14px; margin:20px 0; }.review-song-identity .review-cover { width:75px; height:75px; border-radius:13px; }
+.review-song-identity h2 { margin:0; font:600 23px/1.5 var(--serif); color:#426550; }
+.review-unit-list { display:flex; flex-direction:column; gap:14px; }
+.review-unit-card { display:block; width:100%; padding:18px 15px 13px; text-align:left; border:1px solid #d7e2d3; border-radius:17px; background:white; }
+.review-unit-meta { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:12px; color:#808a80; }
+.review-unit-text { display:block; margin:17px 0; font:500 24px/1.8 var(--serif); color:#000; white-space:pre-line; }.review-unit-text>span { display:block; }.review-unit-text p { margin:0; }
+.review-unit-bottom { display:flex; align-items:center; justify-content:space-between; margin-top:15px; padding-top:12px; border-top:1px solid #e4e9df; font-size:12px; color:#7b837d; }
+.review-detail { padding-bottom:calc(110px + env(safe-area-inset-bottom,0px)); }
+.review-mode-tabs { display:flex; gap:9px; margin-bottom:16px; }.review-mode-tabs button { flex:1; min-height:44px; padding:9px; border:1px solid #d7e2d3; border-radius:12px; color:#426550; background:white; font:15px var(--serif); }.review-mode-tabs button.selected { background:#e6ede3; }
+.review-lyric-card { padding:18px 16px; border:1px solid #d7e2d3; border-radius:17px; background:#eaf3e7; }
+.review-lyric-tools { display:flex; align-items:center; gap:12px; padding-top:12px; margin-top:12px; border-top:1px solid #d7e2d3; }.review-lyric-tools button { min-height:42px; padding:7px 0; border:0; background:none; color:#426550; }
+.review-lyric-tools .review-play { display:flex; align-items:center; gap:7px; flex:none; font-size:13px; }.review-play:disabled { opacity:.45; }.review-lyric-tools select { max-width:72px; padding:7px 2px; border:0; background:transparent; font:13px var(--sans); color:#426550; }.review-lyric-tools .review-reveal { margin-left:auto; font:13px var(--serif); }
+.review-meaning { margin:14px 0 0; padding-top:12px; border-top:1px solid #d7e2d3; font:16px/1.9 var(--serif); white-space:pre-line; color:#576952; }
+.review-listen-hidden { min-height:130px; display:grid; place-items:center; text-align:center; padding:15px; color:#7b837d; font:17px/1.8 var(--serif); }
+.review-knowledge { margin-top:16px; border:1px solid #d7e2d3; border-radius:16px; background:white; overflow:hidden; }.review-knowledge summary { display:flex; justify-content:space-between; align-items:center; min-height:60px; padding:17px 16px; cursor:pointer; list-style:none; color:#426550; font:600 18px var(--serif); }.review-knowledge summary::-webkit-details-marker { display:none; }.review-knowledge summary span { display:flex; align-items:center; gap:12px; color:#92998f; font:12px var(--sans); }.review-knowledge[open]>summary svg { transform:rotate(180deg); }.review-knowledge>div { padding:0 16px 12px; }
+.review-word { padding:15px 0; border-top:1px solid #e4e9df; }.review-word>div { display:flex; align-items:baseline; flex-wrap:wrap; gap:10px; }.review-word strong { color:#000; font:22px/1.5 var(--serif); }.review-word small { color:#92998f; font-size:12px; }.review-word p { margin:6px 0 0; font:15px/1.8 var(--serif); color:#576952; }
+.review-grammar { padding:14px 0; margin:0; border-top:1px solid #e4e9df; font:16px/1.9 var(--serif); color:#576952; }.review-hint { margin:12px 0 0; color:#808a80; font-size:12px; line-height:1.8; }
+.review-primary,.review-analysis-actions button { min-height:44px; padding:12px 16px; border:1px solid #426550; border-radius:12px; color:white; background:#426550; font:15px var(--serif); }.review-analysis-actions { margin-top:18px; }.review-primary:disabled { opacity:.5; }
+.review-notes textarea { display:block; width:100%; min-height:92px; padding:12px; margin:9px 0 12px; border:1px solid #d7e2d3; border-radius:10px; font:15px/1.6 var(--serif); resize:vertical; }.review-notes label { font-size:14px; }.review-notes>div>button { min-height:44px; padding:9px 15px; border:1px solid #d7e2d3; border-radius:10px; background:#e6ede3; color:#426550; font:14px var(--serif); }.review-focus { display:flex; flex-wrap:wrap; gap:12px; padding:5px 0 17px; }.review-focus label { display:flex; align-items:center; gap:5px; min-height:32px; }
+.review-context { margin-top:23px; padding:17px 0; border-top:1px solid #d7e2d3; }.review-context h2 { margin:0 0 14px; font:17px var(--serif); color:#426550; }.review-context p { margin:8px 0; color:#92998f; font:15px/1.8 var(--serif); white-space:pre-line; }.review-context .review-context-current { color:#000; }
+.review-secondary-actions { display:flex; flex-wrap:wrap; gap:15px; }.review-secondary-actions button { display:flex; align-items:center; gap:5px; min-height:44px; padding:10px 0; border:0; background:none; color:#426550; font:14px var(--serif); }.review-secondary-actions button:last-child { color:#b54b42; }
+.review-grade-bar { position:fixed; bottom:0; left:0; right:0; z-index:17; display:flex; gap:9px; padding:14px 18px calc(18px + env(safe-area-inset-bottom,0px)); border-top:1px solid #d7e2d3; background:white; }.review-grade-bar button { flex:1; min-width:0; min-height:48px; border:1px solid #d7e2d3; border-radius:12px; color:#426550; background:white; font:15px/1.5 var(--serif); }.review-grade-bar button:last-child { color:white; background:#426550; border-color:#426550; }.review-grade-bar button:disabled { opacity:.45; }
+.review-warning,.review-error,.review-notice { margin:15px 0; padding:12px; border-radius:11px; font-size:14px; line-height:1.8; }.review-warning { background:#fff6dc; color:#73521b; }.review-error { color:#a3463c; background:#fff1ec; }.review-notice { color:#426550; background:#eaf3e7; }
+.review-modal-backdrop { position:fixed; inset:0; z-index:2600; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(18,29,27,.45); }.review-collector,.review-confirm { width:min(100%,560px); max-height:85vh; overflow:auto; padding:22px 19px; border-radius:24px; background:white; }.review-collector header { display:flex; justify-content:space-between; align-items:center; gap:15px; }.review-collector h2,.review-confirm h2 { margin:0; color:#426550; font:24px/1.5 var(--serif); }.review-collector header button { border:0; background:none; color:#92998f; }.review-range-fields { display:grid; gap:15px; margin-top:22px; }.review-range-fields label { display:grid; gap:8px; font-size:14px; }.review-range-fields select { width:100%; min-width:0; min-height:46px; padding:10px; border:1px solid #d7e2d3; border-radius:10px; font:15px var(--serif); background:white; }.review-collector-count { margin:16px 0 10px; font-size:13px; color:#808a80; }.review-collector-preview { max-height:240px; overflow:auto; padding:14px; border:1px solid #d7e2d3; border-radius:12px; background:#eaf3e7; }.review-collector-preview p { margin:0; font:20px/1.9 var(--serif); color:#000; }.review-collector footer,.review-confirm footer { display:flex; gap:12px; margin-top:23px; }.review-collector footer button,.review-confirm footer button { flex:1; min-height:46px; padding:9px; border:1px solid #d7e2d3; border-radius:11px; background:white; color:#426550; font:15px var(--serif); }.review-collector footer button:last-child,.review-confirm footer button:last-child { background:#426550; color:white; }.review-collector footer button:disabled { opacity:.4; }.review-confirm p { font-size:15px; line-height:1.8; color:#576952; }
+.review-range-collect { position:sticky; top:0; z-index:8; display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:#e6ede3; border-radius:12px; color:#426550; font-size:13px; }.review-range-collect button { display:flex; gap:6px; align-items:center; min-height:40px; padding:8px 12px; border:0; border-radius:9px; background:white; color:#426550; font:14px var(--serif); }
 .sentence-analysis-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
 .sentence-analysis-actions button { flex:1 1 130px; min-height:44px; padding:10px 12px; border:1px solid #426550; border-radius:12px; background:#fffdf8; color:#426550; font:inherit; font-size:14px; }
 .sentence-analysis-actions button:first-child { border-color:#b54b42; color:#b54b42; }
@@ -1273,3 +1338,131 @@ body[style*="overflow: hidden"] .unified-study-page .practice-layout{overflow:vi
 .import-extra .artwork-picker-heading p,.import-extra .online-song-search>h3 { display:none; }
 .song-import-dialog .song-file-field { padding:16px; min-height:0; margin-bottom:12px; }
 .song-import-actions button { border-radius:12px; }
+/* 复习卡片左滑只展开操作，竖向手势仍交给滚动容器；红色不随主题色改变。 */
+.review-swipe { position:relative; min-width:0; overflow:hidden; border-radius:17px; touch-action:pan-y; }
+.review-swipe-content { position:relative; width:100%; transition:transform .18s ease-out; }
+.review-swipe.is-dragging .review-swipe-content { transition:none; user-select:none; }
+.review-swipe-delete { position:absolute; top:0; right:0; bottom:0; width:76px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; border:0; background:#c43836; color:#fff; font:14px var(--sans); }
+.review-swipe-delete[aria-hidden="true"] { visibility:hidden; pointer-events:none; }
+.review-reused-analysis { white-space:pre-line; }
+.review-meaning { white-space:pre-line; }
+/* 用户补充：左滑露出的红色删除区域四角独立圆润，包括靠歌词一侧的两个角。 */
+.review-swipe-delete { border-radius:17px; }
+/* 复习移出确认框只使用弹窗自身的白底；避免继承网页footer的深色底、内边距及分隔线。 */
+.review-confirm footer { padding:0; background:transparent; border:0; font:inherit; letter-spacing:normal; }
+/* 参考用户提供的简洁复习界面：听力阶段留白，突出播放，底部仅保留进入理解的主操作。 */
+.review-listening .review-lyric-card { background:transparent; border-color:transparent; padding:16px 4px; }
+.review-listening .review-listen-hidden { min-height:34vh; display:flex; align-items:center; justify-content:flex-start; padding:28px 8px; font:500 25px/1.8 var(--serif); color:var(--ink); }
+.review-listening .review-lyric-tools { padding-top:10px; border-top:0; }
+.review-listening .review-play { min-height:64px; gap:13px; font-size:18px; }
+.review-listening .review-play svg { width:30px; height:30px; }
+.review-listen-step { display:flex; }
+.review-listen-step button { flex:1; background:#426550; color:white; min-height:52px; }
+/* 三档语义颜色不受主题影响；取消大面积按钮底色，以短色线区分熟悉程度。 */
+.review-rating-bar button,.review-rating-bar button:last-child { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-height:62px; border:0; background:transparent; color:var(--ink); font-size:18px; }
+.review-rating-bar button:after { content:""; width:22px; height:4px; border-radius:4px; background:#2f8d78; }
+.review-rating-bar .review-rating-hard:after { background:#e6ac30; }
+.review-rating-bar .review-rating-again:after { background:#d85460; }
+/* 理解阶段沿用参考图的原文/句意在上、知识分块在下；适配当前主题，不引入外部壁纸。 */
+.review-detail:not(.review-listening) .review-lyric-card { background:transparent; border-color:transparent; padding:18px 4px; }
+.review-detail .review-unit-text p { font-weight:600; }
+.review-detail .review-meaning { padding-top:12px; font-size:16px; line-height:1.8; }
+/* 评价语义色从按钮行内变量传入，避免全局主题映射把“熟悉”的绿色转成其他强调色。 */
+/* 显式background-color，兼容主题转换器读取CSS变量；background简写在CSSOM中可能无法展开。 */
+.review-rating-bar button:after,.review-rating-bar .review-rating-hard:after,.review-rating-bar .review-rating-again:after { background-color:var(--review-rating-color); }
+/* 用户标注稿：顶部紧凑导航，歌词→播放→大意→共用知识区域→底部评价。旧折叠区样式保留供对照。 */
+.review-compact-header { justify-content:space-between; margin-bottom:14px; gap:10px; position:relative; z-index:22; }
+.review-header-start { display:flex; align-items:center; gap:9px; min-width:0; }
+.review-compact-header .review-position { margin:0; font:14px var(--sans); white-space:nowrap; }
+.review-compact-header button,.review-options summary { min-width:44px; min-height:44px; justify-content:center; }
+.review-compact-header .review-previous { margin-left:auto; }
+.review-previous:disabled { opacity:.3; }
+.review-options { position:relative; }
+.review-options summary { display:flex; align-items:center; cursor:pointer; list-style:none; color:#426550; }
+.review-options summary::-webkit-details-marker { display:none; }
+.review-options>div { position:absolute; right:0; top:calc(100% + 6px); width:240px; max-width:calc(100vw - 40px); max-height:65vh; overflow:auto; padding:10px 14px; border:1px solid #d7e2d3; border-radius:16px; background:white; box-shadow:0 12px 36px #17221e20; }
+.review-options>div>button { display:flex; align-items:center; justify-content:flex-start; gap:8px; width:100%; min-height:44px; padding:10px 0; text-align:left; font:14px/1.5 var(--serif); }
+.review-options>div>button:disabled { opacity:.4; }
+.review-options .review-option-delete { color:#b54b42; }
+.review-meaning-card { padding:16px; margin:10px 0 16px; border-radius:15px; background:#eaf3e7; }
+.review-detail .review-meaning-card .review-meaning { padding:0; margin:0; border:0; color:var(--ink); font-size:16px; line-height:1.8; }
+.review-detail:not(.review-listening) .review-lyric-card { padding:10px 4px; }
+.review-detail .review-lyric-tools { border:0; margin-top:5px; padding-top:0; }
+.review-knowledge-workspace { display:flex; flex-direction:column; min-width:0; height:clamp(260px,40vh,430px); border:1px solid #d7e2d3; border-radius:16px; overflow:hidden; background:white; }
+.review-knowledge-scroll { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:2px 16px 10px; }
+.review-tab-pane { min-width:0; }
+.review-tab-pane[hidden] { display:none; }
+.review-workspace-status { font-size:12px; }
+.review-knowledge-workspace .review-vocab-row { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr); align-items:start; gap:14px; padding:15px 0; border-top:0; border-bottom:1px solid #e4e9df; }
+.review-knowledge-workspace .review-vocab-title { display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0; overflow-wrap:anywhere; }
+.review-knowledge-workspace .review-vocab-definition { display:block; min-width:0; overflow-wrap:anywhere; }
+.review-knowledge-workspace .review-word strong { font-size:19px; line-height:1.6; }
+.review-knowledge-workspace .review-word p { margin:0 0 5px; font-size:15px; }
+.review-knowledge-workspace .review-word-detail { font-size:13px; color:#808a80; }
+.review-knowledge-workspace .review-grammar:first-child { border-top:0; }
+.review-knowledge-tabs { display:flex; align-items:stretch; flex:none; border-top:1px solid #d7e2d3; padding:5px; gap:5px; }
+.review-knowledge-tabs button { flex:1; min-width:0; min-height:44px; display:flex; align-items:center; justify-content:center; gap:6px; padding:9px 8px; border:0; border-radius:10px; color:#808a80; background:transparent; font:15px/1.4 var(--serif); }
+.review-knowledge-tabs button.selected { color:#426550; background:#e6ede3; }
+.review-notes-panel { padding:14px 0 0; }
+.review-notes-panel textarea { min-height:105px; }
+.review-notes-panel .review-focus { padding-bottom:12px; }
+.review-notes-panel>div>button { width:100%; }
+/* 极长歌词仍可整页滚动；短内容时JS按剩余视口高度压缩面板，预留固定评价栏空间。 */
+.review-knowledge-workspace { min-height:210px; scroll-margin-bottom:130px; }
+/* 复习精简稿：文件译文贴在各行原文下；旧独立AI大意卡不再渲染。 */
+.review-detail .review-unit-text .review-file-translation { margin:3px 0 10px; color:#808a80; font:400 12px/1.55 var(--serif); white-space:pre-wrap; }
+/* 紧凑词条不再分为左右两大栏；保留旧规则便于对照，短讲解尽量容纳6至8条。 */
+.review-knowledge-scroll { padding:3px 12px 7px; }
+.review-knowledge-workspace .review-vocab-row { display:block; padding:5px 0; font:13px/1.5 var(--serif); overflow-wrap:anywhere; }
+/* 显式指定strong以覆盖旧词条strong的19px规则，确保词本身也同步缩小。 */
+.review-knowledge-workspace strong.review-vocab-title { display:inline; font-size:14px; line-height:1.5; }
+.review-knowledge-workspace .review-vocab-definition { display:inline; font-size:13px; line-height:1.5; }
+.review-vocab-title .word-aligned-lyrics { gap:0; vertical-align:bottom; }
+.review-vocab-title .word-aligned-kana,.review-vocab-title .word-aligned-romaji { font-size:8px; line-height:1.2; min-height:1.2em; }
+.review-knowledge-workspace .review-grammar { padding:8px 0; font:13px/1.65 var(--serif); }
+.review-knowledge-workspace .review-notes-panel { padding-top:6px; font-size:13px; }
+.review-notes-panel label,.review-notes-panel textarea { font-size:13px; }
+.review-notes-panel textarea { padding:8px; margin:6px 0 9px; }
+/* 笔记只保留一个输入框，利用面板剩余高度；小屏内容仍由知识区内部滚动。 */
+/* 原面板文本框仅设置min-height:105px，较大的复习面板留下大量空白。 */
+#review-panel-notes { height:100%; min-height:270px; }
+.review-notes-panel { height:100%; box-sizing:border-box; }
+.review-notes-panel .review-notes-content { display:flex; flex-direction:column; height:100%; min-height:0; }
+.review-notes-panel .review-notes-content>label { display:flex; flex-direction:column; flex:1; min-height:0; }
+.review-notes-panel textarea { flex:1; min-height:180px; }
+.review-notes-panel .review-notes-content>button { flex:none; }
+.review-notes-panel .review-focus { gap:7px; padding-bottom:6px; }
+.review-knowledge-tabs button { font-size:14px; min-height:40px; padding:7px; }
+/* 去掉评价区域顶部横线和阴影，保留三档按钮下的语义色短标记。 */
+.review-grade-bar { border-top:0; box-shadow:none; }
+/* 更多中的注音选择复用歌词控件，触摸目标仍保留44px。 */
+.review-options fieldset { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:0 0 8px; padding:6px 0; border:0; }
+.review-options fieldset legend { font-size:13px; }
+.review-options fieldset label { display:flex; align-items:center; gap:4px; min-height:44px; font-size:13px; }
+/* 详情使用同一背景上的视口布局，去掉页面多余滚动及底部独立白色托底。旧固定footer样式保留对照。 */
+body.review-detail-open { overflow:hidden; }
+body.review-detail-open .android-main { height:100vh; min-height:0; overflow:hidden; padding:0; }
+@supports(height:100dvh) { body.review-detail-open .android-main { height:100dvh; } }
+.android-review-book.review-detail { display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden; padding:18px 20px 0; }
+.review-detail>.review-page-header { flex:none; }
+.review-detail>.review-reading-region { flex:0 1 auto; min-height:0; max-height:44%; overflow:auto; overscroll-behavior:contain; scrollbar-width:none; }
+.review-detail.review-listening>.review-reading-region { flex:1; max-height:none; }
+.review-detail .review-knowledge-workspace { flex:1; height:auto; min-height:0; margin-top:12px; }
+.review-detail>.review-grade-bar { position:static; flex:none; background:transparent; border:0; box-shadow:none; padding:12px 0 calc(14px + env(safe-area-inset-bottom,0px)); margin-top:12px; }
+.review-listening .review-play svg { width:20px; height:20px; }
+.review-listening .review-listen-hidden { cursor:pointer; }
+.review-listening .review-listen-hidden[aria-disabled="true"] { cursor:default; }
+.review-listen-hidden:focus-visible { outline:2px solid currentColor; outline-offset:-3px; border-radius:12px; }
+.review-detail>.review-warning,.review-detail>.review-error,.review-detail>.review-notice { flex:none; max-height:12vh; overflow:auto; margin:6px 0; font-size:12px; }
+.review-detail>.review-empty { min-height:0; overflow:auto; }
+/* 复习本统一列表：正方形封面完整展示，留内边距避免外框圆角盖住封面。 */
+.review-albums.list .review-album { gap:13px; padding:12px; }
+.review-albums.list .review-cover { width:92px; height:92px; aspect-ratio:1; align-self:center; border-radius:9px; }
+.review-albums.list .review-cover img { object-fit:contain; }
+.review-albums.list .review-album-info { min-width:0; padding:0; gap:5px; }
+.review-albums.list .review-album-info strong { font-size:18px; overflow-wrap:anywhere; }
+.review-heading+.review-today { margin:0 0 18px; }
+.review-manage-menu>button { display:block; width:100%; min-height:48px; margin-top:8px; padding:10px; border:0; border-radius:10px; background:transparent; color:#426550; font:16px var(--serif); }
+.review-manage-menu>button.review-option-delete { color:#b54b42; }
+.review-album,.review-unit-card { touch-action:pan-y; -webkit-touch-callout:none; user-select:none; }
+.review-song-identity .review-cover img { object-fit:contain; }

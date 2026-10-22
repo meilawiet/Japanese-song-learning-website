@@ -45,7 +45,10 @@ test('unique unchanged legacy folder song migrates despite file ordering', () =>
   assert.equal(result.progress.corrections['song-8:0:0'], undefined)
   assert.ok(result.progress.favoriteSongIds.includes(song.id))
   assert.equal(result.progress.reviewItems[0].songId, song.id)
-  assert.deepEqual(result.progress.lyricSnapshots[song.id], lyricSnapshot(song))
+  // 原仅比较lyricSnapshot(song)；现在原文快照还包含已确认的人工词界保护。
+  // assert.deepEqual(result.progress.lyricSnapshots[song.id], lyricSnapshot(song))
+  assert.deepEqual(result.progress.lyricSnapshots[song.id].lines, lyricSnapshot(song).lines)
+  assert.equal(result.progress.lyricSnapshots[song.id].manualAnnotations[0].tokens[0].surface,song.lines[0].text)
   assert.deepEqual(reconcileLearningState([song], result), result)
 })
 

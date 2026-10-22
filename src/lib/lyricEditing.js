@@ -1,4 +1,5 @@
-import { reconcileLearningState } from './learningIdentity.js'
+// 原仅导入reconcileLearningState；明确编辑后需同步人工词界保护快照。
+import { reconcileLearningState, refreshManualReadingSnapshots } from './learningIdentity.js'
 
 // 项目内歌曲的人工歌词只覆盖当前设备；本地导入歌曲仍写入歌曲库。
 export function applyLyricEdits(song, editsBySong = {}) {
@@ -29,5 +30,6 @@ export function commitEditedLine(songs, state, songId, lineId, annotation, readi
   })
   // 原项目歌曲覆盖值为 annotation.text；传入翻译时保存对象，兼容旧字符串。
   if (!song.isLocal) next.progress.lyricEditsBySong = { ...next.progress.lyricEditsBySong, [songId]: { ...next.progress.lyricEditsBySong?.[songId], [lineId]: typeof translation === 'string' ? { text: annotation.text, translation } : annotation.text } }
-  return { song: updatedSong, state: next }
+  // 原return { song: updatedSong, state: next }；主动改词界不能被旧备份回滚。
+  return { song: updatedSong, state: refreshManualReadingSnapshots(next,songId,[lineId]) }
 }

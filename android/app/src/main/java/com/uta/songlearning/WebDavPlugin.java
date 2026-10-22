@@ -28,7 +28,9 @@ public class WebDavPlugin extends Plugin {
         HttpUrl base=HttpUrl.parse(config.getString("url",""));
         if(base==null||!base.isHttps()||!base.username().isEmpty()||!base.password().isEmpty()||base.query()!=null||base.fragment()!=null) throw new IOException("WebDAV 地址必须是 HTTPS 目录地址。");
         String name=call.getString("name","");
-        if(!name.isEmpty()&&!name.matches("[A-Za-z0-9_.-]+\\.uta-backup")) throw new IOException("云备份文件名无效。");
+        // 原仅允许备份文件：if(!name.isEmpty()&&!name.matches("[A-Za-z0-9_.-]+\\.uta-backup")) throw new IOException("云备份文件名无效。");
+        // 原始音频使用固定哈希文件名，不放宽目录穿越或任意文件访问。
+        if(!name.isEmpty()&&!name.matches("[A-Za-z0-9_.-]+\\.uta-backup")&&!name.matches("_uta-audio-[a-f0-9]{64}\\.bin")) throw new IOException("云备份文件名无效。");
         if(!directory&&name.isEmpty()) throw new IOException("请选择云备份文件。");
         HttpUrl root=base.newBuilder().encodedPath(base.encodedPath().replaceAll("/+$","")+"/").build();
         HttpUrl url=directory?root:root.newBuilder().addPathSegment(name).build();

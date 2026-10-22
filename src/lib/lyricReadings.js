@@ -204,7 +204,9 @@ function prepare(input, importedRomaji = '', corrections = {}, songId, lineId) {
 const cache = new WeakMap()
 export function prepareLyricReadings(input, importedRomaji = '', corrections = {}, songId, lineId) {
   if(!input?.length)return prepare(input,importedRomaji,corrections,songId,lineId)
-  const key=JSON.stringify([songId,lineId,importedRomaji,input.map(token=>corrections[correctionKey(songId,lineId,token.index)] ?? null)])
+  // 原key只看当前索引，修改合并前的legacy索引时会误复用旧显示结果；所有有证据的旧索引也参与缓存键。
+  // const key=JSON.stringify([songId,lineId,importedRomaji,input.map(token=>corrections[correctionKey(songId,lineId,token.index)] ?? null)])
+  const key=JSON.stringify([songId,lineId,importedRomaji,input.map(token=>[token.index,...(token.legacy_reading_indices||[])].map(index=>corrections[correctionKey(songId,lineId,index)] ?? null))])
   let records=cache.get(input)
   if(!records){records=new Map();cache.set(input,records)}
   if(records.has(key))return records.get(key)

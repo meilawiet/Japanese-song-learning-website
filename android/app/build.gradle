@@ -65,8 +65,10 @@ android {
         // 歌曲库移除顶部品牌栏，发布1.5.1供用户验证Gitee远程更新。
         // 旧正式版：versionCode 25 / versionName "1.5.1"。
         // 1.5.2 汇总十项已验证改动，递增内部编号以支持保留数据升级。
-        versionCode 26
-        versionName "1.5.2"
+        // 旧正式版：versionCode 26 / versionName "1.5.2"。
+        // 1.6.0 汇总复习、音频独立备份、人工注音保护及启动体验改动。
+        versionCode 27
+        versionName "1.6.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

@@ -1,11 +1,15 @@
-import {normalizeJapaneseLevel} from './japaneseLevel.js'
+// 原只读取等级；新增独立教学版本，避免将旧讲解当作已升级内容。
+// import {normalizeJapaneseLevel} from './japaneseLevel.js'
+import {normalizeJapaneseLevel,JAPANESE_TEACHING_VERSION} from './japaneseLevel.js'
 
 // v2解析必须携带原文回显及请求标识；旧缓存保留供用户查看、删除，不默认为已核验。
 export const SENTENCE_ANALYSIS_VERSION=2
 const clean=(value,max)=>typeof value==='string'?value.trim().slice(0,max):''
 export function prepareSentenceRequest(lines,language='ja',level='beginner') {
   const requestId=globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`
-  return {language,...(language==='ja'?{japanese_level:normalizeJapaneseLevel(level)}:{}),lines:lines.map((line,index)=>({...line,line_key:`${requestId}:${index}:${line.id}`}))}
+  // 原返回仅带 japanese_level；新请求明确要求歌词教学结构，不改变逐句绑定规则。
+  // return {language,...(language==='ja'?{japanese_level:normalizeJapaneseLevel(level)}:{}),lines:lines.map((line,index)=>({...line,line_key:`${requestId}:${index}:${line.id}`}))}
+  return {language,...(language==='ja'?{japanese_level:normalizeJapaneseLevel(level),teaching_version:JAPANESE_TEACHING_VERSION}:{}),lines:lines.map((line,index)=>({...line,line_key:`${requestId}:${index}:${line.id}`}))}
 }
 
 // 绝不按返回顺序、压缩后的重复歌词位置或猜测句号进行配对。
@@ -25,13 +29,26 @@ export function validateSentenceResult(result,payload) {
     if(vocabulary.some(part=>typeof part?.surface==='string'&&part.surface.trim()&&!line.text.includes(part.surface.trim())))continue
     const meaning=clean(item.meaning,600)
     if(!meaning)continue
+    // 日语新增内容采用有界白名单；缺少关键教学字段时不覆盖旧解析，允许重试。
+    const japaneseTeaching=payload.language==='ja'&&payload.teaching_version===JAPANESE_TEACHING_VERSION
+    const usageNote=clean(item.usage_note,600)
+    const learningFocus=(Array.isArray(item.learning_focus)?item.learning_focus:[]).map(value=>clean(value,260)).filter(Boolean).slice(0,2)
+    const example={sentence:clean(item.everyday_example?.sentence,300),meaning:clean(item.everyday_example?.meaning,300)}
+    if(japaneseTeaching&&(!usageNote||!learningFocus.length||!Array.isArray(item.expression_notes)||!item.everyday_example||typeof item.everyday_example!=='object'||Array.isArray(item.everyday_example)||Boolean(example.sentence)!==Boolean(example.meaning)))continue
+    // 原词汇仅保留surface/meaning，详细字段只用于新日语教学，外语仍按原结构。
+    // vocabulary:vocabulary.map(value=>({surface:clean(value?.surface,100),meaning:clean(value?.meaning,260)})).filter(value=>value.surface&&value.meaning).slice(0,4),
     explanations.push({line_id:line.id,line_key:line.line_key,source_text:line.text,meaning,
       grammar:(Array.isArray(item.grammar)?item.grammar:[]).map(value=>clean(value,400)).filter(Boolean).slice(0,3),
-      vocabulary:vocabulary.map(value=>({surface:clean(value?.surface,100),meaning:clean(value?.meaning,260)})).filter(value=>value.surface&&value.meaning).slice(0,4),
-      pronunciation_tip:payload.language==='ja'?clean(item.pronunciation_tip,320):'',binding_version:SENTENCE_ANALYSIS_VERSION})
+      vocabulary:vocabulary.map(value=>({surface:clean(value?.surface,100),meaning:clean(value?.meaning,260),...(japaneseTeaching?{reading:clean(value?.reading,100),dictionary_form:clean(value?.dictionary_form,100),usage:clean(value?.usage,300)}:{})})).filter(value=>value.surface&&value.meaning).slice(0,4),
+      // 原结尾仅有 pronunciation_tip 和 binding_version；教学版本不提升原文绑定版本。
+      // pronunciation_tip:payload.language==='ja'?clean(item.pronunciation_tip,320):'',binding_version:SENTENCE_ANALYSIS_VERSION})
+      pronunciation_tip:payload.language==='ja'?clean(item.pronunciation_tip,320):'',binding_version:SENTENCE_ANALYSIS_VERSION,
+      ...(japaneseTeaching?{teaching_version:JAPANESE_TEACHING_VERSION,expression_notes:item.expression_notes.map(value=>clean(value,400)).filter(Boolean).slice(0,3),usage_note:usageNote,everyday_example:example,learning_focus:learningFocus}:{})})
   }
   const rejected_count=payload.lines.length-explanations.length
-  if(!explanations.length)throw new Error('AI解析与请求的歌词原文或编号不对应，结果未保存，请重新生成。')
+  // 原提示仅含错位原因；缺少日语教学内容也拒绝，且不清除已有解析。
+  // if(!explanations.length)throw new Error('AI解析与请求的歌词原文或编号不对应，结果未保存，请重新生成。')
+  if(!explanations.length)throw new Error('AI解析与请求的歌词原文或编号不对应，或讲解内容不完整，结果未保存，请重新生成。')
   return {explanations,requested_count:payload.lines.length,rejected_count}
 }
 export function visibleSentenceEntry(entry,line,language='ja') {
@@ -42,7 +59,8 @@ export function currentSentenceEntry(entry,line,language='ja',level='beginner',s
   if(!strict)return true
   return entry.schemaVersion===SENTENCE_ANALYSIS_VERSION&&entry.explanation.binding_version===SENTENCE_ANALYSIS_VERSION
     &&entry.explanation.line_id===line.id&&entry.explanation.source_text===line.text
-    &&(language!=='ja'||entry.japaneseLevel===normalizeJapaneseLevel(level))
+    // 原只比较等级：&&(language!=='ja'||entry.japaneseLevel===normalizeJapaneseLevel(level))
+    &&(language!=='ja'||entry.japaneseLevel===normalizeJapaneseLevel(level)&&entry.explanation.teaching_version===JAPANESE_TEACHING_VERSION)
 }
 export function sentenceEntry(line,explanation,language,level) {
   return {text:line.text,language,schemaVersion:SENTENCE_ANALYSIS_VERSION,...(language==='ja'?{japaneseLevel:normalizeJapaneseLevel(level)}:{}),explanation}

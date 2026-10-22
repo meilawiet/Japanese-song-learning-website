@@ -142,7 +142,10 @@ export async function updateLocalSongMetadata(songId, metadata) {
       // 补入真实音频后解除纯歌词标记，不误判成云端尚未下载。
       if(metadata.audioBlob instanceof Blob)updatedRecord.lyricsOnly=false
       // 替换音频或歌词后旧云附件哈希失效，不能在下一次目录恢复时误复用旧内容。
+      // 旧整曲摘要失效逻辑：if(metadata.audioBlob||metadata.lines)delete updatedRecord.cloudAsset
       if(metadata.audioBlob||metadata.lines)delete updatedRecord.cloudAsset
+      // 新音频引用仅在音频字段被替换时失效，编辑歌词/时间轴不会使音频失效。
+      if(Object.hasOwn(metadata,'audioBlob')){delete updatedRecord.cloudAudio;updatedRecord.cloudPending=false}
       store.put(updatedRecord)
     }
     return request
@@ -179,7 +182,7 @@ export async function updateLocalSongTimings(songId, before, draft) {
           if (!request.result) throw new Error('找不到当前歌曲，请重新打开歌曲库。')
           const lines=mergeTimestampChanges(request.result.lines,before,draft)
           updated={...request.result,lines,duration:lyricDuration(lines)}
-          // 时间轴已经改变，旧云附件摘要不再代表本地歌曲。
+          // 清除旧整曲摘要；新cloudAudio只代表音频字节，调整时间戳时继续保留。
           delete updated.cloudAsset
           store.put(updated)
         } catch (reason) { failure=reason; store.transaction.abort() }
