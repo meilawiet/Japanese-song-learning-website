@@ -22,30 +22,30 @@
     }
   },
   "lastPublished": {
-    "version": "1.5.2",
-    "versionCode": 26,
-    "commit": "bcb6b06adad2d2a0db86a41399d92b93d7de1fd5",
-    "tag": "v1.5.2",
-    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.5.2",
-    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.5.2",
-    "asset": "UTA-Android-1.5.2.apk",
-    "size": 31352299,
-    "sha256": "04f83237f5fc8dc5dd3ae90e8a0c264941d981d768f3f13856058ef4528e397b",
-    "publishedOn": "2026-10-19",
+    "version": "1.6.0",
+    "versionCode": 27,
+    "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+    "tag": "v1.6.0",
+    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+    "asset": "UTA-Android-1.6.0.apk",
+    "size": 31372779,
+    "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+    "publishedOn": "2026-10-22",
     "branch": "android-dev"
   },
   "currentLocalInstall": {
     "installedOn": "2026-10-22",
-    "device": "Samsung SM-N9860 / Android 13",
+    "device": "Samsung SM-N9860 / Android13",
     "package": "com.uta.songlearning",
-    "path": ".tools/conversation-artifacts/20261022-manual-reading/startup-loading/UTA-startup-no-loading.apk",
-    "version": "1.5.2",
-    "versionCode": 26,
+    "path": ".tools/conversation-artifacts/20261022-manual-reading/release-1.6.0/UTA-Android-1.6.0.apk",
+    "version": "1.6.0",
+    "versionCode": 27,
     "size": 31372779,
-    "sha256": "f06656eecb9263599ea0f7def72f00550df17af324c722a5e9a1d52d6addafe7",
+    "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
     "signed": true,
-    "published": false,
-    "method": "原发行证书v2/v3，调试关闭、前端资源逐字节一致；保留数据-r安装Success，COLD Status ok，UID与首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常；包含038至058本地改动，非公开1.5.2原包"
+    "published": true,
+    "method": "原发行签名v2/v3，版本1.6.0/code27、调试关闭；前端逐字节匹配，保留数据-r升级Success/COLD Status ok，UID/首次安装时间不变，回读APK摘要一致，无该进程AndroidRuntime致命异常。"
   },
   "reminder": {
     "lastRemindedItemIds": [
@@ -61,7 +61,7 @@
       "FIX-20261020-047"
     ],
     "lastRemindedOn": "2026-10-20",
-    "userDecision": "用户2026-10-22重新明确授权上传源码并打包发布1.6.0，取代此前暂停。GitHub android-dev源码+APK、Gitee仅同APK；21项在两端正式发布、提交及附件核验成功前保持待发布。"
+    "userDecision": "用户2026-10-22授权的1.6.0源码上传及双端APK发布均完成，21项全部结转released，当前待发布0。下一批需另行发布授权；累计达到10项时提醒并逐项列出全部verified内容。"
   },
   "items": [
     {
@@ -1824,7 +1824,7 @@
       "id": "FEAT-20261019-038",
       "type": "feature",
       "title": "WebDAV原始音频独立存储，修改歌词和时间戳不重复上传音频",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-19",
       "completedOn": "2026-10-19",
       "summary": "音频以自身字节SHA256命名保存为独立.bin；快照保存完整歌词、翻译、注音、时间戳、重置原点、封面及学习资料。相同音频复用，替换音频或云端缺失时上传。恢复复用音频但始终应用新资料，纯歌词直接恢复。用户明确不再维护旧云备份，采用外层v3/目录v2，旧格式拒绝并提示重新上传；本机删歌仍不自动删除云文件。",
@@ -1859,13 +1859,27 @@
         "sha256": "1f8ed166370bcac0be6ea006daed3d402e00531433208f639037bd2ffd444ad8",
         "signed": false,
         "method": "assembleRelease构建验证，不是正式发行附件"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FIX-20261019-039",
       "type": "bugfix",
       "title": "修复跨端最小复习条目缺少原文时在恢复或下载后丢失",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-19",
       "completedOn": "2026-10-19",
       "summary": "协议允许仅有songId/lineId的复习条目。旧重整强制比较text而清空合法记录；新逻辑仅在歌曲及行ID和原文身份能够确认时补齐text并保留附加字段。待下载期间保留，音频补齐后同样核对；显式原文失配和不存在行沿用原有清理，不按重复原文猜测。未知歌曲引用保持，不新增协议字段或容器版本。",
@@ -1890,13 +1904,27 @@
         "sha256": "33dca4ddcb5497238a573226223e8a6ad31f5ff9d77c3376f92727db1efe6908",
         "signed": false,
         "method": "assembleRelease构建验证，不是发行或手机安装包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FEAT-20261019-040",
       "type": "feature",
       "title": "细化六档日语AI教学，区分歌词表达与日常用法",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-19",
       "completedOn": "2026-10-19",
       "summary": "按零基础至N1细化学习重点；解释省略/跨行/文体时区分证据与推测，新增日常使用建议、非原文日常示例及学习重点，词汇增加常规读音/原形/用法。选词讲解也使用个人等级。教学版本独立，旧解析可读但手动重生成才更新；非日语保持简洁结构，日语两句一批，缺关键字段不覆盖旧记录。",
@@ -1929,13 +1957,27 @@
         "signed": true,
         "published": false,
         "method": "三星SM-N9860保留数据-r覆盖Success，原发行签名v2/v3，冷启动Status ok，WebView调试关闭；本机开发包，包含038/039/040，不是公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FEAT-20261019-041",
       "type": "feature",
       "title": "初版复习本：单句/多句收藏、按歌复习与单词语法讲解",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-19",
       "completedOn": "2026-10-19",
       "summary": "学习页长按收藏单句或选择连续多句，也可收藏已选播放范围；仅展示有复习内容的歌曲，按歌曲→单元→详情进入，使用“单词”“语法”独立折叠。支持理解/听力、整段一次播放与调速、重点/笔记、今日到期队列、三档熟悉程度、确认移出；收藏与掌握独立。复用已有适用单句解析，多句手动按完整原文生成并校验，离页取消，错位不覆盖。复习条目沿用原学习备份扩展字段，旧单句可读，歌词变更时保留新收藏并提示。",
@@ -1968,13 +2010,27 @@
         "signed": true,
         "published": false,
         "method": "原发行签名v2/v3，WebView调试关闭，三星SM-N9860保留数据-r覆盖Success/COLD Status ok，手机base.apk摘要一致；本机开发包含038/039/040/041，不是公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FEAT-20261019-042",
       "type": "feature",
       "title": "统一双击收藏入口：首次收藏本句，选好范围后收藏本段",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-19",
       "completedOn": "2026-10-19",
       "summary": "移除长按菜单的单句/多句收藏选项，长按仅保留编辑和取消；首次双击歌词后直接收藏本句，第二次双击另一句后收藏本段。收藏后保留选择且不自动播放，重复范围去重；无时间戳纯歌词也能双击收藏，播放继续禁用。",
@@ -1990,13 +2046,27 @@
         "独立Chromium89和模拟原生桥7项交互检查通过：长按仅编辑/取消、首次双击收藏单句/保留起点、重复去重、第二次双击收藏整段/不播放、双击退出、纯歌词单多句收藏/禁播放、段外单击退出；原创数据、阻断外网、无JS异常，截图已查看",
         "本轮只验证代码及独立浏览器流程，未构建新APK或覆盖手机；currentLocalInstall仍记录此前实际安装包，未发布/推送代码",
         "2026-10-20 随038至044最新开发包保留数据覆盖三星；此前仅本地代码状态已更新，公开发行包仍未改变。"
-      ]
+      ],
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FIX-20261020-043",
       "type": "bugfix",
       "title": "修复多句复习无法读取学习页已有词义和语法解析",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-20",
       "completedOn": "2026-10-20",
       "summary": "多句复习在没有独立整段解析时，按本歌实际行ID和原文逐句复用学习解析，显示词义、用法、语法及句意，标注来源行号与复用数量；不重新调用AI、不存为伪造整段结果。单句优先适用的新学习解析，空原形不再显示标签。缺失或错位记录不串行，旧等级内容保留但提示。",
@@ -2023,13 +2093,27 @@
         "signed": true,
         "published": false,
         "method": "原发行签名v2/v3，WebView调试关闭；三星保留数据-r覆盖Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至044，不是公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FEAT-20261020-044",
       "type": "feature",
       "title": "复习歌词左滑显示四角圆角的红色垃圾桶并移出单元",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-20",
       "completedOn": "2026-10-20",
       "summary": "复习列表和详情歌词卡片可左滑露出红色垃圾桶，删除区域四角独立圆角。水平滑动不触发进入详情，竖向滚动不展开删除；点击垃圾桶后确认，仅移出对应复习收藏及记录，原歌曲、学习解析、掌握和其他收藏不变。",
@@ -2056,13 +2140,27 @@
         "signed": true,
         "published": false,
         "method": "原发行签名v2/v3，WebView调试关闭；三星保留数据-r覆盖Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至044，不是公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FEAT-20261020-045",
       "type": "feature",
       "title": "精简复习详情，单词默认收起并移除表达用法及学习重点展示",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-20",
       "completedOn": "2026-10-20",
       "summary": "进入及切换复习单元时单词栏默认收起，可手动展开；移除复习页独立的表达与用法、生成按钮下AI学习重点，保留个人复习笔记和已有解析数据。修正歌词卡片与笔记重复React key导致换句残留旧卡片的问题。",
@@ -2086,13 +2184,27 @@
         "signed": true,
         "published": false,
         "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发包含038至046，不是公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FEAT-20261020-046",
       "type": "feature",
       "title": "歌曲库歌名、歌手与学习进度区域也支持长按编辑菜单",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-20",
       "completedOn": "2026-10-20",
       "summary": "长按操作从仅封面扩大到歌曲主卡片，歌名、歌手及学习进度均可弹出同一编辑菜单，列表文字也支持；移动超过12px取消长按，避免滑动误触，轻点保持进入学习，选歌弹层仍不弹编辑菜单。",
@@ -2116,13 +2228,27 @@
         "signed": true,
         "published": false,
         "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发包含038至046，不是公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FIX-20261020-047",
       "type": "bugfix",
       "title": "移除复习删除确认框按钮区误继承的深色底块",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-20",
       "completedOn": "2026-10-20",
       "summary": "为复习移出确认框单独重置footer背景、内边距及边框，让按钮区与白色圆角弹窗一体；不改网页页脚或确认/取消行为。",
@@ -2146,13 +2272,27 @@
         "signed": true,
         "published": false,
         "method": "原发行签名v2/v3，WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至047，不是公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FEAT-20261020-048",
       "type": "feature",
       "title": "复习点击歌曲直接进入歌词详情，移除中间歌曲复习列表",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-20",
       "completedOn": "2026-10-20",
       "summary": "复习本点击封面或列表歌曲直接进入首个收藏单元，返回一次回到复习本；右上角继续切换同歌单元，移出当前单元后继续下一条，移出最后单元回到复习本，不再出现中间歌词列表。",
@@ -2176,13 +2316,27 @@
         "signed": true,
         "published": false,
         "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至049，不是公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FEAT-20261020-049",
       "type": "feature",
       "title": "复习合并为先听后理解，评价后自动切句并采用简洁布局",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-20",
       "completedOn": "2026-10-20",
       "summary": "参考用户给出的简洁复习截图，移除理解/听力页签；每个单元先手动播放，主动进入理解后展示原文、句意和默认折叠的单词/语法。听力阶段隐藏歌词、解析、笔记、前后文及评价，避免答案泄露。熟悉/模糊/不认识以固定绿黄红短线区分，保留原调度；评价后自动下一条，本歌和今日均使用队列，不认识稍后重练，完成显示本轮完成页。无音频或时间戳可直接进入理解。",
@@ -2209,13 +2363,27 @@
         "signed": true,
         "published": false,
         "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至049，不是公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FEAT-20261020-050",
       "type": "feature",
       "title": "按标注稿重排复习详情，单词语法笔记共用面板并支持上一条",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-20",
       "completedOn": "2026-10-20",
       "summary": "顶部左侧返回及进度、右侧上一条；按歌词、播放行、独立歌词大意、知识面板顺序展示。单词/语法/笔记在同一面板底部切换，单词与对应释义并排，切换保留未保存笔记；上一条仅返回查看、不撤销评价。保留先听后理解与底部三档评价，次要操作收纳更多菜单，面板随剩余屏幕高度调整以免遮住页签。",
@@ -2242,13 +2410,27 @@
         "signed": true,
         "published": false,
         "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至050，不是公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FEAT-20261020-051",
       "type": "feature",
       "title": "精简复习翻译与知识排版，关键表达注音同步歌词设置",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-20",
       "completedOn": "2026-10-20",
       "summary": "复习只显示歌词文件自带翻译，在对应原文下方小字号展示，无译文留空，移除AI句意卡及已复用学习页提示。关键表达按“单词：释义；用法”紧凑排列，复用歌词注音渲染器，假名仅注汉字、罗马音覆盖所有有读音词，四种注音在更多自由切换并与该歌曲学习设置同步。缩小表达、语法与笔记字号和间距，去除评价栏顶部横线。页签改为关键表达/语法与语境/笔记。",
@@ -2276,11 +2458,25 @@
         "signed": true,
         "published": false,
         "method": "原发行签名v2/v3、WebView调试关闭；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至051，不是公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "type": "feature",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-20",
       "completedOn": "2026-10-20",
       "files": [
@@ -2308,11 +2504,25 @@
         "前端与Android Debug/Release构建通过，原发行签名v2/v3、版本1.5.2/code26、调试关闭，包内5个JS/CSS与dist一致。",
         "三星Android13隔离.dev应用10项通过：程序滚动与真实竖滑不移动整页、提示区点击/Enter/空格播放暂停、图标缩小、footer为静态透明布局、进入复习/评价自动下一条、长语法内部滚动、笔记保存、前后文与系统返回、大字号130%布局、离开释放限制。按后续053要求更新了左滑停用检查。",
         "原创歌词、静音WAV和模拟已有解析，AI0、无用户云盘访问，原生听力及130%理解截图已查看。最终同签名APK保留数据覆盖三星Success，COLD Status ok，手机回读摘要一致。"
-      ]
+      ],
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "type": "feature",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-20",
       "completedOn": "2026-10-20",
       "files": [
@@ -2340,13 +2550,27 @@
         "三星隔离.dev应用11项通过：统一列表与今日排序、原创矩形封面完整显示、单击直达、封面/文字区域真实长按编辑及删除、点按指定单元/系统返回、长按歌词删除确认/取消、整歌移出范围、今日队列与无音频、移出最后单元回空页。保留原歌曲音频、学习解析、掌握状态及其他歌复习。",
         "首次真机长按发现菜单弹出后抬起的兼容click可能误点删除；增加window捕获消费该次click，下一次主动按下立即释放，不用延时吞正常点击，全部11项重跑通过。原生列表与编辑截图已查看，无JS异常，原创歌词/封面/WAV/模拟缓存，真实AI0。",
         "最终APK保留数据-r覆盖三星并回读摘要一致，正式数据未清理或注入测试歌曲，独立.dev应用已卸载；未公开发布或上传源码。"
-      ]
+      ],
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FIX-20261022-054",
       "type": "bugfix",
       "title": "修复自动注音缓存缺失时清除手动读音，增加人工词界保护",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-22",
       "completedOn": "2026-10-22",
       "summary": "确认旧启动重整把自动缓存缺失当成人工校正失效并直接删除。人工词界证据现随已有lyricSnapshots保护，缓存缺失或自动词界变化时按同歌同行同原文恢复；无可靠证据的旧校正隔离保留，不盲套新索引。支持人工留空、旧括号合并legacy索引及显示缓存刷新，主动编辑和采用AI分词会更新保护快照，备份往返并校验可选扩展。",
@@ -2380,13 +2604,27 @@
         "signed": true,
         "published": false,
         "method": "原发行签名v2/v3、WebView调试关闭，23项前端资源与本轮构建一致；保留数据-r覆盖三星Success/COLD Status ok，手机base.apk摘要一致；本机开发含038至054，不是公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FEAT-20261022-055",
       "type": "feature",
       "title": "复习笔记移除分类勾选，扩大文本框",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-22",
       "completedOn": "2026-10-22",
       "summary": "移除听力、词汇、语法、表达勾选项，仅保留我的笔记文本框与保存按钮。文本框随复习知识面板剩余高度扩展，小屏仍可内部滚动。只保存note，不覆盖旧focus或其他复习字段；草稿跨页签保留，保存后重载可读取。",
@@ -2413,10 +2651,24 @@
         "signed": true,
         "published": false,
         "method": "原发行证书v2/v3，调试关闭、前端资源逐字节一致；保留数据-r安装Success，COLD Status ok，UID与首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常；包含038至057本地改动，非公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-22",
       "completedOn": "2026-10-22",
       "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/startup-lyrics",
@@ -2449,10 +2701,24 @@
         "5项Node边界检查通过，涵盖空库/演示/空行、原文空格及译文排除、抽样覆盖、待下载歌曲、歌曲身份及本机封面协议。",
         "最终三星SM-N9860 Android13隔离.dev完整检查5项通过，包含空库、真实下载字体+同歌原创封面、导入字体+损坏封面回退、无封面回退及笔记回归。原生封面及默认图截图已查看，首次可见文字及图片来源逐帧核对，无JS异常。",
         "原发行证书v2/v3，调试关闭、前端资源逐字节一致；保留数据-r安装Success，COLD Status ok，UID与首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常；包含038至057本地改动，非公开1.5.2原包"
-      ]
+      ],
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-22",
       "completedOn": "2026-10-22",
       "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/startup-lyrics",
@@ -2482,13 +2748,27 @@
         "三星隔离.dev用本机已存在的真实猫啃字体与导入字体，调试脚本故意增加900ms加载延迟，逐帧确认所有可见文字均晚于字体加载、所选字族已注册并loaded，单次启动不换文案。",
         "纯字体阶段Chromium89模拟桥曾通过4项；加入封面后的HTTP模拟因内置字体在6秒兜底前未完成而未获得文字可见帧，保留browser-last-failure.json，不宣称该模拟通过。最终以完整真机检查5项与真实冷启动为本机安装验收；调试页面load事件错过短启动、旧脚本重复延迟与更新弹窗遮挡等测试问题均记录并改为新进程逐帧采样，正式包不含测试脚本。",
         "原发行证书v2/v3，调试关闭、前端资源逐字节一致；保留数据-r安装Success，COLD Status ok，UID与首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常；包含038至057本地改动，非公开1.5.2原包"
-      ]
+      ],
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     },
     {
       "id": "FIX-20261022-058",
       "type": "bugfix",
       "title": "移除正常启动时的正在启动UTA文字页",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-22",
       "completedOn": "2026-10-22",
       "summary": "移除网页入口在主程序前显示的正在启动UTA段落；安卓构建静态标识和空根节点同色背景衔接原生启动画面，再进入现有歌曲封面/歌词。保留独立启动失败守卫、重试和诊断，不新增人为延迟或改写歌曲数据。",
@@ -2516,7 +2796,21 @@
         "signed": true,
         "published": false,
         "method": "原发行证书v2/v3，调试关闭、前端资源逐字节一致；保留数据-r安装Success，COLD Status ok，UID与首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常；包含038至058本地改动，非公开1.5.2原包"
-      }
+      },
+      "release": {
+        "version": "1.6.0",
+        "versionCode": 27,
+        "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
+        "tag": "v1.6.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
+        "asset": "UTA-Android-1.6.0.apk",
+        "size": 31372779,
+        "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+        "publishedOn": "2026-10-22",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-22"
     }
   ]
 }
