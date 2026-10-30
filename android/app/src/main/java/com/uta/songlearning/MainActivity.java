@@ -17,6 +17,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AppUpdatePlugin.class);
         // 将耳机断开后即将外放的系统事件转给学习播放器。
         registerPlugin(AudioRoutePlugin.class);
+        // 首页反馈邀请使用本机同步计数，前三次启动各展示一次。
+        registerPlugin(FeedbackInvitePlugin.class);
         // 原独立 WebView 接入保留对照；QQ 授权的 Cookie 回到浏览器，现复用已注册的 Browser 插件。
         // registerPlugin(FeedbackPlugin.class);
         // 新方案使用官方访客登录态，应用内直接发言，不再依赖 QQ 或浏览器登录。

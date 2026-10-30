@@ -41,6 +41,8 @@ import SettingsDialog from './components/SettingsDialog'
 // 原说明：首页低频邀请，复用内置反馈，不打断学习和其他操作。
 // 首页仅邀请加入 QQ 交流群，原提醒周期和勿扰条件继续沿用。
 import CommunityInvite from './components/CommunityInvite'
+// 本次安卓反馈活动前三次启动邀请，关闭后仍可从关于页进入。
+import FeedbackInvite from './components/FeedbackInvite'
 // 逐句解析独立展示/删除，日语水平与原文绑定校验共用纯策略。
 import SentenceAnalysis from './components/SentenceAnalysis'
 import SentenceDeleteDialog from './components/SentenceDeleteDialog'
@@ -202,6 +204,7 @@ export default function App() {
   // 三个主页面双击返回才退出；切换页面会清除上一次返回提示。
   const androidExitAttemptRef = useRef(0)
   const [androidLaunchVisible, setAndroidLaunchVisible] = useState(IS_ANDROID_APP)
+  const [feedbackInviteVisible,setFeedbackInviteVisible]=useState(false)
   const [androidFontReady, setAndroidFontReady] = useState(!IS_ANDROID_APP)
   const [activeLineId, setActiveLineId] = useState(0)
   const [mode, setMode] = useState('reading')
@@ -2216,7 +2219,7 @@ export default function App() {
     {sentenceDeleteTarget&&<SentenceDeleteDialog whole={sentenceDeleteTarget.lineId==null} onCancel={()=>setSentenceDeleteTarget(null)} onConfirm={()=>deleteSentenceAnalysis(sentenceDeleteTarget)}/>}
     {/* 首页连续空闲才允许提醒；更新、导入、编辑、练习与各类面板均优先。 */}
     {IS_ANDROID_APP && <CommunityInvite routeKey={`${activePage}:${mobileTab}`} eligible={
-      !reviewDetailOpen && !needsJapaneseLevel && activePage.startsWith('mobile-') && localSongsReady && !androidLaunchVisible &&
+      !feedbackInviteVisible && !reviewDetailOpen && !needsJapaneseLevel && activePage.startsWith('mobile-') && localSongsReady && !androidLaunchVisible &&
       !practiceActive && !study.playing && !study.busy && playingLineId === null && !singAlongPlaying &&
       !settingsOpen && !importOpen && !importBusy && !importPreparing && !importDraft &&
       !songPickerOpen && !songToDelete && !deletingSongId && !backupBusy && !backupPreview && !computerShare &&
@@ -2230,6 +2233,8 @@ export default function App() {
     {/* 原主容器没有滚动处理；选段期间滚动只取消手势，不取消已选起点。 */}
     {/* <main id="top" className={...} data-reading-style={readingStyle}> */}
     <main id="top" className={IS_ANDROID_APP ? `android-main ${activePage.startsWith('mobile-') ? 'android-home-main' : ''} ${activePage === 'lesson' ? `android-lesson-page ${unifiedStudy ? `unified-study-page ${timestampEditing?'timestamp-debug-mode':''}` : ''}` : ''}` : ''} data-reading-style={readingStyle} onScrollCapture={unifiedStudy ? () => { lyricTapRef.current?.cancel(); cancelLyricPress() } : undefined}>
+      {/* 首页反馈卡片优先于旧QQ群提醒；启动图、新手/更新、导入及设置不提前消耗机会。 */}
+      {IS_ANDROID_APP&&<FeedbackInvite onVisibleChange={setFeedbackInviteVisible} enabled={activePage==='mobile-learn'&&!androidLaunchVisible&&localSongsReady&&!needsJapaneseLevel&&!settingsOpen&&!importOpen&&!importBusy&&!importPreparing&&!backupPreview&&!computerShare&&!appUpdates.checking&&!appUpdates.prompt&&!appUpdates.installing&&!appUpdates.downloadState.busy}/>}
       {/* 安卓三屏首页按确认稿呈现，模式卡片只负责进入现有功能。 */}
     {/* 复习主页接入三层复习本，其他主页保持原入口；原实现保留：
       {IS_ANDROID_APP && activePage.startsWith('mobile-') && <AndroidHome tab={mobileTab} recentLearn={recentLearnSong ? { song: recentLearnSong, artwork: artworkForSong(recentLearnSong) } : null} recentSing={recentSingSong ? { song: recentSingSong, artwork: artworkForSong(recentSingSong) } : null} onEnterLearn={enterRecentLearning} onEnterSingAlong={showSingAlong} onEnterReview={showReviewQueue} onOpenLibrary={() => showLibraryPage()} onOpenSettings={() => setSettingsOpen(true)} />}

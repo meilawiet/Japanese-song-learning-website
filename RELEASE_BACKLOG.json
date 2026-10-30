@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedOn": "2026-10-22",
+  "updatedOn": "2026-10-30",
   "reminderThreshold": 10,
   "policy": {
     "reminderPresentation": "达到10项待发布内容时，发版提醒必须同时逐项展示当前全部verified条目的名称和简要说明；不包含released或cancelled条目。",
@@ -35,17 +35,19 @@
     "branch": "android-dev"
   },
   "currentLocalInstall": {
-    "installedOn": "2026-10-22",
-    "device": "Samsung SM-N9860 / Android13",
-    "package": "com.uta.songlearning",
-    "path": ".tools/conversation-artifacts/20261022-manual-reading/release-1.6.0/UTA-Android-1.6.0.apk",
-    "version": "1.6.0",
-    "versionCode": 27,
+    "version": "1.6.1",
+    "versionCode": 28,
     "size": 31372779,
-    "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
+    "sha256": "8cd05bd996f923e80fc036d55ef46a670d1860753f05f61981296fd63eeeb68d",
+    "path": ".tools/conversation-artifacts/20261022-manual-reading/feedback-1.6.1/UTA-Android-1.6.1.apk",
+    "device": "Samsung SM-N9860 / Android13",
+    "installedOn": "2026-10-30",
+    "package": "com.uta.songlearning",
     "signed": true,
-    "published": true,
-    "method": "原发行签名v2/v3，版本1.6.0/code27、调试关闭；前端逐字节匹配，保留数据-r升级Success/COLD Status ok，UID/首次安装时间不变，回读APK摘要一致，无该进程AndroidRuntime致命异常。"
+    "published": false,
+    "webFilesMatched": 23,
+    "debuggingEnabled": false,
+    "method": "原发行签名v2/v3，版本1.6.1/code28、调试关闭；前端逐字节匹配，保留数据-r升级Success/COLD Status ok，UID/首次安装时间不变，回读APK摘要一致，无该进程AndroidRuntime致命异常。"
   },
   "reminder": {
     "lastRemindedItemIds": [
@@ -61,7 +63,7 @@
       "FIX-20261020-047"
     ],
     "lastRemindedOn": "2026-10-20",
-    "userDecision": "用户2026-10-22授权的1.6.0源码上传及双端APK发布均完成，21项全部结转released，当前待发布0。下一批需另行发布授权；累计达到10项时提醒并逐项列出全部verified内容。"
+    "userDecision": "用户2026-10-30明确授权上传代码、发包更新1.6.1；059在双平台正式发行、提交及附件全部核验前保持verified。"
   },
   "items": [
     {
@@ -2811,6 +2813,52 @@
         "branch": "android-dev"
       },
       "releasedOn": "2026-10-22"
+    },
+    {
+      "id": "FEAT-20261030-059",
+      "type": "feature",
+      "title": "首页前三次启动居中邀请填写体验反馈，并保留关于页固定入口",
+      "status": "verified",
+      "startedOn": "2026-10-30",
+      "completedOn": "2026-10-30",
+      "summary": "安卓1.6.1首页前三次启动显示屏幕居中的反馈弹窗，提供用户指定腾讯文档表单的短文案超链接和本次不填写；已删除是否填写由你决定。关闭后同次启动不重现，第四次起不自动邀请；设置→关于→反馈始终可填写。原生同步保存次数，快速结束进程也不回退，不进入学习备份；保留QQ群提醒并避免叠加。",
+      "files": [
+        "src/components/FeedbackInvite.jsx",
+        "src/lib/feedbackInvite.js",
+        "src/App.jsx",
+        "src/components/AppUpdates.jsx",
+        "src/styles.css",
+        "android/app/src/main/java/com/uta/songlearning/FeedbackInvitePlugin.java",
+        "android/app/src/main/java/com/uta/songlearning/MainActivity.java",
+        "android/app/build.gradle",
+        "package.json",
+        "package-lock.json",
+        "tests/feedbackInvite.test.mjs",
+        "tests/updateAndEditorUi.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "32/32针对性Node检查通过，包含原有更新及QQ群邀请和原生异步认领去重。",
+        "三星SM-N9860 Android13独立.dev最终7项检查通过：居中、短链接及固定入口提示、移除指定文案、关闭/切页/回前台不重复、前三次真实强杀冷启动各提示而第四次停止、浏览器失败重试及正确目标URL、关于页真实打开表单后返回不重计。没有提交任何答案或访问AI/WebDAV。",
+        "另以100%实际字号为基线，130%旅途麦金字号倍率1.3，弹窗中心误差小于3px，无横向溢出及视口遮挡；系统文字缩放0.9使实际标题字号21.06px，未假称23.4px。",
+        "原发行签名v2/v3，版本1.6.1/code28、调试关闭；前端逐字节匹配，保留数据-r升级Success/COLD Status ok，UID/首次安装时间不变，回读APK摘要一致，无该进程AndroidRuntime致命异常。"
+      ],
+      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/feedback-1.6.1",
+      "localBuild": {
+        "version": "1.6.1",
+        "versionCode": 28,
+        "size": 31372779,
+        "sha256": "8cd05bd996f923e80fc036d55ef46a670d1860753f05f61981296fd63eeeb68d",
+        "path": ".tools/conversation-artifacts/20261022-manual-reading/feedback-1.6.1/UTA-Android-1.6.1.apk",
+        "device": "Samsung SM-N9860 / Android13",
+        "installedOn": "2026-10-30",
+        "package": "com.uta.songlearning",
+        "signed": true,
+        "published": false,
+        "webFilesMatched": 23,
+        "debuggingEnabled": false,
+        "method": "原发行签名v2/v3，版本1.6.1/code28、调试关闭；前端逐字节匹配，保留数据-r升级Success/COLD Status ok，UID/首次安装时间不变，回读APK摘要一致，无该进程AndroidRuntime致命异常。"
+      }
     }
   ]
 }

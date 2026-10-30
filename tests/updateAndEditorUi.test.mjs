@@ -40,7 +40,8 @@ test('下载前、下载中和安装失败时更新弹窗都只保留取消与�
     assert.doesNotMatch(html,/选择其他安装方式|保存安装包|选择已下载/)
   }
 })
-test('关于页面停用反馈入口，保留更新、项目地址和正确交流群号',()=>{
+// 新活动使用腾讯文档短文案超链接，旧兔小巢入口仍停用。
+test('关于页面提供固定反馈表链接并保留更新、项目地址和正确交流群号',()=>{
   const html=renderToStaticMarkup(createElement(AboutPanel,{updates:{version:'1.0.2',check:()=>{}}}))
   // 原只有检查更新、项目地址、加群交流三个按钮；现在增加兔小巢入口。
   // assert.equal((html.match(/<button /g)||[]).length,3)
@@ -49,6 +50,9 @@ test('关于页面停用反馈入口，保留更新、项目地址和正确交�
   assert.equal((html.match(/<button /g)||[]).length,3)
   for(const text of ['检查更新','项目地址','加群交流','1125131374']) assert.ok(html.includes(text))
   assert.doesNotMatch(html,/建议与反馈|兔小巢/)
+  assert.match(html,/>反馈<\/h4>/)
+  assert.match(html,/href="https:\/\/docs.qq.com\/form\/page\/DQ01nRWRjSHJoUm9W"/)
+  assert.match(html,/>填写使用体验反馈<\/a>/)
   assert.doesNotMatch(html,/每次启动自动检测/)
 })
 test('歌曲编辑合并名称分区为四项且默认不挂载联网搜索',()=>{

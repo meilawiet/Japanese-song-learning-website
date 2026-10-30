@@ -67,8 +67,10 @@ android {
         // 1.5.2 汇总十项已验证改动，递增内部编号以支持保留数据升级。
         // 旧正式版：versionCode 26 / versionName "1.5.2"。
         // 1.6.0 汇总复习、音频独立备份、人工注音保护及启动体验改动。
-        versionCode 27
-        versionName "1.6.0"
+        // 旧正式版：versionCode 27 / versionName "1.6.0"。
+        // 1.6.1 新增首页三次反馈邀请和关于页固定表单入口。
+        versionCode 28
+        versionName "1.6.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

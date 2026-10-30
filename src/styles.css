@@ -974,6 +974,20 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .about-panel [role="alert"],.app-update-dialog [role="alert"] { color:#b13d32; }
 .about-panel .about-check-update { margin:0; padding:15px 0; border:0; border-bottom:1px solid #dce5da; border-radius:0; background:transparent; }
 .about-panel .about-check-update > span:last-child { font-size:12px; }
+/* 首页反馈采用可关闭卡片和短文案超链接，不显示原始长网址。 */
+/* 原首页卡片定位：margin:20px 20px 0；现用独立遮罩在整个屏幕可用区居中。 */
+.feedback-invite-backdrop { position:fixed; inset:0; z-index:2120; display:grid; place-items:center; padding:24px; background:#17221e88; }
+.feedback-invite-card { width:min(100%,460px); max-height:calc(100vh - 48px); overflow:auto; margin:0; padding:24px; border:1px solid #d7e2d3; border-radius:22px; background:#fffdf8; color:var(--ink); }
+.feedback-invite-card h2 { margin:0 0 10px; font:600 18px/1.5 var(--serif); }
+.feedback-invite-card p { margin:0 0 12px; font:14px/1.7 var(--sans); }
+.feedback-invite-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; }
+.feedback-form-action a { color:#426550; text-decoration:underline; text-underline-offset:3px; font:15px/1.6 var(--sans); }
+.feedback-form-action a[aria-disabled="true"] { opacity:.6; }
+.feedback-form-action>span[role="alert"] { display:block; color:#b54b42; font:13px/1.6 var(--sans); }
+.feedback-invite-actions button { min-height:44px; padding:6px 0; border:0; background:transparent; color:var(--muted); font:14px var(--sans); }
+.feedback-invite-card .feedback-invite-hint { margin:12px 0 0; color:var(--muted); font-size:12px; }
+.about-feedback { padding:16px 0; border-bottom:1px solid #dce5da; }
+.about-feedback h4 { margin:0 0 10px; font:600 17px/1.5 var(--serif); }
 
 /* 真机修正：fieldset 放入普通滚动容器，底部操作区不与内容重叠。 */
 .song-editor-fields { min-width:0; margin:0; padding:0; border:0; }

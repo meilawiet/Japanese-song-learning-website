@@ -1,0 +1,14 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {FEEDBACK_INVITE_KEY,createFeedbackLaunchSession,createAsyncFeedbackLaunchSession,feedbackSession,FEEDBACK_FORM_URL} from '../src/lib/feedbackInvite.js'
+const storage=()=>{const data=new Map();return {getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value)}}
+// 用独立内存存储模拟跨次启动，不修改手机真实配置。
+test('前三次启动各提示一次，第四次以后停止',()=>{const s=storage();for(let n=1;n<=3;n++)assert.equal(createFeedbackLaunchSession(s).claim().launch,n);for(let i=0;i<3;i++)assert.equal(createFeedbackLaunchSession(s).claim(),null);assert.equal(JSON.parse(s.getItem(FEEDBACK_INVITE_KEY)).shownLaunches,3)})
+test('重复效果、切换页面及重挂载不额外计数',()=>{const s=storage(),session=feedbackSession(s);assert.equal(feedbackSession(s),session);assert.equal(session.claim().launch,1);assert.equal(session.claim().launch,1);assert.equal(JSON.parse(s.getItem(FEEDBACK_INVITE_KEY)).shownLaunches,1)})
+test('本次关闭不再出现，下次启动继续第二次机会',()=>{const s=storage(),session=createFeedbackLaunchSession(s);session.claim();session.dismiss();assert.equal(session.claim(),null);assert.equal(createFeedbackLaunchSession(s).claim().launch,2)})
+test('未显示不扣次数，旧QQ群偏好不影响反馈',()=>{const s=storage();s.setItem('uta-community-invite-v1',JSON.stringify({optedOut:true}));createFeedbackLaunchSession(s);assert.equal(s.getItem(FEEDBACK_INVITE_KEY),null);assert.equal(createFeedbackLaunchSession(s).claim().launch,1)})
+test('异常计数可恢复，超额不重置，存储失败跳过自动提示',()=>{for(const value of ['bad','null','{}','{"shownLaunches":-1}']){const s=storage();s.setItem(FEEDBACK_INVITE_KEY,value);assert.equal(createFeedbackLaunchSession(s).claim().launch,1)}const s=storage();s.setItem(FEEDBACK_INVITE_KEY,'{"shownLaunches":999}');assert.equal(createFeedbackLaunchSession(s).claim(),null);for(const broken of [{getItem(){throw Error('blocked')}},{getItem:()=>null,setItem(){throw Error('quota')}}])assert.equal(createFeedbackLaunchSession(broken).claim(),null)})
+test('链接固定为用户提供的安卓表单',()=>{assert.equal(FEEDBACK_FORM_URL,'https://docs.qq.com/form/page/DQ01nRWRjSHJoUm9W')})
+// 严格模式、原生返回前关闭以及失败都不应触发重复计数或迟到弹窗。
+test('原生异步认领并发只调用一次，关闭后忽略迟到结果',async()=>{let calls=0,finish;const session=createAsyncFeedbackLaunchSession(()=>{calls++;return new Promise(resolve=>{finish=resolve})});const first=session.claim(),second=session.claim();await Promise.resolve();assert.equal(calls,1);session.dismiss();finish({launch:1});assert.equal(await first,null);assert.equal(await second,null);assert.equal(await session.claim(),null)})
+test('原生认领成功、超额和调用失败都安全返回',async()=>{assert.deepEqual(await createAsyncFeedbackLaunchSession(()=>({launch:2})).claim(),{launch:2});assert.equal(await createAsyncFeedbackLaunchSession(()=>({launch:0})).claim(),null);assert.equal(await createAsyncFeedbackLaunchSession(()=>Promise.reject(Error('unavailable'))).claim(),null)})

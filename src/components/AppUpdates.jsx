@@ -2,6 +2,8 @@ import {useCallback,useEffect,useRef,useState} from 'react'
 import {CapacitorHttp,registerPlugin} from '@capacitor/core'
 import {App} from '@capacitor/app'
 import {Browser} from '@capacitor/browser'
+// 腾讯文档反馈入口独立于停用的旧反馈服务。
+import {FeedbackFormLink} from './FeedbackInvite'
 // 原关于图标：import {RefreshCw,ExternalLink,Users} from 'lucide-react'
 // 原反馈图标导入：import {RefreshCw,ExternalLink,Users,MessageSquare} from 'lucide-react'
 import {RefreshCw,ExternalLink,Users} from 'lucide-react'
@@ -112,6 +114,7 @@ export function AboutPanel({updates}) {
     <button className="about-check-update" type="button" disabled={updates.checking} onClick={()=>updates.check(true)}><span><RefreshCw size={19}/>检查更新</span><span>{updates.checking?'检测中…':'›'}</span></button>
     <button className="about-check-update" type="button" onClick={openProject}><span><ExternalLink size={19}/>项目地址</span><span>›</span></button>
     <button className="about-check-update" type="button" onClick={copyGroup}><span><Users size={19}/>加群交流</span><span>QQ群 1125131374</span></button>
+    <div className="about-feedback"><h4>反馈</h4><FeedbackFormLink/></div>
     {/* 停用旧入口：<button className="about-check-update" type="button" disabled={openingFeedback} onClick={openFeedback}><span><MessageSquare size={19}/>建议与反馈</span><span>{openingFeedback?'正在打开…':'›'}</span></button> */}
     {(updates.error||linkError)&&<p role="alert">{linkError||updates.error}</p>}
     {!updates.error&&updates.release&&<p role="status">{updates.release.message}{updates.release.newer?` ${updates.release.version}`:''}</p>}{notice&&<p role="status">{notice}</p>}
