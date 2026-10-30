@@ -22,31 +22,29 @@
     }
   },
   "lastPublished": {
-    "version": "1.6.0",
-    "versionCode": 27,
-    "commit": "b764d1ac5707bd900bb241ea3b670b809d6993b8",
-    "tag": "v1.6.0",
-    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.0",
-    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.0",
-    "asset": "UTA-Android-1.6.0.apk",
+    "version": "1.6.1",
+    "versionCode": 28,
+    "commit": "e48960006e3f02a890418f9e74020c0bb34d26dd",
+    "tag": "v1.6.1",
+    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.1",
+    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.1",
+    "asset": "UTA-Android-1.6.1.apk",
     "size": 31372779,
-    "sha256": "098a54e189413b6169fd01aa64badb61b54f7b6253a6d2ea8512d6b2060b8a98",
-    "publishedOn": "2026-10-22",
+    "sha256": "8cd05bd996f923e80fc036d55ef46a670d1860753f05f61981296fd63eeeb68d",
+    "publishedOn": "2026-10-30",
     "branch": "android-dev"
   },
   "currentLocalInstall": {
+    "installedOn": "2026-10-30",
+    "device": "Samsung SM-N9860 / Android13",
+    "package": "com.uta.songlearning",
+    "path": ".tools/conversation-artifacts/20261022-manual-reading/feedback-1.6.1/UTA-Android-1.6.1.apk",
     "version": "1.6.1",
     "versionCode": 28,
     "size": 31372779,
     "sha256": "8cd05bd996f923e80fc036d55ef46a670d1860753f05f61981296fd63eeeb68d",
-    "path": ".tools/conversation-artifacts/20261022-manual-reading/feedback-1.6.1/UTA-Android-1.6.1.apk",
-    "device": "Samsung SM-N9860 / Android13",
-    "installedOn": "2026-10-30",
-    "package": "com.uta.songlearning",
     "signed": true,
-    "published": false,
-    "webFilesMatched": 23,
-    "debuggingEnabled": false,
+    "published": true,
     "method": "原发行签名v2/v3，版本1.6.1/code28、调试关闭；前端逐字节匹配，保留数据-r升级Success/COLD Status ok，UID/首次安装时间不变，回读APK摘要一致，无该进程AndroidRuntime致命异常。"
   },
   "reminder": {
@@ -63,7 +61,7 @@
       "FIX-20261020-047"
     ],
     "lastRemindedOn": "2026-10-20",
-    "userDecision": "用户2026-10-30明确授权上传代码、发包更新1.6.1；059在双平台正式发行、提交及附件全部核验前保持verified。"
+    "userDecision": "用户2026-10-30授权的1.6.1源码上传和GitHub/Gitee同APK发行均已核验，059已released，待发布0/10。下一批需新的明确授权；达到10项时逐项展示全部verified标题和简述。"
   },
   "items": [
     {
@@ -2818,7 +2816,7 @@
       "id": "FEAT-20261030-059",
       "type": "feature",
       "title": "首页前三次启动居中邀请填写体验反馈，并保留关于页固定入口",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-30",
       "completedOn": "2026-10-30",
       "summary": "安卓1.6.1首页前三次启动显示屏幕居中的反馈弹窗，提供用户指定腾讯文档表单的短文案超链接和本次不填写；已删除是否填写由你决定。关闭后同次启动不重现，第四次起不自动邀请；设置→关于→反馈始终可填写。原生同步保存次数，快速结束进程也不回退，不进入学习备份；保留QQ群提醒并避免叠加。",
@@ -2854,11 +2852,25 @@
         "installedOn": "2026-10-30",
         "package": "com.uta.songlearning",
         "signed": true,
-        "published": false,
+        "published": true,
         "webFilesMatched": 23,
         "debuggingEnabled": false,
         "method": "原发行签名v2/v3，版本1.6.1/code28、调试关闭；前端逐字节匹配，保留数据-r升级Success/COLD Status ok，UID/首次安装时间不变，回读APK摘要一致，无该进程AndroidRuntime致命异常。"
-      }
+      },
+      "release": {
+        "version": "1.6.1",
+        "versionCode": 28,
+        "commit": "e48960006e3f02a890418f9e74020c0bb34d26dd",
+        "tag": "v1.6.1",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.1",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.1",
+        "asset": "UTA-Android-1.6.1.apk",
+        "size": 31372779,
+        "sha256": "8cd05bd996f923e80fc036d55ef46a670d1860753f05f61981296fd63eeeb68d",
+        "publishedOn": "2026-10-30",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-30"
     }
   ]
 }
