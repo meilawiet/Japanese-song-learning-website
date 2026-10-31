@@ -69,8 +69,10 @@ android {
         // 1.6.0 汇总复习、音频独立备份、人工注音保护及启动体验改动。
         // 旧正式版：versionCode 27 / versionName "1.6.0"。
         // 1.6.1 新增首页三次反馈邀请和关于页固定表单入口。
-        versionCode 28
-        versionName "1.6.1"
+        // 旧正式版：versionCode 28 / versionName "1.6.1"。
+        // 1.6.2 发布人工注音整曲同步与时间戳双击选段批量调整。
+        versionCode 29
+        versionName "1.6.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

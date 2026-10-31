@@ -23,6 +23,8 @@ import useStudyPlayback from './lib/useStudyPlayback'
 // 每次调整即时保存当前句；调试会话只保留选句与初始偏移参照。
 import TimestampTuner from './components/TimestampTuner'
 import { applySavedTimings, makeTimeOverrides, originalTimestamp, resetLineTimestamp, shiftLineTimestamp } from './lib/timestampTuning'
+// 时间戳选段复用同一点击识别器，保存仍使用原子时间轴事务。
+import {timestampRange,doubleTapTimestampLine,shiftTimestampRange,resetTimestampRange} from './lib/timestampTuning'
 import { updateLocalSongTimings } from './lib/localSongStore'
 // 手动滑动歌词期间暂缓居中，避免当前播放句把用户拉回。
 import useManualLyricScroll from './lib/useManualLyricScroll'
@@ -37,6 +39,8 @@ import useModalScrollLock from './lib/useModalScrollLock'
 import { applyLyricReview, reviewFingerprint } from './lib/lyricAiReview'
 import LyricChat from './components/LyricChat'
 import { applyLyricEdits, commitEditedLine } from './lib/lyricEditing'
+// 同步前验证人工读音，缺失自动注音在写入歌曲资料前准备齐全。
+import {readingSyncRules} from './lib/readingSync.js'
 import SettingsDialog from './components/SettingsDialog'
 // 原说明：首页低频邀请，复用内置反馈，不打断学习和其他操作。
 // 首页仅邀请加入 QQ 交流群，原提醒周期和勿扰条件继续沿用。
@@ -500,6 +504,8 @@ export default function App() {
   // const activeSong=useMemo(()=>timestampEditing?{...sourceSong,lines:timestampSession.lines,duration:lyricDuration(timestampSession.lines)}:sourceSong,[sourceSong,timestampEditing,timestampSession?.lines])
   const activeSong=sourceSong
   const timestampTarget=timestampEditing?activeSong.lines.find(line=>line.id===timestampSession.selectedId):null
+  const timestampSelectedRange=timestampEditing?timestampRange(activeSong.lines,timestampSession):null
+  const timestampSelectedLines=timestampSelectedRange?activeSong.lines.slice(timestampSelectedRange.startIndex,timestampSelectedRange.endIndex+1):timestampTarget?[timestampTarget]:[]
   // 每首歌保存语言和显示偏好，随学习进度备份；原有全局偏好作为日语歌曲默认值。
   const activeLanguage = songLanguage(activeSong)
   const activeSongSettings = songSettings[activeSong.id] || {}
@@ -565,7 +571,13 @@ export default function App() {
   function selectTimestampLine(id) {
     if (timestampBusy) return
     stopLinePlayback();lyricTapRef.current?.cancel();setTimestampError('')
-    setTimestampSession(previous=>previous?{...previous,selectedId:id}:previous)
+    // 原单选仅更新selectedId；单击同时清除未完成起点或整段选择。
+    setTimestampSession(previous=>previous?{...previous,selectedId:id,anchorId:null,rangeIds:null}:previous)
+  }
+  function selectTimestampRange(id){
+    if(timestampBusy)return
+    stopLinePlayback();setTimestampError('')
+    setTimestampSession(previous=>doubleTapTimestampLine(activeSong.lines,previous,id))
   }
   async function shiftTimestamp(deltaMs) {
     if (!timestampEditing || timestampBusy) return
@@ -574,7 +586,10 @@ export default function App() {
     try {
       const duration=audioUrl && Number.isFinite(audioRef.current?.duration)?audioRef.current.duration:Infinity
       // 中间重置沿用同一原子写入入口，只还原当前句，其他句维持现值。
-      lines=deltaMs===null?resetLineTimestamp(song.lines,timestampSession.selectedId,duration):shiftLineTimestamp(song.lines,timestampSession.selectedId,deltaMs,duration)
+      // 原调用只接受selectedId；选段时一次校验并保存整段，失败时不写任何一句。
+      lines=timestampSelectedRange
+        ?deltaMs===null?resetTimestampRange(song.lines,timestampSelectedRange.startId,timestampSelectedRange.endId,duration):shiftTimestampRange(song.lines,timestampSelectedRange.startId,timestampSelectedRange.endId,deltaMs,duration)
+        :deltaMs===null?resetLineTimestamp(song.lines,timestampSession.selectedId,duration):shiftLineTimestamp(song.lines,timestampSession.selectedId,deltaMs,duration)
     } catch (reason) { setTimestampError(reason.message || '无法调整这一句的时间。');return }
     stopLinePlayback();setTimestampBusy(true);setTimestampError('')
     try {
@@ -598,12 +613,14 @@ export default function App() {
       // 无时间轴仍允许阅读选句；可播放时由控制器决定段首，不能用被点句覆盖它。
       // 纯歌词也能双击收藏；选区外单击仅退出，不同时选中或播放另一句。
       onSingle: id => {
+        if(timestampEditing){selectTimestampLine(id);return}
         if (!study.transport.state.ready) {
           if (study.transport.state.range || study.transport.state.rangeAnchorId != null) study.transport.clearRange()
           else setActiveLineId(id)
         } else study.transport.playLine(id)
       },
       onDouble: id => {
+        if(timestampEditing){selectTimestampRange(id);return}
         // 原缺时间戳时直接返回；现在允许选句/选段收藏，播放仍由ready严格限制。
         // if (!study.transport.state.ready) { setToast('歌词缺少完整时间戳，补全后可选段播放。'); return }
         setSentenceExplanationOpen(null)
@@ -620,7 +637,8 @@ export default function App() {
       gesture.cancel(); window.removeEventListener('pointerdown', action, true); document.removeEventListener('visibilitychange', hidden)
       if (lyricTapRef.current === gesture) lyricTapRef.current = null
     }
-  }, [unifiedStudy, activeSong.id, study.transport, study.mode])
+  // 原依赖没有时间戳模式；切换模式/写入期间取消旧的延迟单击，避免误触播放。
+  }, [unifiedStudy, activeSong.id, study.transport, study.mode,timestampEditing,timestampBusy])
   useEffect(() => {
     if (!IS_ANDROID_APP) return undefined
     let active = true
@@ -907,7 +925,8 @@ export default function App() {
     if (Date.now() < lyricPressSuppressionRef.current) { event.preventDefault(); event.stopPropagation() }
   }
   // 单句翻译与歌词读音一并保存，编辑翻译不会改变原时间轴。
-  async function saveEditedLyric({ annotation, readings, translation, manualIndices }) {
+  // 原签名无syncReadings，只保存当前句；默认行为继续保留。
+  async function saveEditedLyric({ annotation, readings, translation, manualIndices,syncReadings=false }) {
     const target = editingLyric
     const song = allSongs.find((item) => item.id === target?.songId)
     if (!song) throw new Error('找不到当前歌曲。')
@@ -916,6 +935,12 @@ export default function App() {
     const editedLines = song.lines.map((line) => line.id === target.lineId ? { ...line, text: annotation.text, translation } : line)
     setLyricEditSaving(true)
     try {
+      let syncAnnotations=[]
+      if(syncReadings){
+        readingSyncRules(annotation,readings,manualIndices)
+        const missing=song.lines.filter(line=>line.id!==target.lineId&&!(learningState.annotations[song.id]||[]).some(item=>annotationMatchesLine(item,line)))
+        if(missing.length){syncAnnotations=await annotateSongLines(missing,songLanguage(song));if(!missing.every(line=>syncAnnotations.some(item=>annotationMatchesLine(item,line))))throw new Error('未能准备整首歌的注音，请重试。')}
+      }
       if (song.isLocal) {
         const updated = await updateLocalSongMetadata(song.id, { lines: editedLines })
         if (!updated) throw new Error('歌词保存失败，请重试。')
@@ -923,11 +948,13 @@ export default function App() {
         setLocalSongs((previous) => previous.map((item) => item.id === song.id ? visibleSong : item))
       }
       // 原提交没有 translation 参数，现兼容项目歌曲与本地歌曲。
-      setLearningState((previous) => commitEditedLine(allSongs, previous, song.id, target.lineId, annotation, readings, translation, manualIndices).state)
+      // 原commitEditedLine调用在manualIndices结束；同步与本句保存一起进入现有持久化路径。
+      setLearningState((previous) => commitEditedLine(allSongs, previous, song.id, target.lineId, annotation, readings, translation, manualIndices,{syncReadings,annotations:syncAnnotations}).state)
       setEditingLyric(null)
       setSentenceExplanationOpen(null)
       setSelectedTokenIndex(0)
-      setToast('这一句的歌词与读音已保存。')
+      // 原文案：setToast('这一句的歌词与读音已保存。')。
+      setToast(syncReadings?'本句已保存，人工注音已同步到整首歌的相同词。':'这一句的歌词与读音已保存。')
     } finally { setLyricEditSaving(false) }
   }
 
@@ -952,7 +979,8 @@ export default function App() {
     if (event.target.closest('button, a, input, select, textarea, .sentence-inline-analysis')) return
     // 安卓先区分单击/双击，网页维持原即时选句；第二次双击仅选段，不播放。
     // 原直接交给单/双击播放；调试模式即时选择目标，不触发播放或选段。
-    if (timestampEditing) { selectTimestampLine(lineId); return }
+    // 原时间戳分支立即单选；现交给同一300ms识别器区分单击和双击。
+    if (timestampEditing) { if(!timestampBusy)lyricTapRef.current?.tap(lineId); return }
     if (unifiedStudy) { lyricTapRef.current?.tap(lineId); return }
     chooseLine(lineId)
     // 原来任何整句点击都尝试播放；纯歌词阅读只切换当前句，避免无音频报错。
@@ -2335,7 +2363,9 @@ export default function App() {
           {/* 已选播放范围可一键收藏，长按段内仍不触发编辑或掌握操作。 */}
           {/* 原工具栏只在完整范围出现：{unifiedStudy&&study.range&&<div className="review-range-collect"><span>第{study.range.startIndex+1}–{study.range.endIndex+1}行</span><button type="button" onClick={()=>collectReviewRange(activeSong,study.range.startId,study.range.endId)}><Plus size={16}/>收藏本段</button></div>} */}
           {/* 首次双击显示收藏本句；第二次双击确定范围后改为收藏本段，不自动播放或退出选区。 */}
-          {unifiedStudy&&(study.range||study.rangeAnchorId!=null)&&<div className="review-range-collect"><span>{study.range?`第${study.range.startIndex+1}–${study.range.endIndex+1}行`:`第${activeSong.lines.findIndex(line=>line.id===study.rangeAnchorId)+1}行`}</span><button type="button" onClick={()=>collectReviewRange(activeSong,study.range?.startId??study.rangeAnchorId,study.range?.endId??study.rangeAnchorId)}><Plus size={16}/>{study.range?'收藏本段':'收藏本句'}</button></div>}
+          {timestampEditing&&<p className="timestamp-selection-note" id="timestamp-selection-note" role="status">{timestampSelectedRange?`已选第${timestampSelectedRange.startIndex+1}–${timestampSelectedRange.endIndex+1}句，共${timestampSelectedLines.length}句；单击歌词可恢复单句调整。`:timestampSession.anchorId!=null?`已选起点第${activeSong.lines.findIndex(line=>line.id===timestampSession.anchorId)+1}句，请双击终点句。`:'双击起点句，再双击终点句，可批量调整这一段时间戳。'}</p>}
+          {/* 原复习收藏条在时间戳模式不挂载，两个选区互相独立。 */}
+          {!timestampEditing&&unifiedStudy&&(study.range||study.rangeAnchorId!=null)&&<div className="review-range-collect"><span>{study.range?`第${study.range.startIndex+1}–${study.range.endIndex+1}行`:`第${activeSong.lines.findIndex(line=>line.id===study.rangeAnchorId)+1}行`}</span><button type="button" onClick={()=>collectReviewRange(activeSong,study.range?.startId??study.rangeAnchorId,study.range?.endId??study.rangeAnchorId)}><Plus size={16}/>{study.range?'收藏本段':'收藏本句'}</button></div>}
           <div className="lyrics-list">
             {/* 原 map 只接收 line；数组位置用于判断选段，不能假定句子 id 连续。 */}
             {activeSong.lines.map((line, lineIndex) => {
@@ -2348,9 +2378,11 @@ export default function App() {
               const hasSentenceExplanation = visibleSentenceEntry(currentSentenceCache[line.id], line, activeLanguage)
               const sentenceExpanded = sentenceExplanationOpen?.songId === activeSong.id && sentenceExplanationOpen.line.id === line.id
               // 已选段的各句共享连续底色；操作按钮保留布局位置但禁用并移出可访问控件树。
-              const rangeSelected = unifiedStudy && study.range && lineIndex >= study.range.startIndex && lineIndex <= study.range.endIndex
-              const rangeAnchor = unifiedStudy && study.rangeAnchorId === line.id
-              const rangeEdge = rangeSelected ? `${lineIndex === study.range.startIndex ? 'range-start' : ''} ${lineIndex === study.range.endIndex ? 'range-end' : ''}` : ''
+              // 原选区只来自播放控制器；时间戳模式使用独立会话，不启动选段播放。
+              const visualRange=timestampEditing?timestampSelectedRange:study.range
+              const rangeSelected = unifiedStudy && visualRange && lineIndex >= visualRange.startIndex && lineIndex <= visualRange.endIndex
+              const rangeAnchor = unifiedStudy && (timestampEditing?timestampSession.anchorId:study.rangeAnchorId) === line.id
+              const rangeEdge = rangeSelected ? `${lineIndex === visualRange.startIndex ? 'range-start' : ''} ${lineIndex === visualRange.endIndex ? 'range-end' : ''}` : ''
               // 原点击播放保留；新增整句长按与滚动取消，抬手后不误触播放或词语详情。
               // 原行属性：className={`lyric-row ${current ? 'active' : ''}`}；其余原长按/点击事件保留，新加选段样式与双击缩放抑制。
               return <article id={`lyric-row-${activeSong.id}-${line.id}`} className={`lyric-row ${current ? 'active' : ''} ${timestampEditing&&timestampSession.selectedId===line.id?'timestamp-target':''} ${rangeSelected ? 'lyric-range-selected' : ''} ${rangeAnchor ? 'lyric-range-anchor' : ''} ${rangeEdge}`} data-range-selected={rangeSelected ? 'true' : undefined} data-range-anchor={rangeAnchor ? 'true' : undefined} aria-describedby={rangeSelected || rangeAnchor ? 'study-range-note' : undefined} onPointerDownCapture={(event) => beginLyricPress(event, line.id)} onPointerMoveCapture={moveLyricPress} onPointerUpCapture={(event) => { cancelLyricPress(); suppressLyricPressClick(event) }} onPointerCancel={cancelLyricPress} onPointerLeave={cancelLyricPress} onClickCapture={suppressLyricPressClick} onDoubleClick={unifiedStudy ? event => event.preventDefault() : undefined} onContextMenu={(event) => { if (IS_ANDROID_APP) event.preventDefault() }} onClick={(event) => handleLyricRowClick(event, line.id)} key={`${activeSong.id}-${line.id}`}>
@@ -2457,7 +2489,8 @@ export default function App() {
       </section>}
     </main>
     {/* 调节条在滚动容器外固定，始终跟随窗口；上下按钮不遮挡歌词原文。 */}
-    {timestampEditing && <TimestampTuner line={timestampTarget} number={activeSong.lines.findIndex(line=>line.id===timestampSession.selectedId)+1} offset={Math.round(((timestampTarget?.start??0)-(originalTimestamp(timestampTarget)??0))*1000)} busy={timestampBusy} error={timestampError} onShift={shiftTimestamp} onReset={()=>shiftTimestamp(null)}/> }
+    {/* 原TimestampTuner仅接收当前句；多句模式另外传入范围与每句相对原点的偏移。 */}
+    {timestampEditing && <TimestampTuner line={timestampTarget} number={activeSong.lines.findIndex(line=>line.id===timestampSession.selectedId)+1} range={timestampSelectedRange} selectedLines={timestampSelectedLines} offset={Math.round(((timestampTarget?.start??0)-(originalTimestamp(timestampTarget)??0))*1000)} busy={timestampBusy} error={timestampError} onShift={shiftTimestamp} onReset={()=>shiftTimestamp(null)}/> }
       {/* 原独立界面实现保留供对照：
     {IS_ANDROID_APP && <AndroidBottomNav activeTab={mobileTab} onSelect={showMobileTab} />}
       */}

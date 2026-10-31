@@ -1,0 +1,21 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readingSyncRules} from '../src/lib/readingSync.js'
+import {commitEditedLine} from '../src/lib/lyricEditing.js'
+import {reconcileLearningState} from '../src/lib/learningIdentity.js'
+import {prepareLyricReadings,tokenReading} from '../src/lib/lyricReadings.js'
+// 原创重复词、稀疏索引和同形不同分词，验证不会把一个汉字替换进整个复合词。
+const token=(index,surface,reading)=>({index,surface,reading,is_symbol:false})
+const row=(id,tokens)=>({id,text:tokens.map(t=>t.surface).join(''),language:'ja',tokens})
+const rows=[row(10,[token(0,'明日','あした'),token(5,'歌う','うたう')]),row(30,[token(8,'明日','あした'),token(9,'も','も'),token(15,'明日','あした')]),row(50,[token(1,'明日香','あすか')])]
+const song={id:'local-sync',isLocal:true,language:'ja',lines:rows.map(r=>({id:r.id,text:r.text,start:r.id,translation:'原创译文'}))}
+const other={...song,id:'other'}
+const seed=()=>({annotations:{[song.id]:structuredClone(rows),other:structuredClone(rows)},progress:{corrections:{'local-sync:30:8':'みょうにち','other:30:8':'べつ'},learnedBySong:{[song.id]:[10,30]},reviewItems:[],favoriteSongIds:[],lyricSnapshots:{[song.id]:{lines:song.lines}}},sentenceExplanations:{},aiReviews:{}})
+const save=(state,readings={0:'あす',5:'うたう'},indices=[0],options={syncReadings:true})=>commitEditedLine([song,other],state,song.id,10,rows[0],readings,'原创译文',indices,options)
+test('全曲相同完整词更新，含同句重复及已有人工值，不影响复合词/其他歌曲/时间/掌握',()=>{const state=seed(),copy=structuredClone(state),result=save(state);for(const key of ['local-sync:10:0','local-sync:30:8','local-sync:30:15'])assert.equal(result.state.progress.corrections[key],'あす');assert.equal(result.state.progress.corrections['other:30:8'],'べつ');assert.equal(result.state.progress.corrections['local-sync:50:1'],undefined);assert.equal(result.state.progress.corrections['local-sync:10:5'],undefined);assert.deepEqual(result.song.lines,song.lines);assert.deepEqual(result.state.progress.learnedBySong,state.progress.learnedBySong);assert.deepEqual(state,copy)})
+test('普通保存仅更新本句，原来其他人工注音保持',()=>{const result=save(seed(),undefined,undefined,{});assert.equal(result.state.progress.corrections['local-sync:30:8'],'みょうにち');assert.equal(result.state.progress.corrections['local-sync:30:15'],undefined)})
+test('人工留空同步且缓存缺失、JSON重载后原词界和读音仍受保护',()=>{const result=save(seed(),{0:'',5:'うたう'}),reloaded=JSON.parse(JSON.stringify(result.state));reloaded.annotations={};const restored=reconcileLearningState([song,other],reloaded);for(const key of ['local-sync:10:0','local-sync:30:8','local-sync:30:15'])assert.equal(restored.progress.corrections[key],'');assert.ok(restored.annotations[song.id].some(r=>r.id===30))})
+test('缺失缓存可以显式补齐，缺失且未补齐时拒绝悄悄只同步一部分',()=>{const state=seed();state.annotations[song.id]=[rows[0]];assert.throws(()=>save(state),/尚未准备/);const result=save(state,undefined,undefined,{syncReadings:true,annotations:rows.slice(1)});assert.equal(result.state.progress.corrections['local-sync:30:15'],'あす')})
+test('同一词多个人工异读拒绝统一；预填自动读音不作为规则',()=>{assert.throws(()=>readingSyncRules(rows[1],{8:'あす',15:'みょうにち'},[8,15]),/不同的人工注音/);assert.throws(()=>readingSyncRules(rows[0],{0:'あす'},[]),/先修改/);assert.equal(readingSyncRules(rows[0],{0:'あす',5:'うたう'},[0]).size,1)})
+test('括号注音以显示词面匹配，旧legacy值被同一词新值替换',()=>{const state=seed(),bracket=row(30,[token(2,'明日(あした)','あした')]),s={...song,lines:[song.lines[0],{id:30,text:bracket.text,start:30}]};state.annotations[song.id]=[rows[0],bracket];state.progress.lyricSnapshots={[song.id]:{lines:s.lines}};const result=commitEditedLine([s],state,s.id,10,rows[0],{0:'あす',5:'うたう'},'', [0],{syncReadings:true});const r=result.state.annotations[s.id].find(a=>a.id===30),prepared=prepareLyricReadings(r.tokens,'',result.state.progress.corrections,s.id,30);assert.equal(tokenReading(prepared.tokens[0],result.state.progress.corrections,s.id,30),'あす')})
+test('按原样保留模式随同步写入，不对韩语等自定义标注转假名',()=>{const state=seed(),source={...rows[0],tokens:rows[0].tokens.map(t=>({...t,manual_reading_mode:'literal'}))};const result=commitEditedLine([song],state,song.id,10,source,{0:'as-is',5:'うたう'},'', [0],{syncReadings:true});assert.equal(result.state.annotations[song.id].find(r=>r.id===30).tokens[0].manual_reading_mode,'literal');assert.equal(result.state.progress.corrections['local-sync:30:8'],'as-is')})

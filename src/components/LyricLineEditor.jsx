@@ -59,7 +59,8 @@ export default function LyricLineEditor({ song, line, annotation, corrections, o
     finally { if (request === requestRef.current) setBusy(false) }
   }
 
-  async function save(event) {
+  // 旧签名只接收event；同步按钮和本句保存共用校验、输入转换及错误提示。
+  async function save(event,syncReadings=false) {
     event.preventDefault()
     if (text.trim() !== annotatedText || !tokens.length) { setError(japanese?'歌词已调整，请先点击“重新注音”，再确认读音。':'请先确认原文，再保存修改。'); return }
     // 原来所有字段都 toHiragana，导致 news 变成 ねws；现按用户选定方式保存。
@@ -69,7 +70,8 @@ export default function LyricLineEditor({ song, line, annotation, corrections, o
     setBusy(true)
     // 原保存仅提交 annotation 和 readings；翻译与当前句一并保存。
     // 仅真正编辑过的字段记为人工校正，不把预填的来源注音全部提升为人工数据。
-    try { await onSave({ annotation: { id: line.id, text: annotatedText, language, tokens:tokens.map(token=>({...token,manual_reading_mode:readingModes[token.index] || (japanese?'romaji':'literal')})) }, readings: prepared, translation: translation.trim(), manualIndices:[...manualIndices] }) }
+    // 原onSave仅包含annotation/readings/translation/manualIndices；新增明确的同步选择。
+    try { await onSave({ annotation: { id: line.id, text: annotatedText, language, tokens:tokens.map(token=>({...token,manual_reading_mode:readingModes[token.index] || (japanese?'romaji':'literal')})) }, readings: prepared, translation: translation.trim(), manualIndices:[...manualIndices],syncReadings }) }
     catch (reason) { setError(reason.message || '保存失败，请重试。') }
     finally { setBusy(false) }
   }
@@ -125,6 +127,8 @@ export default function LyricLineEditor({ song, line, annotation, corrections, o
     {language!=='zh'&&<div className="line-editor-readings">{tokens.filter((token) => !token.is_symbol).map((token) => <label key={token.index}><span lang={japanese?'ja':undefined}>{lyricSurface(token)}</span>{japanese&&<select aria-label={`${lyricSurface(token)}的读音输入方式`} value={readingModes[token.index]} disabled={busy || text.trim() !== annotatedText} onChange={event => {setReadingModes(previous => ({ ...previous, [token.index]: event.target.value }));setManualIndices(previous=>new Set([...previous,token.index]))}}><option value="romaji">日语罗马音转假名</option><option value="literal">按原样保留</option></select>}<input aria-label={`${lyricSurface(token)}的读音`} lang={readingModes[token.index] === 'literal' ? undefined : 'ja'} autoCorrect="off" autoCapitalize="none" spellCheck={false} value={readings[token.index] || ''} disabled={busy || text.trim() !== annotatedText} onChange={(event) => {setReadings((previous) => ({ ...previous, [token.index]: event.target.value }));setManualIndices(previous=>new Set([...previous,token.index]))}} /></label>)}</div>}
     {!japanese&&tokens.some(token=>token.pending_readings?.length)&&<div className="line-editor-warning"><strong>原标注待重新分配（已保留）</strong>{tokens.flatMap(token=>(token.pending_readings||[]).map((value,index)=><p key={`${token.index}-${index}`}>{value}</p>))}</div>}
     {error && <p className="line-editor-error" role="alert">{error}</p>}
+    {/* 整曲同步是显式操作，普通保存不扩散；已有人工校正也可直接重新同步。 */}
+    {language!=='zh'&&<div className="line-editor-sync"><button type="button" disabled={busy||!manualIndices.size||text.trim()!==annotatedText} onClick={event=>save(event,true)}>{busy?'处理中…':'保存并同步整首歌'}</button><p>将本句人工注音统一应用到本歌的相同完整词，替换这些词已有的注音；留空也会同步。不改变其他词的分词、歌词和时间戳。</p></div>}
     <footer><button type="button" disabled={busy} onClick={onClose}>取消</button><button type="submit" disabled={busy || !tokens.length || text.trim() !== annotatedText}>保存修改</button></footer>
   </form></div>
 }

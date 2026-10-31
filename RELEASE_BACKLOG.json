@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedOn": "2026-10-30",
+  "updatedOn": "2026-10-31",
   "reminderThreshold": 10,
   "policy": {
     "reminderPresentation": "达到10项待发布内容时，发版提醒必须同时逐项展示当前全部verified条目的名称和简要说明；不包含released或cancelled条目。",
@@ -35,17 +35,17 @@
     "branch": "android-dev"
   },
   "currentLocalInstall": {
-    "installedOn": "2026-10-30",
-    "device": "Samsung SM-N9860 / Android13",
-    "package": "com.uta.songlearning",
-    "path": ".tools/conversation-artifacts/20261022-manual-reading/feedback-1.6.1/UTA-Android-1.6.1.apk",
     "version": "1.6.1",
     "versionCode": 28,
     "size": 31372779,
-    "sha256": "8cd05bd996f923e80fc036d55ef46a670d1860753f05f61981296fd63eeeb68d",
+    "sha256": "8839388c423e0fa27de341bf6dd471af906f87af529ff20a181b71b49ce72a65",
+    "path": ".tools/conversation-artifacts/20261022-manual-reading/reading-sync-20261031/UTA-reading-sync.apk",
+    "device": "Xiaomi 23049RAD8C / Android15",
+    "installedOn": "2026-10-31",
+    "package": "com.uta.songlearning",
     "signed": true,
-    "published": true,
-    "method": "原发行签名v2/v3，版本1.6.1/code28、调试关闭；前端逐字节匹配，保留数据-r升级Success/COLD Status ok，UID/首次安装时间不变，回读APK摘要一致，无该进程AndroidRuntime致命异常。"
+    "published": false,
+    "method": "原发行签名v2/v3，1.6.1/code28、调试关闭，23项前端逐字节匹配；保留数据-r覆盖Success/COLD Status ok，首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常。"
   },
   "reminder": {
     "lastRemindedItemIds": [
@@ -61,7 +61,7 @@
       "FIX-20261020-047"
     ],
     "lastRemindedOn": "2026-10-20",
-    "userDecision": "用户2026-10-30授权的1.6.1源码上传和GitHub/Gitee同APK发行均已核验，059已released，待发布0/10。下一批需新的明确授权；达到10项时逐项展示全部verified标题和简述。"
+    "userDecision": "用户2026-10-31明确授权先将060/061注音同步与批量时间戳打包发布、上传代码，按1.6.2/code29执行；两端与附件核验完成前保持verified。主题尚未实施，不计本批。"
   },
   "items": [
     {
@@ -2871,6 +2871,81 @@
         "branch": "android-dev"
       },
       "releasedOn": "2026-10-30"
+    },
+    {
+      "id": "FEAT-20261031-060",
+      "type": "feature",
+      "title": "本句人工注音一键同步整首歌相同词",
+      "summary": "歌词编辑新增保存并同步整首歌，将本句明确人工校正（含已有修正、主动留空和原样模式）应用到本歌相同完整词，普通保存仍只改本句；不匹配子串/词典形。本句同词多个异读提示冲突，先补齐缺失注音后再保存，沿用corrections和人工词界保护快照。",
+      "files": [
+        "src/lib/readingSync.js",
+        "src/lib/lyricEditing.js",
+        "src/components/LyricLineEditor.jsx",
+        "src/App.jsx",
+        "src/styles.css",
+        "tests/readingSync.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "相关Node回归含本项7个新用例通过。",
+        "小米23049RAD8C Android15独立.dev最终6项通过，含旧人工修正、本句保存、整曲同步、实际注音显示、空值同步、缓存缺失重载以及歌词/翻译/时间/掌握保留。",
+        "无AI或用户WebDAV调用；仅.dev注入原创夹具。",
+        "原发行签名v2/v3，1.6.1/code28、调试关闭，23项前端逐字节匹配；保留数据-r覆盖Success/COLD Status ok，首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常。"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-31",
+      "completedOn": "2026-10-31",
+      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/reading-sync-20261031",
+      "localBuild": {
+        "version": "1.6.1",
+        "versionCode": 28,
+        "size": 31372779,
+        "sha256": "8839388c423e0fa27de341bf6dd471af906f87af529ff20a181b71b49ce72a65",
+        "path": ".tools/conversation-artifacts/20261022-manual-reading/reading-sync-20261031/UTA-reading-sync.apk",
+        "device": "Xiaomi 23049RAD8C / Android15",
+        "installedOn": "2026-10-31",
+        "package": "com.uta.songlearning",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3，1.6.1/code28、调试关闭，23项前端逐字节匹配；保留数据-r覆盖Success/COLD Status ok，首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常。"
+      }
+    },
+    {
+      "id": "FEAT-20261031-061",
+      "type": "feature",
+      "title": "时间戳模式双击选段批量调整与重置",
+      "summary": "双击起点和终点按歌词顺序选中连续多句，整段±0.2秒原子写入，重置各自原始时间；单击恢复单句，支持反向选择。独立高亮与范围提示，不触发播放或收藏；外侧冲突、缺失时间戳、0秒及音频时长约束下整段不部分保存。",
+      "files": [
+        "src/lib/timestampTuning.js",
+        "src/components/TimestampTuner.jsx",
+        "src/App.jsx",
+        "src/styles.css",
+        "tests/timestampRange.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "两项合计85/85相关Node回归通过，含本项5个新用例和旧单句/选段播放用例。",
+        "小米.dev最终6项通过：真实双击范围高亮、0.1秒密集间隔整段+0.2、提前/重置、单选/反选、外侧冲突整段拒绝、退出重载和段外修改保留。",
+        "注音同步在最终组合Debug包中复测6项仍通过。",
+        "原发行签名v2/v3，1.6.1/code28、调试关闭，23项前端逐字节匹配；保留数据-r覆盖Success/COLD Status ok，首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常。"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-31",
+      "completedOn": "2026-10-31",
+      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/reading-sync-20261031",
+      "localBuild": {
+        "version": "1.6.1",
+        "versionCode": 28,
+        "size": 31372779,
+        "sha256": "8839388c423e0fa27de341bf6dd471af906f87af529ff20a181b71b49ce72a65",
+        "path": ".tools/conversation-artifacts/20261022-manual-reading/reading-sync-20261031/UTA-reading-sync.apk",
+        "device": "Xiaomi 23049RAD8C / Android15",
+        "installedOn": "2026-10-31",
+        "package": "com.uta.songlearning",
+        "signed": true,
+        "published": false,
+        "method": "原发行签名v2/v3，1.6.1/code28、调试关闭，23项前端逐字节匹配；保留数据-r覆盖Success/COLD Status ok，首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常。"
+      }
     }
   ]
 }

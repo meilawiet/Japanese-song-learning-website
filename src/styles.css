@@ -988,6 +988,12 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .feedback-invite-card .feedback-invite-hint { margin:12px 0 0; color:var(--muted); font-size:12px; }
 .about-feedback { padding:16px 0; border-bottom:1px solid #dce5da; }
 .about-feedback h4 { margin:0 0 10px; font:600 17px/1.5 var(--serif); }
+/* 同步单独成行，避免手机底部取消/保存按钮拥挤；随现有主题和字号缩放。 */
+.line-editor-sync { margin-top:18px; }
+.line-editor-sync>button { width:100%; min-height:46px; border:1px solid #c7dac0; border-radius:12px; background:#e8f1e3; color:#426550; font:15px var(--serif); }
+.line-editor-sync>p { margin:8px 0; color:var(--muted); font:12px/1.6 var(--sans); }
+/* 选段调整提示不复用播放收藏工具条，文字为右侧调节条保留空间。 */
+.timestamp-selection-note { margin:12px 0; padding-right:76px; color:var(--muted); font:13px/1.7 var(--sans); }
 
 /* 真机修正：fieldset 放入普通滚动容器，底部操作区不与内容重叠。 */
 .song-editor-fields { min-width:0; margin:0; padding:0; border:0; }
