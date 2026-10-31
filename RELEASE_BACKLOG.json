@@ -22,30 +22,30 @@
     }
   },
   "lastPublished": {
-    "version": "1.6.1",
-    "versionCode": 28,
-    "commit": "e48960006e3f02a890418f9e74020c0bb34d26dd",
-    "tag": "v1.6.1",
-    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.1",
-    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.1",
-    "asset": "UTA-Android-1.6.1.apk",
+    "version": "1.6.2",
+    "versionCode": 29,
+    "commit": "287b5829efedd0499bb58f2f4195bd0e3a352518",
+    "tag": "v1.6.2",
+    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.2",
+    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.2",
+    "asset": "UTA-Android-1.6.2.apk",
     "size": 31372779,
-    "sha256": "8cd05bd996f923e80fc036d55ef46a670d1860753f05f61981296fd63eeeb68d",
-    "publishedOn": "2026-10-30",
+    "sha256": "39768a1eef52344bb3d044a99b7e0a810570951e5ba132184fc14a46330147ca",
+    "publishedOn": "2026-10-31",
     "branch": "android-dev"
   },
   "currentLocalInstall": {
-    "version": "1.6.1",
-    "versionCode": 28,
-    "size": 31372779,
-    "sha256": "8839388c423e0fa27de341bf6dd471af906f87af529ff20a181b71b49ce72a65",
-    "path": ".tools/conversation-artifacts/20261022-manual-reading/reading-sync-20261031/UTA-reading-sync.apk",
-    "device": "Xiaomi 23049RAD8C / Android15",
     "installedOn": "2026-10-31",
+    "device": "Xiaomi 23049RAD8C / Android15",
     "package": "com.uta.songlearning",
+    "path": ".tools/conversation-artifacts/20261022-manual-reading/release-1.6.2/UTA-Android-1.6.2.apk",
+    "version": "1.6.2",
+    "versionCode": 29,
+    "size": 31372779,
+    "sha256": "39768a1eef52344bb3d044a99b7e0a810570951e5ba132184fc14a46330147ca",
     "signed": true,
-    "published": false,
-    "method": "原发行签名v2/v3，1.6.1/code28、调试关闭，23项前端逐字节匹配；保留数据-r覆盖Success/COLD Status ok，首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常。"
+    "published": true,
+    "method": "原发行签名v2/v3，版本1.6.2/code29、调试关闭；前端逐字节匹配，保留数据-r升级Success/COLD Status ok，UID/首次安装时间不变，回读APK摘要一致，无该进程AndroidRuntime致命异常。"
   },
   "reminder": {
     "lastRemindedItemIds": [
@@ -61,7 +61,7 @@
       "FIX-20261020-047"
     ],
     "lastRemindedOn": "2026-10-20",
-    "userDecision": "用户2026-10-31明确授权先将060/061注音同步与批量时间戳打包发布、上传代码，按1.6.2/code29执行；两端与附件核验完成前保持verified。主题尚未实施，不计本批。"
+    "userDecision": "用户2026-10-31授权的1.6.2源码上传和GitHub/Gitee同APK发行均已核验，060/061已released，待发布0/10。下一批需新的明确授权；达到10项时逐项展示全部verified标题和简述。"
   },
   "items": [
     {
@@ -2892,7 +2892,7 @@
         "无AI或用户WebDAV调用；仅.dev注入原创夹具。",
         "原发行签名v2/v3，1.6.1/code28、调试关闭，23项前端逐字节匹配；保留数据-r覆盖Success/COLD Status ok，首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常。"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-31",
       "completedOn": "2026-10-31",
       "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/reading-sync-20261031",
@@ -2906,9 +2906,23 @@
         "installedOn": "2026-10-31",
         "package": "com.uta.songlearning",
         "signed": true,
-        "published": false,
+        "published": true,
         "method": "原发行签名v2/v3，1.6.1/code28、调试关闭，23项前端逐字节匹配；保留数据-r覆盖Success/COLD Status ok，首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常。"
-      }
+      },
+      "release": {
+        "version": "1.6.2",
+        "versionCode": 29,
+        "commit": "287b5829efedd0499bb58f2f4195bd0e3a352518",
+        "tag": "v1.6.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.2",
+        "asset": "UTA-Android-1.6.2.apk",
+        "size": 31372779,
+        "sha256": "39768a1eef52344bb3d044a99b7e0a810570951e5ba132184fc14a46330147ca",
+        "publishedOn": "2026-10-31",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-31"
     },
     {
       "id": "FEAT-20261031-061",
@@ -2929,7 +2943,7 @@
         "注音同步在最终组合Debug包中复测6项仍通过。",
         "原发行签名v2/v3，1.6.1/code28、调试关闭，23项前端逐字节匹配；保留数据-r覆盖Success/COLD Status ok，首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常。"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-31",
       "completedOn": "2026-10-31",
       "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/reading-sync-20261031",
@@ -2943,9 +2957,23 @@
         "installedOn": "2026-10-31",
         "package": "com.uta.songlearning",
         "signed": true,
-        "published": false,
+        "published": true,
         "method": "原发行签名v2/v3，1.6.1/code28、调试关闭，23项前端逐字节匹配；保留数据-r覆盖Success/COLD Status ok，首次安装时间不变，回读APK摘要一致，无当前进程AndroidRuntime致命异常。"
-      }
+      },
+      "release": {
+        "version": "1.6.2",
+        "versionCode": 29,
+        "commit": "287b5829efedd0499bb58f2f4195bd0e3a352518",
+        "tag": "v1.6.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.2",
+        "asset": "UTA-Android-1.6.2.apk",
+        "size": 31372779,
+        "sha256": "39768a1eef52344bb3d044a99b7e0a810570951e5ba132184fc14a46330147ca",
+        "publishedOn": "2026-10-31",
+        "branch": "android-dev"
+      },
+      "releasedOn": "2026-10-31"
     }
   ]
 }
