@@ -1,7 +1,9 @@
+import { validLyricEnd } from './lyricTiming.js'
 import { PLAYBACK_RATES, LEGACY_FAST_RATES, normalizePlaybackRate } from './playbackRate.js'
 import { DESKTOP_THEME_IDS } from './desktopThemes.js'
 import { DESKTOP_FONT_IDS } from './desktopFonts.js'
 import { validRangePracticeSettings } from './rangePractice.js'
+import { validSingleLineRepeatCount } from './singleLinePlayback.js'
 
 const SIGNATURE = 'UTA-LEARNING-BACKUP\n'
 const VERSION = 1
@@ -28,12 +30,27 @@ function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-function checkState(manifest) {
+function validSongSettings(settings) {
+  if (!isRecord(settings)) return false
+  return Object.values(settings).every(value => isRecord(value)
+    && (value.language == null || ['zh', 'ja', 'ko', 'other'].includes(value.language))
+    && (value.readingStyle == null || ['none', 'hiragana', 'romaji', 'both'].includes(value.readingStyle))
+    && (value.romajiPosition == null || ['above', 'below'].includes(value.romajiPosition))
+    && ['showTranslation', 'showSourceReadings', 'showManualReadings'].every(key => value[key] == null || typeof value[key] === 'boolean')
+    && (value.timeOverrides == null || isRecord(value.timeOverrides)
+      && Object.entries(value.timeOverrides).every(([id, override]) => /^\d+$/.test(id) && Number.isSafeInteger(Number(id))
+        && isRecord(override) && typeof override.text === 'string' && override.text.length <= 1000
+        && Number.isFinite(override.baseStart) && override.baseStart >= 0
+        && Number.isFinite(override.start) && override.start >= 0)))
+}
+
+export function checkState(manifest) {
   if (!isRecord(manifest.progress) || !isRecord(manifest.annotations)
     || !isRecord(manifest.aiReviews) || !isRecord(manifest.sentenceExplanations)) {
     throw new Error('备份中的学习数据格式不正确。')
   }
   const progress = manifest.progress
+  if (progress.songSettings != null && !validSongSettings(progress.songSettings)) throw new Error('备份中的歌曲语言或显示设置格式不正确。')
   if (manifest.artworkOverrides != null && (!isRecord(manifest.artworkOverrides)
     || Object.values(manifest.artworkOverrides).some((item) => !isRecord(item)
       || (item.artworkUrl && !validArtworkUrl(item.artworkUrl))))) {
@@ -54,11 +71,12 @@ function checkState(manifest) {
       || Object.values(progress.lyricEditsBySong).some((lines) => !isRecord(lines)
         || Object.entries(lines).some(([id, edit]) => !/^\d+$/.test(id) || !(typeof edit === 'string' && edit.trim() && edit.length <= 500
           || isRecord(edit) && typeof edit.text === 'string' && edit.text.trim() && edit.text.length <= 500
-          && typeof edit.translation === 'string' && edit.translation.length <= 1000
-          && Number.isFinite(edit.start) && edit.start >= 0)))))
+          && typeof edit.translation === 'string' && edit.translation.length <= 5000
+          && (edit.start == null || Number.isFinite(edit.start) && edit.start >= 0) && validLyricEnd(edit))))))
     || (progress.playbackRate != null && ![...PLAYBACK_RATES, ...LEGACY_FAST_RATES].includes(progress.playbackRate))
     || (progress.rangePracticeSettings != null && !validRangePracticeSettings(progress.rangePracticeSettings))
-    || (progress.readingStyle != null && !['hiragana', 'romaji', 'both'].includes(progress.readingStyle))
+    || (progress.singleLineRepeatCount != null && !validSingleLineRepeatCount(progress.singleLineRepeatCount))
+    || (progress.readingStyle != null && !['none', 'hiragana', 'romaji', 'both'].includes(progress.readingStyle))
     || (progress.hiddenReadings != null && (!isRecord(progress.hiddenReadings)
       || Object.entries(progress.hiddenReadings).some(([key, value]) => !/^.+:\d+:\d+$/.test(key) || value !== true)))
     || (progress.lyricFontSize != null && (!Number.isInteger(progress.lyricFontSize) || progress.lyricFontSize < 14 || progress.lyricFontSize > 40))
@@ -73,7 +91,8 @@ function checkState(manifest) {
     || Object.values(manifest.annotations).some((lines) => !Array.isArray(lines)
       || lines.some((line) => !isRecord(line) || !Number.isSafeInteger(line.id) || !Array.isArray(line.tokens)
         || line.tokens.some((token) => !isRecord(token) || !Number.isSafeInteger(token.index)
-          || typeof token.surface !== 'string' || typeof token.reading !== 'string')))
+          || typeof token.surface !== 'string' || typeof token.reading !== 'string'
+          || ['display_surface', 'source_reading', 'source_pronunciation', 'manual_group_reading', 'manual_reading_mode'].some(key => token[key] != null && typeof token[key] !== 'string'))))
     || Object.values(manifest.sentenceExplanations).some((songEntries) => !isRecord(songEntries)
       || Object.values(songEntries).some((entry) => !isRecord(entry) || typeof entry.text !== 'string'
         || !isRecord(entry.explanation) || typeof entry.explanation.meaning !== 'string'
@@ -103,24 +122,31 @@ function checkState(manifest) {
   if (progress.playbackRate != null) progress.playbackRate = normalizePlaybackRate(progress.playbackRate)
 }
 
-function checkSong(song) {
+export function checkSong(song, nullableAudio = false) {
+  const noAudio = nullableAudio && song?.audio === null && (song.lyricsOnly === true || song.cloudPending === true)
   if (!isRecord(song) || typeof song.id !== 'string' || !song.id.startsWith('local-')
     || typeof song.title !== 'string' || !song.title.trim()
     || typeof song.artist !== 'string' || !Array.isArray(song.lines) || !song.lines.length
-    || !isRecord(song.audio) || typeof song.audio.name !== 'string'
+    || !noAudio && (!isRecord(song.audio) || typeof song.audio.name !== 'string'
     || typeof song.audio.type !== 'string' || !Number.isSafeInteger(song.audio.size)
-    || song.audio.size <= 0 || !Number.isSafeInteger(song.audio.offset) || song.audio.offset < 0) {
+    || song.audio.size <= 0 || !Number.isSafeInteger(song.audio.offset) || song.audio.offset < 0)) {
     throw new Error('备份中有无效的歌曲或音频资料。')
   }
   if (song.lines.length > 2000 || song.lines.some((line) => !isRecord(line)
     || !Number.isSafeInteger(line.id) || typeof line.text !== 'string' || !line.text.trim() || line.text.length > 500
-    || !Number.isFinite(line.start) || line.start < 0 || typeof line.translation !== 'string' || line.translation.length > 1000
+    || !(line.start === null || Number.isFinite(line.start) && line.start >= 0) || !validLyricEnd(line) || typeof line.translation !== 'string' || line.translation.length > 1000
     || (line.romaji != null && (typeof line.romaji !== 'string' || line.romaji.length > 1000))
     || (line.sourceReadings != null && (!Array.isArray(line.sourceReadings) || line.sourceReadings.length > 250
       || line.sourceReadings.some(hint => !isRecord(hint) || !Number.isSafeInteger(hint.start) || !Number.isSafeInteger(hint.end)
         || hint.start < 0 || hint.end > line.text.length || hint.end <= hint.start || typeof hint.reading !== 'string' || hint.reading.length > 100))))
     || new Set(song.lines.map((line) => line.id)).size !== song.lines.length) {
     throw new Error('备份中的歌词格式不正确。')
+  }
+  if (noAudio && song.cloudPending) {
+    const ref = song.cloudAudio
+    if (song.lyricsOnly || !ref || !/^[a-f0-9]{64}$/.test(ref.sha256) || ref.name !== `_uta-audio-${ref.sha256}.bin`
+      || !Number.isSafeInteger(ref.size) || ref.size <= 0 || ref.size > 500 * 1024 * 1024
+      || typeof ref.type !== 'string' || typeof ref.origin !== 'string') throw new Error('待下载音频引用无效。')
   }
   for (const field of ['artworkUrl', 'artworkSourceUrl']) {
     if (song[field] && (field === 'artworkUrl' ? !validArtworkUrl(song[field])
@@ -134,14 +160,18 @@ export function createLearningBackup(songs, state) {
   const audioParts = []
   let offset = 0
   const songEntries = songs.map(({ audioBlob, ...song }) => {
-    if (!(audioBlob instanceof Blob) || !audioBlob.size) throw new Error(`《${song.title || '未命名歌曲'}》缺少音频，无法完整备份。`)
+    if (!(audioBlob instanceof Blob) || !audioBlob.size) {
+      if (song.lyricsOnly === true || song.cloudPending === true) return { ...song, audio: null }
+      throw new Error(`《${song.title || '未命名歌曲'}》缺少音频，无法完整备份。`)
+    }
     const audio = { name: song.audioName || 'audio', type: audioBlob.type || '', size: audioBlob.size, offset }
     offset += audioBlob.size
     audioParts.push(audioBlob)
     return { ...song, audio }
   })
   const manifest = {
-    version: VERSION,
+    // Local v2 supports lyric-only / pending audio records. Ordinary v1 stays byte-compatible.
+    version: songEntries.some(song => song.audio === null || song.lines.some(line => line.start === null)) ? 2 : VERSION,
     createdAt: new Date().toISOString(),
     progress: { ...state.progress },
     annotations: state.annotations,
@@ -151,7 +181,7 @@ export function createLearningBackup(songs, state) {
     songs: songEntries,
   }
   checkState(manifest)
-  songEntries.forEach(checkSong)
+  songEntries.forEach(song => checkSong(song, manifest.version === 2))
   const metadata = encoder.encode(JSON.stringify(manifest))
   if (metadata.byteLength > MAX_MANIFEST_BYTES) throw new Error('备份资料过大，无法生成文件。')
   const length = new Uint8Array(4)
@@ -175,7 +205,7 @@ export async function inspectLearningBackup(file) {
   } catch {
     throw new Error('无法读取备份资料，文件可能已损坏。')
   }
-  if (!isRecord(manifest) || manifest.version !== VERSION || !Array.isArray(manifest.songs)
+  if (!isRecord(manifest) || ![VERSION, 2].includes(manifest.version) || !Array.isArray(manifest.songs)
     || typeof manifest.createdAt !== 'string' || Number.isNaN(Date.parse(manifest.createdAt))) {
     throw new Error('不支持此备份版本。')
   }
@@ -187,10 +217,10 @@ export async function inspectLearningBackup(file) {
   const ids = new Set()
   let audioBytes = 0
   for (const song of manifest.songs) {
-    checkSong(song)
-    if (ids.has(song.id) || song.audio.offset !== audioBytes) throw new Error('备份中的歌曲或音频顺序不正确。')
+    checkSong(song, manifest.version === 2)
+    if (ids.has(song.id) || song.audio && song.audio.offset !== audioBytes) throw new Error('备份中的歌曲或音频顺序不正确。')
     ids.add(song.id)
-    audioBytes += song.audio.size
+    audioBytes += song.audio?.size || 0
   }
   const audioStart = prefixSize + metadataLength
   if (audioStart + audioBytes !== file.size) throw new Error('备份音频不完整，文件可能已损坏。')
@@ -202,7 +232,7 @@ export function songsFromLearningBackup(inspection) {
   return manifest.songs.map(({ audio, ...song }) => ({
     ...song,
     isLocal: true,
-    audioName: audio.name,
-    audioBlob: file.slice(audioStart + audio.offset, audioStart + audio.offset + audio.size, audio.type),
+    audioName: audio?.name || song.audioName || '',
+    audioBlob: audio ? file.slice(audioStart + audio.offset, audioStart + audio.offset + audio.size, audio.type) : null,
   }))
 }

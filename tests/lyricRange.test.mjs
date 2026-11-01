@@ -28,3 +28,10 @@ test('audio length clamps the range while invalid timestamps and stale IDs fail 
   assert.match(lyricRangeBounds([{id:0,start:2},{id:1,start:1}],0,1,5).error,/时间戳无效/)
   assert.equal(lyricRangeBounds(lines,999,21,6),null)
 })
+
+test('a selected range uses the last selected sentence manual end without shifting its start', () => {
+  const custom = lines.map(line => line.id === 35 ? { ...line, end: 3.6 } : line)
+  const range = lyricRangeBounds(custom, 21, 35, 6)
+  assert.equal(range.start, 1); assert.equal(range.end, 3.6)
+  assert.equal(lyricRangeBounds(custom, 21, 35, 3).end, 3)
+})

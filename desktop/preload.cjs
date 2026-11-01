@@ -2,6 +2,12 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('utaDesktop', Object.freeze({
   platform: 'windows',
+  webDav: (action, payload) => ipcRenderer.invoke('uta:webdav', action, payload),
+  onWebDavProgress: callback => {
+    const listener = (_event, value) => callback(value);
+    ipcRenderer.on('uta:webdav:progress', listener);
+    return () => ipcRenderer.removeListener('uta:webdav:progress', listener);
+  },
   packaged: !process.defaultApp,
   applyTheme: (colors) => ipcRenderer.invoke('uta:theme:apply', colors),
   openMenu: (name) => ipcRenderer.invoke('uta:menu', name),

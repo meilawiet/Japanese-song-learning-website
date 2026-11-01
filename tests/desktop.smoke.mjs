@@ -230,6 +230,8 @@ try {
   assert.equal(await lyricRows.first().locator('.lyric-token').first().locator('rt').count(),0)
   assert.deepEqual(await lyricRows.first().locator('.token-reading-surface').allTextContents().then(items=>items.slice(0,2)),['学','校'])
   assert.ok(Object.values(await page.evaluate(()=>JSON.parse(localStorage.getItem('uta-pronunciation-progress-v2')).hiddenReadings)).includes(true))
+  // Word details now open only after an explicit word selection.
+  await lyricRows.first().locator('.lyric-token').first().click()
   for (const [width,height] of [[1024,768], [1440,960]]) {
     await client.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setSize(...size), [width,height])
     await page.waitForTimeout(250)

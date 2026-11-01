@@ -14,6 +14,7 @@ import DesktopAboutSettings from './DesktopAboutSettings'
 import DesktopLyricSourcesPanel from './DesktopLyricSourcesPanel'
 import DesktopFontSettings from './DesktopFontSettings'
 import DesktopGeneralSettings from './DesktopGeneralSettings'
+import DesktopCrossPlatformPanel from './DesktopCrossPlatformPanel'
 import { DEFAULT_DESKTOP_FONT } from '../lib/desktopFonts'
 
 const previewTokens = [
@@ -23,21 +24,23 @@ const previewTokens = [
   { index: 3, surface: '。', reading: '', is_symbol: true },
 ]
 
-export default function SettingsDialog({ onClose, onExport, onRestore, onCloudExport, updates, backupBusy, backupError, readingStyle = 'hiragana', onReadingStyleChange, lyricFontSize = DEFAULT_LYRIC_FONT_SIZE, onLyricFontSizeChange, readingFontSize = DEFAULT_READING_FONT_SIZE, onReadingFontSizeChange, lineReadingFontSize = DEFAULT_LINE_READING_FONT_SIZE, onLineReadingFontSizeChange, translationFontSize = DEFAULT_TRANSLATION_FONT_SIZE, onTranslationFontSizeChange, desktopTheme = DEFAULT_DESKTOP_THEME, onDesktopThemeChange, desktopFont = DEFAULT_DESKTOP_FONT, onDesktopFontChange, initialTab = 'data', updateDrop, onUpdateDropHandled }) {
+export default function SettingsDialog({ onClose, onExport, onRestore, onCloudExport, onCrossCollect, onCrossRestore, onCrossAudioReady, updates, backupBusy, backupError, readingStyle = 'hiragana', onReadingStyleChange, lyricFontSize = DEFAULT_LYRIC_FONT_SIZE, onLyricFontSizeChange, readingFontSize = DEFAULT_READING_FONT_SIZE, onReadingFontSizeChange, lineReadingFontSize = DEFAULT_LINE_READING_FONT_SIZE, onLineReadingFontSizeChange, translationFontSize = DEFAULT_TRANSLATION_FONT_SIZE, onTranslationFontSizeChange, desktopTheme = DEFAULT_DESKTOP_THEME, onDesktopThemeChange, desktopFont = DEFAULT_DESKTOP_FONT, onDesktopFontChange, initialTab = 'data', updateDrop, onUpdateDropHandled }) {
   const isDesktop = Boolean(globalThis.window?.utaDesktop)
   const canUpdateDesktop = isDesktop && window.utaDesktop.packaged
   const [tab, setTab] = useState(() => isDesktop && ['reading', 'fonts'].includes(initialTab) ? 'theme'
     : isDesktop && initialTab === 'update' ? 'about'
     : Capacitor.isNativePlatform() && initialTab === 'reading' ? 'data' : initialTab)
   const [sourcesDirty, setSourcesDirty] = useState(false)
+  const [crossBusy, setCrossBusy] = useState(false)
   const handledDrop = useRef(null)
   useEffect(() => {
+    if (crossBusy) return
     if (!updateDrop || handledDrop.current === updateDrop) return
     handledDrop.current = updateDrop
     if (!sourcesDirty || window.confirm('歌词源配置尚未保存，确定放弃修改并打开更新页面吗？')) setTab('about')
     else onUpdateDropHandled?.()
-  }, [updateDrop])
-  const confirmLeaveSources = () => !sourcesDirty || window.confirm('歌词源配置尚未保存，确定放弃修改吗？')
+  }, [updateDrop, crossBusy])
+  const confirmLeaveSources = () => !crossBusy && (!sourcesDirty || window.confirm('歌词源配置尚未保存，确定放弃修改吗？'))
   const closeSettings = () => { if (confirmLeaveSources()) onClose() }
   const changeTab = value => { if (value !== tab && confirmLeaveSources()) setTab(value) }
   const [draft, setDraft] = useState(loadAiSettings)
@@ -143,9 +146,9 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
     <section className="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabIndex={-1} ref={dialogRef} onClick={(event) => event.stopPropagation()}>
       <header className="settings-heading"><div><p className="eyebrow">MAKE IT YOURS</p><h2 id="settings-title">设置</h2><p>{isDesktop ? '调整阅读、字体与主题，管理学习数据、歌词源和 AI 服务。' : '管理学习数据，连接你的 AI 服务。'}</p></div><button type="button" className="settings-close" onClick={closeSettings} aria-label="关闭设置"><X size={21} /></button></header>
       {/* Windows 将配色、字体与注音集中到主题设置；网页与安卓保留各自入口。 */}
-      <div className="settings-tabs" aria-label="设置分类">{isDesktop && <button type="button" aria-pressed={tab === 'general'} onClick={() => changeTab('general')}><Settings size={17} /> 常规设置</button>}{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => changeTab('profile')}><UserRound size={17} /> 个人资料</button> : !isDesktop && <button type="button" aria-pressed={tab === 'reading'} onClick={() => changeTab('reading')}><Languages size={17} /> 注音显示</button>}{isDesktop && <button type="button" aria-pressed={tab === 'theme'} onClick={() => changeTab('theme')}><Palette size={17} /> 主题设置</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => changeTab('data')}><Database size={17} /> 数据管理</button><button type="button" aria-pressed={tab === 'ai'} onClick={() => changeTab('ai')}><KeyRound size={17} /> AI 服务</button>{isDesktop && <button type="button" aria-pressed={tab === 'sources'} onClick={() => changeTab('sources')}><Search size={17}/> 歌词源</button>}{isDesktop && <button type="button" aria-pressed={tab === 'about'} onClick={() => changeTab('about')}><Info size={17}/> 关于</button>}{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>changeTab('about')}>关于</button>}</div>
+      <div className="settings-tabs" aria-label="设置分类">{isDesktop && <button type="button" aria-pressed={tab === 'general'} onClick={() => changeTab('general')}><Settings size={17} /> 常规设置</button>}{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => changeTab('profile')}><UserRound size={17} /> 个人资料</button> : !isDesktop && <button type="button" aria-pressed={tab === 'reading'} onClick={() => changeTab('reading')}><Languages size={17} /> 注音显示</button>}{isDesktop && <button type="button" aria-pressed={tab === 'theme'} onClick={() => changeTab('theme')}><Palette size={17} /> 主题设置</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => changeTab('data')}><Database size={17} /> 数据管理</button>{isDesktop && <button type="button" aria-pressed={tab === 'cross'} onClick={() => changeTab('cross')}><Database size={17}/> 跨端互通</button>}<button type="button" aria-pressed={tab === 'ai'} onClick={() => changeTab('ai')}><KeyRound size={17} /> AI 服务</button>{isDesktop && <button type="button" aria-pressed={tab === 'sources'} onClick={() => changeTab('sources')}><Search size={17}/> 歌词源</button>}{isDesktop && <button type="button" aria-pressed={tab === 'about'} onClick={() => changeTab('about')}><Info size={17}/> 关于</button>}{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>changeTab('about')}>关于</button>}</div>
 
-      {tab === 'about' && isAndroid ? <AboutPanel updates={updates}/> : tab === 'about' && isDesktop ? <DesktopAboutSettings canUpdate={canUpdateDesktop} updateDrop={updateDrop} onUpdateDropHandled={onUpdateDropHandled}/> : tab === 'sources' && isDesktop ? <DesktopLyricSourcesPanel onDirtyChange={setSourcesDirty}/> : tab === 'profile' && isAndroid ? <div className="settings-content"><ProfilePanel editable /></div> : tab === 'reading' && !isAndroid ? readingSettings : tab === 'general' && isDesktop ? <DesktopGeneralSettings/> : tab === 'theme' && isDesktop ? <div className="settings-content desktop-theme-settings desktop-appearance-settings">
+      {tab === 'cross' && isDesktop ? <DesktopCrossPlatformPanel onCollect={onCrossCollect} onRestore={onCrossRestore} onAudioReady={onCrossAudioReady} onBusyChange={setCrossBusy} externalBusy={Boolean(backupBusy)}/> : tab === 'about' && isAndroid ? <AboutPanel updates={updates}/> : tab === 'about' && isDesktop ? <DesktopAboutSettings canUpdate={canUpdateDesktop} updateDrop={updateDrop} onUpdateDropHandled={onUpdateDropHandled}/> : tab === 'sources' && isDesktop ? <DesktopLyricSourcesPanel onDirtyChange={setSourcesDirty}/> : tab === 'profile' && isAndroid ? <div className="settings-content"><ProfilePanel editable /></div> : tab === 'reading' && !isAndroid ? readingSettings : tab === 'general' && isDesktop ? <DesktopGeneralSettings/> : tab === 'theme' && isDesktop ? <div className="settings-content desktop-theme-settings desktop-appearance-settings">
         <h3>应用主题色</h3><p className="settings-description">选择一套配色，让学习界面更合你的心意。</p>
         <div className="desktop-theme-grid" aria-label="应用主题色">{DESKTOP_THEMES.map(theme => <button key={theme.id} type="button" className="desktop-theme-card" data-theme-card={theme.id} aria-pressed={desktopTheme === theme.id} onClick={() => onDesktopThemeChange(theme.id)} style={{ '--swatch-bg': theme.colors.surface, '--swatch-accent': theme.colors.accent, '--swatch-soft': theme.colors.soft }}>
           <span className="desktop-theme-swatches" aria-hidden="true"><i/><i/><i/></span><b>{theme.name}</b><small>{theme.description}</small>{desktopTheme === theme.id && <Check className="desktop-theme-check" size={16} aria-hidden="true"/>}

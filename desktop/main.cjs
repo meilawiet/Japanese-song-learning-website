@@ -10,6 +10,7 @@ const { lyricRequest, createLyricsClient } = require('./lyricNetwork.cjs');
 const { LyricSourceStore } = require('./lyricSources.cjs');
 const { registerUpdateHandlers } = require('./updateRuntime.cjs');
 const { WindowCloseController } = require('./windowClose.cjs');
+const { DesktopWebDav } = require('./webDav.cjs');
 
 const appRoot = path.resolve(__dirname, '..');
 const home = app.isPackaged ? path.dirname(process.execPath) : appRoot;
@@ -37,6 +38,14 @@ const requestLyricContent = createLyricsClient(fetch);
 const trustedSnapshotCaller = event => {
   if (event.sender !== mainWindow?.webContents || !event.senderFrame?.url.startsWith(APP_ORIGIN + '/')) throw new Error('Forbidden');
 };
+const webDav = new DesktopWebDav({ dataDir, safeStorage, progress: value => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('uta:webdav:progress', value);
+} });
+const webDavReady = webDav.initialize();
+ipcMain.handle('uta:webdav', async (event, action, payload) => {
+  trustedSnapshotCaller(event); await webDavReady;
+  return webDav.invoke(action, payload);
+});
 ipcMain.handle('uta:lyrics:request', async (event, payload) => {
   trustedSnapshotCaller(event);
   try {

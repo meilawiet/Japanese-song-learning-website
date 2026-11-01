@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { displayReading, lineReading, normalizeReadingStyle, normalizeTranslationFontSize } from '../src/lib/readingDisplay.js'
+import { displayReading, lineReading, normalizeReadingStyle, normalizeTranslationFontSize, tokenReading, tokenHasManualReading, lyricSurface } from '../src/lib/readingDisplay.js'
 
 test('default and unknown settings preserve the existing reading', () => {
   for (const style of [undefined, null, 'broken', 'hiragana']) {
@@ -58,4 +58,28 @@ test('line display respects corrections, skips symbols, and never mutates saved 
   assert.equal(lineReading(tokens, corrections, 'song', 0, 'hiragana'), 'きみ は うたう')
   assert.equal(lineReading(undefined, {}, 'song', 0, 'romaji'), '')
   assert.equal(JSON.stringify({ tokens, corrections }), before)
+})
+
+test('explicit empty and literal manual readings survive display without dictionary fallback or romanization', () => {
+  const token = { index: 0, surface: '空', reading: 'そら' }
+  const corrections = { 'local-song:10:0': '' }
+  assert.equal(tokenHasManualReading(token, corrections, 'local-song:10:0'), true)
+  assert.equal(tokenReading(token, corrections, 'local-song:10:0'), '')
+  assert.equal(lineReading([token], corrections, 'local-song', 10, 'romaji'), '')
+  assert.equal(tokenReading(token, {}, 'local-song:10:0'), 'そら')
+  assert.equal(displayReading('あいう', 'romaji', { manual_reading_mode: 'literal' }), 'あいう')
+  assert.equal(displayReading('あいう', 'hiragana', { manual_reading_mode: 'literal' }), 'あいう')
+})
+
+test('Android source pronunciation, whole-group readings, written particles and display surfaces keep their priorities', () => {
+  const source = { index: 0, surface: '近づく', display_surface: '近づく', reading: 'ちかづく', source_reading: 'ちかづく', source_pronunciation: 'ちかずく' }
+  assert.equal(lyricSurface(source), '近づく')
+  assert.equal(tokenReading(source, {}, 's:0:0', 'romaji'), 'ちかずく')
+  assert.equal(lineReading([source], {}, 's', 0, 'romaji'), 'chikazuku')
+  assert.equal(lineReading([source], {}, 's', 0, 'hiragana'), 'ちかづく')
+  const manual = { ...source, manual_group_reading: 'あす' }
+  assert.equal(tokenReading(manual, { 's:0:0': 'あした' }, 's:0:0', 'romaji'), 'あす')
+  assert.equal(tokenReading(manual, {}, 's:0:0', 'hiragana', { showManualReadings: false }), '')
+  assert.equal(tokenReading(source, {}, 's:0:0', 'hiragana', { showSourceReadings: false }), '')
+  assert.equal(tokenReading({ surface: 'へ', reading: 'へ', part_of_speech: '助詞', source_reading: 'え' }, {}, 's:0:0'), 'へ')
 })

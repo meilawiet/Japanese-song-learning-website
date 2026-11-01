@@ -23,7 +23,12 @@ export async function restoreCloudData(inspection) {
     await replaceLyricChats(extras.chats)
     // 原来只要有密钥就永久保存；恢复时保留用户原先的记住密钥选择。
     // if(extras.ai) await saveAiSettings({...extras.ai,api_key:extras.ai.api_key||'',rememberKey:Boolean(extras.ai.api_key)})
-    if(extras.ai) await saveAiSettings({...extras.ai,api_key:extras.ai.api_key||'',rememberKey:Boolean(extras.ai.rememberKey)&&Boolean(extras.ai.api_key)})
+    // A local recovery snapshot never exports an API key. An interrupted restore
+    // keeps the original settings in a separate Windows-encrypted recovery slot.
+    const recoveryAi = extras.desktopRecovery?.keepAi && globalThis.window?.utaDesktop
+      ? await window.utaDesktop.webDav('loadRecoveryAi') : null
+    if (recoveryAi) await saveAiSettings(recoveryAi)
+    else if(extras.ai && !extras.desktopRecovery?.keepAi) await saveAiSettings({...extras.ai,api_key:extras.ai.api_key||'',rememberKey:Boolean(extras.ai.rememberKey)&&Boolean(extras.ai.api_key)})
     for(const [field,key] of [['learn','uta-recent-learn-v1'],['sing','uta-recent-sing-v1']]) {const value=extras.recent?.[field];if(typeof value==='string')localStorage.setItem(key,value);else localStorage.removeItem(key)}
   }
   try {

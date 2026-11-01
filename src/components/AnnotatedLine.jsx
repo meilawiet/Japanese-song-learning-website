@@ -1,11 +1,11 @@
 import { hasKanji, splitRuby } from '../lib/ruby'
-import { displayReading } from '../lib/readingDisplay'
+import { displayReading, lyricSurface, tokenReading, tokenHasManualReading } from '../lib/readingDisplay'
 import ReadingLyric from './ReadingLyric'
 import WordReading from './WordReading'
 
 export default function AnnotatedLine({
   tokens,
-  corrections,
+  corrections = {},
   hiddenReadings = {},
   fallbackText = '',
   songId,
@@ -22,11 +22,12 @@ export default function AnnotatedLine({
   onExplainSelection,
   interactive = true,
   wordAlignedReadings = false,
+  readingOptions = {},
 }) {
   if (!tokens?.length) return <span className="auto-lyric loading-lyric">{fallbackText || '正在生成自动读音…'}</span>
 
   // 安卓逐句取消旧选词/拖选入口，静态注音仍使用同一人工校正数据；整句点击由父层播放。
-  if (!interactive) return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>{mode === 'reading' ? <ReadingLyric tokens={tokens} corrections={corrections} songId={songId} lineId={lineId} readingStyle={readingStyle} /> : tokens.map(token => token.surface).join('')}</span>
+  if (!interactive) return <span className={`auto-lyric ${readingStyle === 'romaji' ? 'romaji' : ''}`}>{mode === 'reading' ? <ReadingLyric tokens={tokens} corrections={corrections} songId={songId} lineId={lineId} readingStyle={readingStyle} readingOptions={readingOptions} /> : tokens.map(lyricSurface).join('')}</span>
 
   const wordAligned = wordAlignedReadings && mode === 'reading'
     && tokens.some(token => /[^\x00-\x7F]/.test(token.surface) && !token.is_symbol)
@@ -34,9 +35,12 @@ export default function AnnotatedLine({
     {tokens.map((token) => {
       const key = `${songId}:${lineId}:${token.index}`
       if (token.is_symbol) return <span className="lyric-symbol" key={key}>{wordAligned ? <WordReading token={token} /> : token.surface}</span>
-      const reading = corrections[key] || token.reading
-      const ruby = splitRuby(token.surface, reading)
-      const annotatable = hasKanji(token.surface)
+      const surface = lyricSurface(token)
+      const corrected = tokenHasManualReading(token, corrections, key)
+      const reading = tokenReading(token, corrections, key, 'hiragana', readingOptions)
+      const rubyReading = tokenReading(token, corrections, key, readingStyle === 'romaji' ? 'romaji' : 'hiragana', readingOptions)
+      const ruby = splitRuby(surface, rubyReading)
+      const annotatable = hasKanji(surface)
       const isSelected = selectedIndex === token.index
       const isInRange = selectionRange
         && token.index >= Math.min(selectionRange.startIndex, selectionRange.endIndex)
@@ -50,9 +54,9 @@ export default function AnnotatedLine({
         onStartSelection?.(token.index)
       }} onPointerEnter={(event) => {
         if (event.buttons & 1) onExtendSelection?.(token.index)
-      }} onPointerUp={() => onFinishSelection?.()} onClick={(event) => { event.stopPropagation(); onSelectToken(token.index) }} aria-label={`${token.surface}，读音 ${displayReading(reading, readingStyle === 'both' ? 'hiragana' : readingStyle, token, Boolean(corrections[key]))}${hiddenReadings[key] ? '，注音已隐藏' : ''}`}>
-        {wordAligned ? <WordReading token={token} reading={reading} hidden={Boolean(hiddenReadings[key])} corrected={Boolean(corrections[key])} /> : <>
-          {annotatable && mode === 'reading' && !hiddenReadings[key] ? <ruby>{ruby.base}<rt lang={readingStyle === 'romaji' ? 'ja-Latn' : 'ja'}>{readingStyle === 'both' ? <span className="ruby-both"><span>{displayReading(ruby.ruby, 'hiragana')}</span><span lang="ja-Latn">{displayReading(ruby.ruby, 'romaji')}</span></span> : displayReading(ruby.ruby, readingStyle)}</rt></ruby> : annotatable ? ruby.base : token.surface}
+      }} onPointerUp={() => onFinishSelection?.()} onClick={(event) => { event.stopPropagation(); onSelectToken(token.index, event) }} aria-label={`${surface}，读音 ${displayReading(reading, readingStyle === 'both' ? 'hiragana' : readingStyle, token, corrected || token.source_reading != null)}${hiddenReadings[key] ? '，注音已隐藏' : ''}`}>
+        {wordAligned ? <WordReading token={token} reading={reading} hidden={Boolean(hiddenReadings[key])} corrected={corrected} readingOptions={readingOptions} /> : <>
+          {annotatable && mode === 'reading' && ruby.ruby && !hiddenReadings[key] ? <ruby>{ruby.base}<rt lang={readingStyle === 'romaji' ? 'ja-Latn' : 'ja'}>{readingStyle === 'both' ? <span className="ruby-both"><span>{displayReading(ruby.ruby, 'hiragana', token, corrected || token.source_reading != null)}</span><span lang="ja-Latn">{displayReading(ruby.ruby, 'romaji', token, corrected || token.source_reading != null)}</span></span> : displayReading(ruby.ruby, readingStyle, token, corrected || token.source_reading != null)}</rt></ruby> : annotatable ? ruby.base : surface}
           {annotatable ? ruby.suffix : ''}
         </>}
       </button>

@@ -3,6 +3,7 @@ const path = require('node:path');
 const { randomBytes } = require('node:crypto');
 
 const PREFIX = Buffer.from('UTA-LEARNING-BACKUP\n');
+const CLOUD_PREFIX = Buffer.from('UTA-CLOUD-BACKUP\n');
 const SNAPSHOT_NAME = /^UTA-before-restore-[\dTZ-]+-[a-f0-9]{16}\.uta-backup$/;
 
 class RestoreSnapshotStore {
@@ -10,6 +11,7 @@ class RestoreSnapshotStore {
     this.directory = path.resolve(dataDir, 'backups', 'restore-snapshots');
     this.keep = keep;
     this.sessions = new Map();
+    this.recoveryFile = path.join(dataDir, 'cross-platform-restore.json');
   }
   async begin() {
     await fs.mkdir(this.directory, { recursive: true });
@@ -28,7 +30,8 @@ class RestoreSnapshotStore {
     if (!(data instanceof ArrayBuffer) && !ArrayBuffer.isView(data)) throw new Error('无效快照数据。');
     const bytes = data instanceof ArrayBuffer ? Buffer.from(data) : Buffer.from(data.buffer, data.byteOffset, data.byteLength);
     if (!bytes.length || bytes.length > 4 * 1024 * 1024) throw new Error('无效快照分块。');
-    if (!session.size && !bytes.subarray(0, PREFIX.length).equals(PREFIX)) throw new Error('无效学习快照。');
+    if (!session.size && !bytes.subarray(0, PREFIX.length).equals(PREFIX)
+      && !bytes.subarray(0, CLOUD_PREFIX.length).equals(CLOUD_PREFIX)) throw new Error('无效学习快照。');
     await session.handle.writeFile(bytes);
     session.size += bytes.length;
   }
@@ -44,7 +47,9 @@ class RestoreSnapshotStore {
     // just-published file even if two snapshots share the same millisecond.
     try {
       const entries = await fs.readdir(this.directory, { withFileTypes: true });
-      const snapshots = entries.filter(entry => entry.isFile() && SNAPSHOT_NAME.test(entry.name) && entry.name !== session.name)
+      let protectedName;
+      try { protectedName = JSON.parse(await fs.readFile(this.recoveryFile, 'utf8')).name; } catch { /* No interrupted restore. */ }
+      const snapshots = entries.filter(entry => entry.isFile() && SNAPSHOT_NAME.test(entry.name) && entry.name !== session.name && entry.name !== protectedName)
         .map(entry => entry.name).sort().reverse();
       for (const name of snapshots.slice(this.keep - 1)) {
         const target = path.resolve(this.directory, name);

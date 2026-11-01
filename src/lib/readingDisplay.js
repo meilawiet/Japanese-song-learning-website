@@ -46,6 +46,9 @@ const customRomajiMapping = {
 // corrections. Non-kana characters in mixed readings are left untouched.
 export function displayReading(value, style = 'hiragana', token = null, corrected = false) {
   const reading = String(value || '')
+  // Android's literal manual annotations are already display text, even when
+  // they contain kana. Converting them would silently change user intent.
+  if (token?.manual_reading_mode === 'literal') return reading
   if (normalizeReadingStyle(style) !== 'romaji') return reading
   if (!corrected && token?.part_of_speech?.split('・')[0] === '助詞') {
     const particles = { は: 'wa', へ: 'e', を: 'o' }
@@ -60,9 +63,38 @@ export function displayReading(value, style = 'hiragana', token = null, correcte
   })
 }
 
+export function lyricSurface(token) {
+  return typeof token?.display_surface === 'string' ? token.display_surface : token?.surface || ''
+}
+
+export function tokenHasManualReading(token, corrections = {}, key) {
+  return token?.manual_group_reading != null || Object.hasOwn(corrections, key)
+}
+
+// A present empty correction means "no annotation". Keep that distinct from
+// missing data, and preserve the Android priority of whole-group corrections.
+export function tokenReading(token, corrections = {}, key, style = 'hiragana', options = {}) {
+  if (tokenHasManualReading(token, corrections, key)) {
+    if (options.showManualReadings === false) return ''
+    return token.manual_group_reading ?? corrections[key]
+  }
+  if (token?.source_reading != null) {
+    if (options.showSourceReadings === false) return ''
+    const source = style === 'romaji' ? token.source_pronunciation ?? token.source_reading : token.source_reading
+    // Preserve written particle kana while romanization uses source pronunciation.
+    if (style !== 'romaji' && token.part_of_speech?.split('・')[0] === '助詞') {
+      const surface = lyricSurface(token)
+      if (({ は: ['は', 'わ'], へ: ['へ', 'え'], を: ['を', 'お'] })[surface]?.includes(source)) return surface
+    }
+    return source
+  }
+  return token?.reading ?? ''
+}
+
 export function lineReading(tokens, corrections, songId, lineId, style = 'hiragana') {
   return tokens?.filter((token) => !token.is_symbol).map((token) => {
-    const correction = corrections[correctionKey(songId, lineId, token.index)]
-    return displayReading(correction || token.reading, style, token, Boolean(correction))
+    const key = correctionKey(songId, lineId, token.index)
+    const manual = tokenHasManualReading(token, corrections, key)
+    return displayReading(tokenReading(token, corrections, key, style), style, token, manual || token.source_reading != null)
   }).filter(Boolean).join(' ') || ''
 }

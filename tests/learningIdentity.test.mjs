@@ -102,3 +102,17 @@ test('browser-local mastery and import-time AI cache survive first loading witho
   assert.deepEqual(result.progress.learnedBySong[local.id], [0, 1])
   assert.deepEqual(result.sentenceExplanations[local.id], saved.sentenceExplanations[local.id])
 })
+
+test('minimal cross-platform review entries gain text only for a confirmed song and stable line ID', () => {
+  const local = { ...song, id: 'local-stable', isLocal: true }
+  const saved = state(local.id)
+  saved.progress.lyricSnapshots = { [local.id]: lyricSnapshot(local) }
+  saved.progress.reviewItems = [{ songId: local.id, lineId: 1, custom: 'preserve' }, { songId: 'local-unavailable', lineId: 55 }]
+  const result = reconcileLearningState([local], saved)
+  assert.deepEqual(result.progress.reviewItems, [
+    { songId: local.id, lineId: 1, custom: 'preserve', text: local.lines[1].text }, { songId: 'local-unavailable', lineId: 55 },
+  ])
+  assert.equal(saved.progress.reviewItems[0].text, undefined, 'do not mutate the input snapshot')
+  const changed = { ...local, lines: [local.lines[0], { ...local.lines[1], text: '新原文' }] }
+  assert.deepEqual(reconcileLearningState([changed], saved).progress.reviewItems, [{ songId: 'local-unavailable', lineId: 55 }])
+})

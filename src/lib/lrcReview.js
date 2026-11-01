@@ -50,7 +50,9 @@ export function insertLrcCue(cues, index) {
   return [...cues.slice(0, index), cue, ...cues.slice(index)]
 }
 
-export function compileLrcCues(cues) {
+export function compileLrcCues(cues, { mode = 'import' } = {}) {
+  const saved = mode === 'saved'
+  const cueText = cue => saved ? String(cue.text || '').trim() : String(cue.text || '').trim().replace(/\s+/gu, ' ')
   const lines = [], issues = []
   let previousStart = null
   const byCue = new Map()
@@ -58,16 +60,17 @@ export function compileLrcCues(cues) {
   for (const [index, cue] of (cues || []).entries()) {
     if (!TRACKS.has(cue.track)) { issues.push({ cueId: cue.id, kind: 'error', message: '请选择文字轨道。' }); continue }
     if (cue.track === 'ignore') continue
-    const text = String(cue.text || '').trim().replace(/\s+/gu, ' ')
+    const text = cueText(cue)
     const start = parseLrcTime(cue.timeText)
-    if (start == null) issues.push({ cueId: cue.id, kind: 'error', message: `第 ${index + 1} 行时间戳无效，请使用 00:12.345。` })
+    if (start == null && (!saved || String(cue.timeText || '').trim())) issues.push({ cueId: cue.id, kind: 'error', message: `第 ${index + 1} 行时间戳无效，请使用 00:12.345。` })
     if (!text) issues.push({ cueId: cue.id, kind: 'error', message: `第 ${index + 1} 行没有文字。` })
-    if (text.length > 500) issues.push({ cueId: cue.id, kind: 'error', message: `第 ${index + 1} 行超过 500 字。` })
+    const limit = saved && cue.track !== 'original' ? 1000 : 500
+    if (text.length > limit) issues.push({ cueId: cue.id, kind: 'error', message: `第 ${index + 1} 行超过 ${limit} 字。` })
     if (cue.track === 'original') {
       if (start != null && previousStart != null && start < previousStart && !cue.reviewed) issues.push({ cueId: cue.id, kind: 'review', message: '原文时间戳早于前一句，请检查顺序。' })
       if (start != null && originalStarts.has(start) && !cue.reviewed) issues.push({ cueId: cue.id, kind: 'review', message: '两句原文使用相同时间戳，请确认。' })
       if (start != null) { previousStart = start; originalStarts.add(start) }
-      const source = extractSourceKana(text)
+      const source = saved ? { text, readings: [] } : extractSourceKana(text)
       const current = { start, text: source.text, translation: '', romaji: cue.romaji || '', sourceId: cue.id,
         ...(source.readings.length ? { sourceReadings: source.readings } : {}) }
       lines.push(current)
@@ -81,17 +84,23 @@ export function compileLrcCues(cues) {
     if (cue.track === 'original') { current = byCue.get(cue.id); continue }
     if (cue.track === 'translation' || cue.track === 'romaji') {
       const start = parseLrcTime(cue.timeText)
-      const text = String(cue.text || '').trim().replace(/\s+/gu, ' ')
+      const text = cueText(cue)
       const matches = start == null ? [] : lines.filter(line => line.start != null && Math.abs(line.start - start) <= 0.05)
+      if (saved && cue.targetCueId && !byCue.has(cue.targetCueId)) {
+        issues.push({ cueId: cue.id, kind: 'error', message: '对应原文已被删除或改为其他轨道，请重新选择对应原文。' }); continue
+      }
+      if (saved && !cue.targetCueId && !cue.attachToPrevious && matches.length > 1) {
+        issues.push({ cueId: cue.id, kind: 'error', message: '同一时间有多句原文，请选择这一行对应的原文。' }); continue
+      }
       const target = cue.attachToPrevious ? current : byCue.get(cue.targetCueId) || (matches.length === 1 ? matches[0] : current)
       if (!target) issues.push({ cueId: cue.id, kind: 'error', message: '这行没有对应原文，请改为原文、移动位置或忽略。' })
       else if (target[cue.track] && target[cue.track] !== text) issues.push({ cueId: cue.id, kind: 'error', message: `同一句已有${cue.track === 'romaji' ? '罗马音' : '译文'}，请调整轨道或插入新原文。` })
       else target[cue.track] = text
     }
   }
-  lines.sort((a, b) => (a.start ?? Infinity) - (b.start ?? Infinity))
+  if (!saved) lines.sort((a, b) => (a.start ?? Infinity) - (b.start ?? Infinity))
   return {
-    lines: lines.map(({ sourceId, romaji, ...line }, id) => ({ id, ...line, ...(romaji ? { romaji } : {}) })),
+    lines: lines.map(({ sourceId, romaji, ...line }, id) => ({ id, ...line, ...(saved ? { sourceId } : {}), ...(romaji ? { romaji } : {}) })),
     issues: lines.length ? issues : [{ cueId: cues?.[0]?.id, kind: 'error', message: '没有可学习的原文句子。' }, ...issues],
   }
 }

@@ -11,6 +11,7 @@ const state = {
     meaningOverrides: {},
     playbackRate: 0.75,
     rangePracticeSettings: { mode:'repeat', repeatCount:3, gapSeconds:2 },
+    singleLineRepeatCount: 4,
     readingStyle: 'romaji',
     lyricFontSize: 28,
     desktopTheme: 'crimson-blade',
@@ -50,6 +51,7 @@ test('backed-up songs, audio and learning state round-trip', async () => {
   assert.equal(inspection.manifest.progress.lineReadingFontSize,20)
   assert.equal(inspection.manifest.progress.translationFontSize,18)
   assert.deepEqual(inspection.manifest.progress.rangePracticeSettings,state.progress.rangePracticeSettings)
+  assert.equal(inspection.manifest.progress.singleLineRepeatCount, 4)
   assert.equal(inspection.manifest.sentenceExplanations['local-test'][0].explanation.meaning, '如果是梦')
   assert.equal(restored.lines[0].translation, '如果是梦')
   assert.equal(restored.lines[0].romaji, 'yume naraba')
@@ -70,6 +72,19 @@ test('empty song library still backs up learning data', async () => {
   const inspection = await inspectLearningBackup(createLearningBackup([], state))
   assert.deepEqual(inspection.manifest.songs, [])
   assert.deepEqual(songsFromLearningBackup(inspection), [])
+})
+
+test('single-line loop settings are optional for old backups and reject invalid saved counts', async () => {
+  const legacy = { ...state, progress: { ...state.progress } }
+  delete legacy.progress.singleLineRepeatCount
+  assert.equal((await inspectLearningBackup(createLearningBackup([song], legacy))).manifest.progress.singleLineRepeatCount, undefined)
+  for (const singleLineRepeatCount of [1, 99, 'infinite']) {
+    const next = { ...state, progress: { ...state.progress, singleLineRepeatCount } }
+    assert.equal((await inspectLearningBackup(createLearningBackup([song], next))).manifest.progress.singleLineRepeatCount, singleLineRepeatCount)
+  }
+  for (const singleLineRepeatCount of [0, 100, -1, 1.5, '3']) {
+    assert.throws(() => createLearningBackup([song], { ...state, progress: { ...state.progress, singleLineRepeatCount } }), /学习记录格式/)
+  }
 })
 test('combined readings and hidden words survive a backup without changing old backups', async () => {
   const next = { ...state, progress: { ...state.progress, readingStyle: 'both', hiddenReadings: { 'local-test:0:0': true }, lyricEditsBySong: { demo: { 0: { text: '明日', translation: '明天', start: 1.25 } } } } }
@@ -173,4 +188,17 @@ test('old fast playback preferences migrate to normal speed without mutating the
     assert.equal(inspected.manifest.progress.playbackRate, rate)
   }
   assert.throws(() => createLearningBackup([], { ...state, progress: { ...state.progress, playbackRate: 3 } }), /学习记录格式不正确/)
+})
+
+test('optional manual sentence ends round-trip through backup and invalid intervals are rejected', async () => {
+  const timed = { ...song, lines: [{ ...song.lines[0], end: 3.8 }] }
+  const restored = songsFromLearningBackup(await inspectLearningBackup(createLearningBackup([timed], state)))
+  assert.equal(restored[0].lines[0].end, 3.8)
+  for (const end of [1.5, -1, '3.8', Infinity]) assert.throws(() => createLearningBackup([{ ...timed, lines: [{ ...timed.lines[0], end }] }], state), /歌词格式/)
+  const overrides = structuredClone(state)
+  overrides.progress.lyricEditsBySong = { project: { 0: { text: '夢ならば', translation: '', start: 1.5, end: 3.8 } } }
+  const inspected = await inspectLearningBackup(createLearningBackup([timed], overrides))
+  assert.equal(inspected.manifest.progress.lyricEditsBySong.project[0].end, 3.8)
+  overrides.progress.lyricEditsBySong.project[0].end = 1
+  assert.throws(() => createLearningBackup([timed], overrides), /学习记录格式/)
 })

@@ -1,4 +1,4 @@
-# UTA Windows 1.2.2 使用说明
+# UTA Windows 1.3.0 使用说明
 
 适用于 Windows 10 / 11 x64。解压发布 ZIP 的完整 `UTA-Windows-x64` 文件夹，双击其中的 `UTA.exe`。程序内置 Electron、Python 注音服务、Sudachi 与 Tomoshi 词典；无需安装 Node.js、Python 或 Java。第一次启动可能需要稍等词典加载。
 
@@ -52,10 +52,20 @@
 
 本地方式可选择 `.utapatch`，或从资源管理器直接拖入 UTA 主界面，程序会打开更新页并离线校验。无需解压；若同目录存在同名 `.utapatch.sha256`，也会核对该文件。版本不匹配、包损坏或运行环境不兼容时拒绝安装。校验完成后，点击“退出 UTA、安装并重新打开”，独立更新进程才会切换版本；未保存编辑会先提示，新版无法正常启动时保留旧版供恢复。
 
-本次提供 1.2.0 → 1.2.2 与此前本地测试版 1.2.1 → 1.2.2 两种增量包；手动安装请选择对应起始版本，Gitee 分片需先用配套工具合并。1.2.0 无需先安装 1.2.1。从 1.1.28 或更早版本升级，请退出旧版并备份 `uta-data`，把完整 ZIP 解压到新目录，再将旧 `uta-data` 复制到新版 `UTA.exe` 同级。发布 ZIP 不含学习数据，更新缓存位于 `uta-data/updates`。跨电脑复制时一并复制 `uta-data`，但 Windows 加密的 API Key 要重新填写。
+本次提供 1.2.0、此前本地测试版 1.2.1、1.2.2 直接升级到 1.3.0 的三种增量包；手动安装请选择对应起始版本，Gitee 分片需先用配套工具合并。无需依次安装中间版本。同为 1.3.0 的本地测试构建需使用正式完整 ZIP 手动迁移，保留 uta-data。从 1.1.28 或更早版本升级，请退出旧版并备份 `uta-data`，把完整 ZIP 解压到新目录，再将旧 `uta-data` 复制到新版 `UTA.exe` 同级。发布 ZIP 不含学习数据，更新缓存位于 `uta-data/updates`。跨电脑复制时一并复制 `uta-data`，但 Windows 加密的 API Key 要重新填写。
 
 ## 故障与开发
 
 启动失败可查看 `uta-data/logs/desktop.log`；文件缺失时重新解压完整发布包。联网歌词、封面和 AI 需要网络；本地注音、词典与已有歌曲学习可以离线使用。程序尚未购买代码签名证书，Windows 可能显示未知发布者。
 
-源码分支为 `Windows-exe`。运行 `安装 Windows 开发环境.cmd` 安装项目本地依赖，再运行 `构建 Windows 程序.cmd`；或执行 `scripts/windows.ps1 setup`、`scripts/windows.ps1 test`、`scripts/windows.ps1 build`。普通打包生成便携目录、完整 ZIP 和 SHA-256 文件；`npm run windows:release` 默认读取最近一个公开 Windows 完整包生成增量。提供多个起始版本时，分别还原并验证实际基线，再运行 `scripts/create-windows-patch.mjs`。第三方授权见成品 `licenses`、版本内 `app/dist-desktop/licenses/qq-lyrics.txt` 与 `第三方数据说明.md`。当前 Windows 版尚未启用 Android 跨端数据互通。
+源码分支为 `Windows-exe`。运行 `安装 Windows 开发环境.cmd` 安装项目本地依赖，再运行 `构建 Windows 程序.cmd`；或执行 `scripts/windows.ps1 setup`、`scripts/windows.ps1 test`、`scripts/windows.ps1 build`。普通打包生成便携目录、完整 ZIP 和 SHA-256 文件；`npm run windows:release` 默认读取最近一个公开 Windows 完整包生成增量。提供多个起始版本时，分别还原并验证实际基线，再运行 `scripts/create-windows-patch.mjs`。第三方授权见成品 `licenses`、版本内 `app/dist-desktop/licenses/qq-lyrics.txt` 与 `第三方数据说明.md`。跨端互通的协议要求、恢复范围与验证边界见 [跨端互通说明](CROSS_PLATFORM.md)。
+
+
+## 1.3.0 新增操作
+
+- 慢放旁的“循环”设置单句总播放次数，可选固定次数、自定义 1–99 次或无限；单句保留 0.5 秒提前量，选段仍使用准确起点。
+- 右键歌词 → 编辑歌词：开始和结束时间均可手动输入或用 ±0.2 秒微调。结束时间留空时自动截断；手动结束时间参与单句和选段末句播放范围。
+- 歌曲库 → 编辑歌曲信息 → 重新归类与配对：展开已保存的原文、译文、罗马音，改轨道并选择对应原文；先应用到草稿再保存。取消、撤销和重做不会立即改动歌曲库。保持原文和身份的句子保留学习记录，句序变化会清除过时 AI 上下文。
+- 顶栏两侧边栏按钮可主动收放；点词自动展开右栏，点空白清除选中并收起自动展开的右栏，手动展开的右栏保持展开。双击播放不留下默认选词。
+- 启动恢复上次学习歌曲，保持暂停；已删除则回退到可用歌曲。
+- 设置 → 跨端互通：手动上传、预览和恢复 WebDAV 快照；恢复会替换本机资料，尚无自动双向合并。另一端需支持相同协议，真实公网服务与安卓真机往返尚未验收。配置、密钥范围、按歌曲补下载音频与中断恢复步骤见 [跨端互通说明](CROSS_PLATFORM.md)。

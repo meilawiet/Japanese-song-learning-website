@@ -2,22 +2,22 @@ import { useEffect, useRef, useState } from 'react'
 import { RefreshCw, X } from 'lucide-react'
 import { toHiragana } from 'wanakana'
 import { annotateSongLines } from '../lib/annotationApi'
-import { displayReading } from '../lib/readingDisplay'
+import { displayReading, tokenReading } from '../lib/readingDisplay'
 import { buildSegmentedTokens } from '../lib/lyricSegmentation'
 import { useDesktopUnsavedDraft } from '../lib/useDesktopUnsavedDraft'
+import { formatLyricTime, parseLyricTime, shiftLyricTime } from '../lib/lyricTiming'
+import { lyricRangeBounds } from '../lib/lyricRange'
 import LyricSegmentationDialog from './LyricSegmentationDialog'
 
 // 单句编辑同时提供词典重注音和逐词人工读音，适配歌手使用的特殊读法。
-export default function LyricLineEditor({ song, line, annotation, corrections, hiddenReadings = {}, desktop = false, segmentationSuggestion = null, onSave, onClose }) {
+export default function LyricLineEditor({ song, line, annotation, corrections, hiddenReadings = {}, desktop = false, audioDuration = null, segmentationSuggestion = null, onSave, onClose }) {
   const [text, setText] = useState(line.text)
   const [translation, setTranslation] = useState(line.translation || '')
-  const [start, setStart] = useState(() => {
-    const minutes = Math.floor(line.start / 60)
-    return `${String(minutes).padStart(2, '0')}:${(line.start % 60).toFixed(3).padStart(6, '0')}`
-  })
+  const [start, setStart] = useState(() => formatLyricTime(line.start))
+  const [end, setEnd] = useState(() => formatLyricTime(line.end))
   const [annotatedText, setAnnotatedText] = useState(annotation ? line.text : '')
   const [tokens, setTokens] = useState(annotation?.tokens || [])
-  const [readings, setReadings] = useState(Object.fromEntries((annotation?.tokens || []).map((token) => [token.index, corrections[`${song.id}:${line.id}:${token.index}`] || token.reading])))
+  const [readings, setReadings] = useState(Object.fromEntries((annotation?.tokens || []).map((token) => [token.index, tokenReading(token, corrections, `${song.id}:${line.id}:${token.index}`)])))
   const [hidden, setHidden] = useState(Object.fromEntries((annotation?.tokens || []).map((token) => [token.index, Boolean(hiddenReadings[`${song.id}:${line.id}:${token.index}`])])))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -27,16 +27,19 @@ export default function LyricLineEditor({ song, line, annotation, corrections, h
   const [segmentationNotice, setSegmentationNotice] = useState('')
   const requestRef = useRef(0)
   useEffect(() => () => { requestRef.current += 1 }, [])
-  const initialStart = `${String(Math.floor(line.start / 60)).padStart(2, '0')}:${(line.start % 60).toFixed(3).padStart(6, '0')}`
-  const initialReadings = Object.fromEntries((annotation?.tokens || []).map(token => [token.index, corrections[`${song.id}:${line.id}:${token.index}`] || token.reading]))
+  const initialStart = formatLyricTime(line.start)
+  const initialEnd = formatLyricTime(line.end)
+  const inferredEnd = lyricRangeBounds(song.lines.map(item => item.id === line.id ? { ...item, start: parseLyricTime(start), end: null } : item), line.id, line.id, audioDuration)?.end
+  const initialReadings = Object.fromEntries((annotation?.tokens || []).map(token => [token.index, tokenReading(token, corrections, `${song.id}:${line.id}:${token.index}`)]))
   const initialHidden = Object.fromEntries((annotation?.tokens || []).map(token => [token.index, Boolean(hiddenReadings[`${song.id}:${line.id}:${token.index}`])]))
-  const dirty = text !== line.text || translation !== (line.translation || '') || start !== initialStart
+  const dirty = text !== line.text || translation !== (line.translation || '') || start !== initialStart || end !== initialEnd
     || JSON.stringify(readings) !== JSON.stringify(initialReadings) || JSON.stringify(hidden) !== JSON.stringify(initialHidden)
     || JSON.stringify(tokens) !== JSON.stringify(annotation?.tokens || [])
   useDesktopUnsavedDraft('lyric-editor', desktop && dirty)
   function close() { if (!busy && (!dirty || window.confirm('这一句还有未保存的修改，确定放弃吗？'))) onClose() }
 
   async function regenerate() {
+    if (song.language && song.language !== 'ja') { setError('Windows 内置词典仅自动注音日语，其他语言请保留来源读音或直接编辑已有词的读音。'); return }
     const value = text.trim()
     if (!value || value.length > 500) { setError('请填写 1～500 字的歌词。'); return }
     const request = ++requestRef.current
@@ -87,27 +90,45 @@ export default function LyricLineEditor({ song, line, annotation, corrections, h
 
   async function save(event) {
     event.preventDefault()
-    const timestamp = start.trim().match(/^(\d{1,3}):([0-5]\d(?:\.\d{1,3})?)$/)
-    if (!timestamp) { setError('时间格式应为 mm:ss.sss，例如 01:23.456。'); return }
-    const seconds = Number(timestamp[1]) * 60 + Number(timestamp[2])
+    const seconds = parseLyricTime(start)
+    const endSeconds = parseLyricTime(end)
+    if (start.trim() && seconds === null || end.trim() && endSeconds === null) { setError('时间格式应为 mm:ss.sss，例如 01:23.456；未设置时间可留空。'); return }
+    if (endSeconds !== null && (seconds === null || endSeconds <= seconds)) { setError('结束时间必须晚于开始时间，请同时检查两个时间。'); return }
     const position = song.lines.findIndex((item) => item.id === line.id)
-    if (position > 0 && seconds < song.lines[position - 1].start || position < song.lines.length - 1 && seconds > song.lines[position + 1].start) { setError('时间不能早于上一句或晚于下一句。'); return }
+    const previousTimed = song.lines.slice(0, position).findLast(item => Number.isFinite(item.start))
+    const nextTimed = song.lines.slice(position + 1).find(item => Number.isFinite(item.start))
+    if (seconds !== null && (previousTimed && seconds < previousTimed.start || nextTimed && seconds > nextTimed.start)) { setError('时间不能早于上一句或晚于下一句。'); return }
     if (!text.trim() || text.trim().length > 500 || translation.length > 1000) { setError('请检查歌词和译文长度。'); return }
     if (text.trim() !== annotatedText && text.trim() !== line.text) { setError('歌词已调整，请先点击“重新注音”，再确认读音。'); return }
-    const prepared = Object.fromEntries(tokens.map((token) => [token.index, toHiragana(String(readings[token.index] || '').trim())]))
-    if (tokens.some((token) => !token.is_symbol && !prepared[token.index])) { setError('请补全每个词的读音。'); return }
+    const prepared = Object.fromEntries(tokens.map((token) => {
+      const value = String(readings[token.index] ?? '').trim()
+      return [token.index, token.manual_reading_mode === 'literal' ? value : toHiragana(value)]
+    }))
     setBusy(true)
-    try { await onSave({ annotation: tokens.length ? { id: line.id, text: text.trim(), tokens } : null, readings: prepared, translation, start: seconds, hidden }) }
+    const preparedTokens = tokens.map(token => token.manual_group_reading != null ? { ...token, manual_group_reading: prepared[token.index] } : token)
+    try { await onSave({ annotation: preparedTokens.length ? { id: line.id, text: text.trim(), tokens: preparedTokens } : null, readings: prepared, translation, start: seconds, end: endSeconds, hidden }) }
     catch (reason) { setError(reason.message || '保存失败，请重试。') }
     finally { setBusy(false) }
+  }
+
+  function adjustTime(kind, delta) {
+    try {
+      if (kind === 'start') setStart(shiftLyricTime(start, delta, line.start ?? 0))
+      else setEnd(shiftLyricTime(end, delta, inferredEnd))
+      setError('')
+    } catch (reason) { setError(reason.message) }
   }
 
   return <div className="line-editor-backdrop" onClick={close}><form className="line-editor" role="dialog" aria-modal={!segmentationOpen} aria-labelledby="line-editor-title" onClick={(event) => event.stopPropagation()} onSubmit={save}>
     <header><h2 id="line-editor-title">编辑这一句</h2><button type="button" disabled={busy} onClick={close} aria-label="关闭歌词编辑"><X size={20} /></button></header>
     <label className="line-editor-lyric">日文歌词<textarea value={text} lang="ja" maxLength={500} disabled={busy} onChange={(event) => setText(event.target.value)} /></label>
-    {desktop && <div className="line-editor-metadata"><label>开始时间（分:秒.毫秒）<input value={start} inputMode="decimal" disabled={busy} onChange={(event) => setStart(event.target.value)} /></label><label>中文译文<textarea value={translation} maxLength={1000} disabled={busy} onChange={(event) => setTranslation(event.target.value)} /></label></div>}
+    {desktop && <div className="line-editor-metadata"><div className="line-editor-timing" role="group" aria-label="单句起止时间">
+      <div className="line-editor-time-field"><label htmlFor="line-start-time">开始时间（分:秒.毫秒）</label><input id="line-start-time" value={start} inputMode="decimal" placeholder="未设置，可留空" disabled={busy} onChange={(event) => { setStart(event.target.value); setError('') }} /><div className="line-editor-time-steps"><button type="button" disabled={busy} aria-label="开始时间减少0.2秒" onClick={() => adjustTime('start', -0.2)}>−0.2 秒</button><button type="button" disabled={busy} aria-label="开始时间增加0.2秒" onClick={() => adjustTime('start', 0.2)}>＋0.2 秒</button></div></div>
+      <div className="line-editor-time-field"><label htmlFor="line-end-time">结束时间（分:秒.毫秒）</label><input id="line-end-time" value={end} inputMode="decimal" placeholder={Number.isFinite(inferredEnd) ? `自动 ${formatLyricTime(inferredEnd)}` : '留空：自动结束'} disabled={busy} onChange={(event) => { setEnd(event.target.value); setError('') }} /><div className="line-editor-time-steps"><button type="button" disabled={busy} aria-label="结束时间减少0.2秒" onClick={() => adjustTime('end', -0.2)}>−0.2 秒</button><button type="button" disabled={busy} aria-label="结束时间增加0.2秒" onClick={() => adjustTime('end', 0.2)}>＋0.2 秒</button></div></div>
+      <small>结束时间留空时，按下一句或音频结尾自动结束。单句播放保留原有的 0.5 秒提前量。</small>
+    </div><label>中文译文<textarea value={translation} maxLength={1000} disabled={busy} onChange={(event) => setTranslation(event.target.value)} /></label></div>}
     <div className="line-editor-reading-head"><strong>读音校对</strong><div className="line-editor-reading-actions"><button type="button" disabled={busy || !tokens.length || text.trim() !== annotatedText} onClick={() => { setSegmentationError(''); setActiveSegmentationSuggestion(null); setSegmentationOpen(true) }}>自定义分词</button><button type="button" disabled={busy} onClick={regenerate}><RefreshCw size={15} />{busy ? '处理中…' : '重新注音'}</button></div></div>
-    <p>可按歌手实际唱法修改读音；重新注音会恢复词典读音。</p>
+    <p>可按歌手实际唱法修改读音；留空表示不注音，重新注音会恢复词典读音。</p>
     {text.trim() !== annotatedText && <p className="line-editor-warning">歌词已变化，请重新注音。</p>}
     {segmentationNotice && <p className="line-editor-segmentation-notice">{segmentationNotice}</p>}
     <div className="line-editor-readings">{tokens.filter((token) => !token.is_symbol).map((token) => <div className="line-editor-word" key={token.index}><label><span lang="ja">{token.surface}</span><input aria-label={`${token.surface}的读音`} lang="ja" value={readings[token.index] || ''} disabled={busy || text.trim() !== annotatedText} onChange={(event) => setReadings((previous) => ({ ...previous, [token.index]: event.target.value }))} /></label><span className="line-editor-romaji" lang="ja-Latn">{displayReading(readings[token.index] || '', 'romaji', token, readings[token.index] !== token.reading)}</span>{desktop && /[\u3400-\u9fff]/u.test(token.surface) && <label className="line-editor-hide"><input type="checkbox" checked={Boolean(hidden[token.index])} disabled={busy || text.trim() !== annotatedText} onChange={(event) => setHidden((previous) => ({ ...previous, [token.index]: event.target.checked }))} />隐藏此词注音</label>}</div>)}</div>

@@ -79,6 +79,13 @@ export function reconcileLearningState(songs, saved) {
       if (!cached.some((line) => line.id === lineId && line.tokens.some((token) => token.index === tokenIndex))) delete progress.hiddenReadings[key]
     }
     if (progress.learnedBySong[song.id]) progress.learnedBySong[song.id] = progress.learnedBySong[song.id].filter((id) => validIds.has(id))
+    // The shared protocol allows a minimal {songId,lineId} review entry. Fill
+    // text only after confirming the saved line identity; never guess by order.
+    progress.reviewItems = progress.reviewItems.map(item => {
+      if (item.songId !== song.id || item.text != null || !validIds.has(item.lineId)) return item
+      const line = song.lines.find(candidate => candidate.id === item.lineId)
+      return line ? { ...item, text: line.text } : item
+    })
     progress.reviewItems = progress.reviewItems.filter((item) => item.songId !== song.id
       || song.lines.some((line) => line.id === item.lineId && line.text === item.text))
     // Whole-song review and sentence explanations depend on adjacent context.

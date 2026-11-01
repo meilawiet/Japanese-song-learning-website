@@ -3,6 +3,7 @@ import { ArrowLeft, Check, ImagePlus, Music2, RotateCcw, X } from 'lucide-react'
 import stationBackground from '../assets/uta-twilight-station.png'
 import WordReading from './WordReading'
 import { correctionKey } from '../lib/ruby'
+import { tokenReading, tokenHasManualReading } from '../lib/readingDisplay'
 import { DEFAULT_SING_ALONG_APPEARANCE, loadSingAlongAppearance, saveSingAlongAppearance, validateSingAlongImage } from '../lib/singAlongAppearance'
 
 const displayModes = [['both', '假名＋罗马音'], ['kana', '仅假名'], ['romaji', '仅罗马音'], ['lyrics', '仅歌词']]
@@ -18,9 +19,9 @@ function useImageUrl(blob) {
   return url
 }
 
-export default function DesktopSingAlong({ song, artwork, annotations, corrections, hiddenReadings, audioReady, playing, currentLineId, selectedLineId, error, onPlayFromStart, onPlayFromLine, onBack, annotationError }) {
-  const [displayMode, setDisplayMode] = useState('both')
-  const [showTranslation, setShowTranslation] = useState(true)
+export default function DesktopSingAlong({ song, artwork, annotations, corrections = {}, hiddenReadings = {}, audioReady, playing, currentLineId, selectedLineId, error, onPlayFromStart, onPlayFromLine, onBack, annotationError, readingOptions = {}, onReadingSettingsChange }) {
+  const [displayMode, setDisplayMode] = useState(() => ({ none: 'lyrics', hiragana: 'kana', romaji: 'romaji', both: 'both' })[readingOptions.readingStyle] || 'both')
+  const [showTranslation, setShowTranslation] = useState(readingOptions.showTranslation !== false)
   const [followPlayback, setFollowPlayback] = useState(true)
   const [appearance, setAppearance] = useState(DEFAULT_SING_ALONG_APPEARANCE)
   const [draft, setDraft] = useState(DEFAULT_SING_ALONG_APPEARANCE)
@@ -36,6 +37,10 @@ export default function DesktopSingAlong({ song, artwork, annotations, correctio
   const backgroundUrl = visible.mode === 'image' ? (appearanceOpen ? draftImageUrl : appliedImageUrl) : visible.mode === 'default' ? stationBackground : ''
   const annotationByLine = new Map(annotations?.map(item => [item.id, item]) || [])
   const currentIndex = song.lines.findIndex(line => line.id === currentLineId)
+  useEffect(() => {
+    setDisplayMode(({ none: 'lyrics', hiragana: 'kana', romaji: 'romaji', both: 'both' })[readingOptions.readingStyle] || 'both')
+    setShowTranslation(readingOptions.showTranslation !== false)
+  }, [song.id, readingOptions.readingStyle, readingOptions.showTranslation])
 
   useEffect(() => {
     const shell = document.querySelector('.desktop-shell-singalong')
@@ -113,12 +118,12 @@ export default function DesktopSingAlong({ song, artwork, annotations, correctio
         <div className="desktop-sing-heading"><span>UTA · 跟唱播放器</span><h1 id="desktop-sing-title">{song.title}</h1><p>{song.artist} · 连续播放 · {song.lines.length} 句歌词</p></div>
         <div className="desktop-sing-actions">
           <button type="button" className="desktop-sing-background-button" onClick={openAppearance}><ImagePlus size={16} /> 自定义背景</button>
-          <label className="desktop-sing-display-label"><span className="sr-only">跟唱读音显示</span><select aria-label="跟唱读音显示" value={displayMode} onChange={event => setDisplayMode(event.target.value)}>{displayModes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <label className="desktop-sing-display-label"><span className="sr-only">跟唱读音显示</span><select aria-label="跟唱读音显示" value={displayMode} onChange={event => { setDisplayMode(event.target.value); onReadingSettingsChange?.({ readingStyle: ({ lyrics: 'none', kana: 'hiragana', both: 'both', romaji: 'romaji' })[event.target.value] }) }}>{displayModes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           <button type="button" className="desktop-sing-start" disabled={!audioReady} onClick={onPlayFromStart}><RotateCcw size={16} /> 从头播放</button>
           <button type="button" className="desktop-sing-back" onClick={onBack}><ArrowLeft size={15} /> 返回学习</button>
         </div>
       </header>
-      <div className="desktop-sing-guide"><span>{audioReady ? '点击任一句，从该句时间戳开始连续播放' : '导入这首歌的音频后，可点击任一句开始跟唱。'}</span><div><label><input type="checkbox" checked={showTranslation} onChange={event => setShowTranslation(event.target.checked)} /> 显示译文</label><label><input type="checkbox" checked={followPlayback} onChange={event => setFollowPlayback(event.target.checked)} /> 跟随歌词</label></div></div>
+      <div className="desktop-sing-guide"><span>{audioReady ? '点击任一句，从该句时间戳开始连续播放' : '导入这首歌的音频后，可点击任一句开始跟唱。'}</span><div><label><input type="checkbox" checked={showTranslation} onChange={event => { setShowTranslation(event.target.checked); onReadingSettingsChange?.({ showTranslation: event.target.checked }) }} /> 显示译文</label><label><input type="checkbox" checked={followPlayback} onChange={event => setFollowPlayback(event.target.checked)} /> 跟随歌词</label></div></div>
       {error && <p className="desktop-sing-error" role="alert">{error}</p>}
       {annotationError && <p className="desktop-sing-note" role="status">部分注音未就绪：{annotationError}</p>}
       <ol className="desktop-sing-list" ref={lyricList} aria-label="跟唱歌词" data-reading-mode={displayMode}>
@@ -126,11 +131,11 @@ export default function DesktopSingAlong({ song, artwork, annotations, correctio
           const isCurrent = currentLineId === line.id
           const tokens = annotationByLine.get(line.id)?.tokens
           return <li key={line.id} ref={node => { if (node) rows.current.set(line.id, node); else rows.current.delete(line.id) }} className={`${isCurrent ? 'current' : ''} ${selectedLineId === line.id ? 'selected' : ''}`}>
-            <button type="button" disabled={!audioReady} className="desktop-sing-line" onClick={() => onPlayFromLine(line.id)} aria-label={`从第 ${index + 1} 句开始跟唱`} aria-current={isCurrent ? 'true' : undefined}>
+            <button type="button" disabled={!audioReady || !Number.isFinite(line.start) || line.start < 0} className="desktop-sing-line" onClick={() => onPlayFromLine(line.id)} aria-label={`从第 ${index + 1} 句开始跟唱`} aria-current={isCurrent ? 'true' : undefined} title={Number.isFinite(line.start) ? undefined : '这句尚未设置时间，可先编辑时间再播放'}>
               <span className="desktop-sing-number">{String(index + 1).padStart(2, '0')}</span>
               <span className="desktop-sing-line-body"><span className="desktop-sing-words" lang="ja">{tokens?.length ? tokens.map(token => {
                 const key = correctionKey(song.id, line.id, token.index)
-                return <WordReading key={key} token={token} reading={corrections[key] || token.reading} corrected={Boolean(corrections[key])} hidden={Boolean(hiddenReadings[key])} />
+                return <WordReading key={key} token={token} reading={tokenReading(token, corrections, key, 'hiragana', readingOptions)} corrected={tokenHasManualReading(token, corrections, key)} hidden={Boolean(hiddenReadings[key])} readingOptions={readingOptions} />
               }) : <span className="desktop-sing-fallback">{line.text}</span>}</span>{showTranslation && line.translation && <span className="desktop-sing-translation">{line.translation}</span>}</span>
               <span className="desktop-sing-line-state">{isCurrent ? playing ? '♪ 正在播放' : '已定位' : ''}</span>
             </button>

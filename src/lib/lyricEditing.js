@@ -1,3 +1,4 @@
+import { validLyricEnd } from './lyricTiming.js'
 import { applySongDetailsEdit } from './songDetailsEditing.js'
 
 // 项目内歌曲的人工歌词只覆盖当前设备；本地导入歌曲仍写入歌曲库。
@@ -18,6 +19,7 @@ export function commitEditedLine(songs, state, songId, lineId, annotation, readi
   const { hidden, ...metadata } = changes
   const lineChanges = { text: annotation?.text ?? oldLine.text, ...metadata }
   const updatedSong = { ...song, lines: song.lines.map((line) => line.id === lineId ? { ...line, ...lineChanges } : line) }
+  if (!validLyricEnd(updatedSong.lines.find(line => line.id === lineId))) throw new Error('结束时间必须晚于开始时间。')
   const next = applySongDetailsEdit(song, updatedSong, state)
   const previousTokens = state.annotations?.[songId]?.find((item) => item.id === lineId)?.tokens || []
   const segmentationChanged = annotation && previousTokens.map(token => token.surface).join('\u0000') !== annotation.tokens.map(token => token.surface).join('\u0000')
@@ -39,7 +41,7 @@ export function commitEditedLine(songs, state, songId, lineId, annotation, readi
     for (const [index, isHidden] of Object.entries(hidden)) if (isHidden) next.progress.hiddenReadings[`${prefix}${index}`] = true
   }
   if (!song.isLocal) {
-    const edit = { text: lineChanges.text, translation: lineChanges.translation ?? oldLine.translation ?? '', start: lineChanges.start ?? oldLine.start }
+    const edit = { text: lineChanges.text, translation: lineChanges.translation ?? oldLine.translation ?? '', start: Object.hasOwn(lineChanges, 'start') ? lineChanges.start : oldLine.start, end: Object.hasOwn(lineChanges, 'end') ? lineChanges.end : oldLine.end ?? null }
     next.progress.lyricEditsBySong = { ...next.progress.lyricEditsBySong, [songId]: { ...next.progress.lyricEditsBySong?.[songId], [lineId]: edit } }
   }
   return { song: updatedSong, state: next }

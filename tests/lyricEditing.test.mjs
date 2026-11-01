@@ -63,3 +63,28 @@ test('重新分词只清除该句旧词索引的校正和 AI 建议，保留其�
   assert.deepEqual(result.state.aiReviews[song.id].suggestions.map(item => item.line_id), [1])
   assert.deepEqual(result.state.aiReviews[song.id].segmentation_suggestions.map(item => item.line_id), [1])
 })
+
+test('timing-only line edits preserve pronunciation, mastery and cached AI analysis', () => {
+  const before = state()
+  before.sentenceExplanations[song.id] = { 0: { text: '明日', explanation: { meaning: '明天' } } }
+  const result = commitEditedLine([song], before, song.id, 0, null, {}, { start: 1.2, end: 3.8 })
+  assert.equal(result.song.lines[0].start, 1.2)
+  assert.equal(result.song.lines[0].end, 3.8)
+  assert.deepEqual(result.state.progress.learnedBySong[song.id], [0, 1])
+  assert.deepEqual(result.state.annotations[song.id], before.annotations[song.id])
+  assert.deepEqual(result.state.sentenceExplanations[song.id], before.sentenceExplanations[song.id])
+})
+
+test('project-song end overrides persist and can be cleared back to automatic', () => {
+  const project = { ...song, id: 'project-timing', isLocal: false }
+  const saved = commitEditedLine([project], state(), project.id, 0, null, {}, { start: 1.2, end: 3.8 })
+  const applied = applyLyricEdits(project, saved.state.progress.lyricEditsBySong)
+  assert.equal(applied.lines[0].end, 3.8)
+  const cleared = commitEditedLine([applied], saved.state, project.id, 0, null, {}, { end: null })
+  const again = applyLyricEdits(project, cleared.state.progress.lyricEditsBySong)
+  assert.equal(again.lines[0].end, null)
+  assert.equal(again.lines[0].start, 1.2)
+  const untimed = commitEditedLine([again], cleared.state, project.id, 0, null, {}, { start: null })
+  assert.equal(applyLyricEdits(project, untimed.state.progress.lyricEditsBySong).lines[0].start, null)
+  assert.throws(() => commitEditedLine([project], state(), project.id, 0, null, {}, { start: 3, end: 2 }), /结束时间/)
+})
