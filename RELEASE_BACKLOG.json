@@ -22,32 +22,35 @@
     }
   },
   "lastPublished": {
-    "version": "1.6.2",
-    "versionCode": 29,
-    "commit": "287b5829efedd0499bb58f2f4195bd0e3a352518",
-    "tag": "v1.6.2",
-    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v1.6.2",
-    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v1.6.2",
-    "asset": "UTA-Android-1.6.2.apk",
-    "size": 31372779,
-    "sha256": "39768a1eef52344bb3d044a99b7e0a810570951e5ba132184fc14a46330147ca",
-    "publishedOn": "2026-10-31",
+    "version": "2.0.0",
+    "versionCode": 30,
+    "commit": "4be39cd4e05cb66e644ecf9ddc3d28987df6fc76",
+    "tag": "v2.0.0",
+    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.0.0",
+    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.0.0",
+    "asset": "UTA-Android-2.0.0.apk",
+    "size": 31397207,
+    "sha256": "0e883a6087b4ede5e88332ed6ce3e9d0c2946b3a3f60011aebf93a838a0edbca",
+    "publishedOn": "2026-11-06",
     "branch": "android-dev"
   },
   "currentLocalInstall": {
-    "version": "1.6.2",
-    "versionCode": 29,
-    "size": 31385067,
-    "sha256": "19412067f8e4f8f0a211d098c98b339cfc1c73566198062dfab64acd27009fff",
-    "path": ".tools/conversation-artifacts/20261022-manual-reading/tsubasa-reading-20261105/UTA-tsubasa-reading.apk",
-    "device": "Samsung SM-N9860",
-    "installedOn": "2026-11-05",
+    "version": "2.0.0",
+    "versionCode": 30,
+    "commit": "4be39cd4e05cb66e644ecf9ddc3d28987df6fc76",
+    "tag": "v2.0.0",
+    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.0.0",
+    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.0.0",
+    "asset": "UTA-Android-2.0.0.apk",
+    "size": 31397207,
+    "sha256": "0e883a6087b4ede5e88332ed6ce3e9d0c2946b3a3f60011aebf93a838a0edbca",
+    "publishedOn": "2026-11-06",
+    "branch": "android-dev",
+    "path": ".tools/conversation-artifacts/20261022-manual-reading/release-2.0.0-20261106/UTA-Android-2.0.0.apk",
     "package": "com.uta.songlearning",
-    "signed": true,
-    "published": false,
-    "webFilesMatched": 23,
-    "debuggingEnabled": false,
-    "method": "相邻汉字组假名缺失修复本地包，原发行证书，调试关闭；313/313 Node及三星整首38句检查通过后保留数据-r覆盖；UID/首次安装时间不变，回读APK摘要一致，冷启动无当前进程AndroidRuntime致命异常。"
+    "installedOn": "2026-11-06",
+    "published": true,
+    "method": "原发行证书v2/v3，调试关闭，user0 -r保留数据，UID/首次安装时间不变，无新增分身，原歌曲可见；313项检查通过，正式冷启动正常。"
   },
   "reminder": {
     "lastRemindedItemIds": [
@@ -3008,7 +3011,7 @@
         "本轮310/310 Node、11项.dev实际触摸/背景行为及旧背景迁移通过；真实超过16MB原创PNG成功导入，浅深高亮原生截图核验。",
         "原背景缺少种子时从本机JPEG副本回算；有损量化可相差一档色值，迁移成功且不要求原图逐字节同色；正式手机背景升级后无需重选。"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-31",
       "completedOn": "2026-10-31",
       "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/android-theme-20261031",
@@ -3026,6 +3029,20 @@
         "webFilesMatched": 23,
         "debuggingEnabled": false,
         "method": "首页横滑与图片自动配色本地试用包，原发行证书，调试关闭；310/310 Node、11项本轮真机及旧背景迁移通过后保留数据-r覆盖；UID/首次安装时间不变，回读APK摘要一致，冷启动无当前进程AndroidRuntime致命异常。"
+      },
+      "releasedOn": "2026-11-06",
+      "release": {
+        "version": "2.0.0",
+        "versionCode": 30,
+        "commit": "4be39cd4e05cb66e644ecf9ddc3d28987df6fc76",
+        "tag": "v2.0.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.0.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.0.0",
+        "asset": "UTA-Android-2.0.0.apk",
+        "size": 31397207,
+        "sha256": "0e883a6087b4ede5e88332ed6ce3e9d0c2946b3a3f60011aebf93a838a0edbca",
+        "publishedOn": "2026-11-06",
+        "branch": "android-dev"
       }
     },
     {
@@ -3049,7 +3066,7 @@
         "正式原签名包23个前端文件与APK逐字节匹配、调试关闭；-r保留资料覆盖小米成功，UID/首次安装时间不变，回读APK摘要一致。正式ADB真实双向滑动和再次冷启动截图已查看，原歌曲、字体及背景保留。",
         "无付费AI/用户云盘调用，测试夹具仅.dev；未验证所有手机/旧内核下的触摸交互。"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-10-31",
       "completedOn": "2026-10-31",
       "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/home-swipe-20261031",
@@ -3067,6 +3084,20 @@
         "webFilesMatched": 23,
         "debuggingEnabled": false,
         "method": "首页横滑与图片自动配色本地试用包，原发行证书，调试关闭；310/310 Node、11项本轮真机及旧背景迁移通过后保留数据-r覆盖；UID/首次安装时间不变，回读APK摘要一致，冷启动无当前进程AndroidRuntime致命异常。"
+      },
+      "releasedOn": "2026-11-06",
+      "release": {
+        "version": "2.0.0",
+        "versionCode": 30,
+        "commit": "4be39cd4e05cb66e644ecf9ddc3d28987df6fc76",
+        "tag": "v2.0.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.0.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.0.0",
+        "asset": "UTA-Android-2.0.0.apk",
+        "size": 31397207,
+        "sha256": "0e883a6087b4ede5e88332ed6ce3e9d0c2946b3a3f60011aebf93a838a0edbca",
+        "publishedOn": "2026-11-06",
+        "branch": "android-dev"
       }
     },
     {
@@ -3090,7 +3121,7 @@
         "原发行签名、正式WebView调试关闭、23项前端字节一致；保留资料覆盖三星成功。主用户UID与首次安装时间不变，回读APK摘要一致、冷启动无当前进程致命异常。",
         "正式原有歌曲第2、14、31句通过原生触摸打开并截图查看，缺失假名恢复，原字体与翻译保留。"
       ],
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-05",
       "completedOn": "2026-11-05",
       "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/tsubasa-reading-20261105",
@@ -3108,6 +3139,20 @@
         "webFilesMatched": 23,
         "debuggingEnabled": false,
         "method": "相邻汉字组假名缺失修复本地包，原发行证书，调试关闭；313/313 Node及三星整首38句检查通过后保留数据-r覆盖；UID/首次安装时间不变，回读APK摘要一致，冷启动无当前进程AndroidRuntime致命异常。"
+      },
+      "releasedOn": "2026-11-06",
+      "release": {
+        "version": "2.0.0",
+        "versionCode": 30,
+        "commit": "4be39cd4e05cb66e644ecf9ddc3d28987df6fc76",
+        "tag": "v2.0.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.0.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.0.0",
+        "asset": "UTA-Android-2.0.0.apk",
+        "size": 31397207,
+        "sha256": "0e883a6087b4ede5e88332ed6ce3e9d0c2946b3a3f60011aebf93a838a0edbca",
+        "publishedOn": "2026-11-06",
+        "branch": "android-dev"
       }
     },
     {
@@ -3115,7 +3160,7 @@
       "type": "feature",
       "title": "安卓2.0新版界面与图片手势",
       "summary": "整合已试用Demo0.7的主页面及二三级布局、图片拖动捏合、防误触实时预览、歌词跟随和透明度，修复歌曲库及分割线显示。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-05",
       "completedOn": "2026-11-06",
       "verification": [
@@ -3128,7 +3173,21 @@
         "src/main.jsx",
         "src/components/ThemePanel.jsx"
       ],
-      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/release-2.0.0-20261106"
+      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/release-2.0.0-20261106",
+      "releasedOn": "2026-11-06",
+      "release": {
+        "version": "2.0.0",
+        "versionCode": 30,
+        "commit": "4be39cd4e05cb66e644ecf9ddc3d28987df6fc76",
+        "tag": "v2.0.0",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.0.0",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.0.0",
+        "asset": "UTA-Android-2.0.0.apk",
+        "size": 31397207,
+        "sha256": "0e883a6087b4ede5e88332ed6ce3e9d0c2946b3a3f60011aebf93a838a0edbca",
+        "publishedOn": "2026-11-06",
+        "branch": "android-dev"
+      }
     }
   ]
 }
