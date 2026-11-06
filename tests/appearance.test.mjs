@@ -9,7 +9,7 @@ test('外观设置具有四套主题与受限的独立字号', () => {
   assert.equal(THEMES.length, 4)
   // 原断言检查14个平铺选项；主列表仍为六种，思源宋体第二层恢复八档。
   // assert.equal(FONTS.length, 14)
-  assert.deepEqual(FONTS.map(font => font.id), ['yan', 'flyflower', 'maoken', 'aidian', 'kinghwa', 'sourcehan'])
+  assert.deepEqual(FONTS.map(font => font.id), ['system', 'yan', 'flyflower', 'maoken', 'aidian', 'kinghwa', 'sourcehan'])
   assert.deepEqual(SOURCE_HAN_WEIGHTS.map(font => font.id), ['sourcehan_extralight', 'sourcehan_light', 'sourcehan', 'sourcehan_medium', 'sourcehan_semibold', 'sourcehan_bold', 'sourcehan_heavy', 'sourcehan_sc_heavy'])
   assert.deepEqual(normalizeAppearance(), DEFAULT_APPEARANCE)
   // 原断言缺少字体字段；新增字段不改变字号和主题的既有边界。

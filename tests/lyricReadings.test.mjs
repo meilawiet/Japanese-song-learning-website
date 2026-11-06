@@ -8,6 +8,19 @@ import { commitEditedLine } from '../src/lib/lyricEditing.js'
 import {splitKanjiOkuriganaTokens} from '../src/lib/defaultSegmentation.js'
 
 const tokens=parts=>parts.map(([surface,reading,is_symbol=false],index)=>({index,surface,reading,is_symbol}))
+// 原词界和校正键不变，显示层只取得完整吻合来源的证据；特殊读法继续由来源决定。
+test('来源合并汉字组携带可靠显示词界，失配和重新对齐不复用旧证据',()=>{
+ const input=tokens([['森','もり'],[' ','',true],['君','きみ']]),before=JSON.stringify(input)
+ const first=prepareLyricReadings(input,'mo ri ki mi',{},'s',0).tokens[0]
+ assert.deepEqual(first.source_reading_tokens,[{surface:'森',reading:'もり'},{surface:' ',reading:''},{surface:'君',reading:'きみ'}])
+ assert.equal(first.index,0);assert.equal(first.source_reading,'もりきみ')
+ assert.equal(JSON.stringify(input),before)
+ const special=prepareLyricReadings(input,'mo ri a na ta',{},'s',0).tokens[0]
+ assert.equal(special.source_reading,'もりあなた');assert.equal(special.source_reading_tokens,undefined)
+ assert.equal(prepareLyricReadings([first],'mo ri a na ta',{},'s',0).tokens[0].source_reading_tokens,undefined)
+ assert.equal(tokenReading(first,{'s:0:0':''},'s',0),'')
+ assert.equal(tokenReading(first,{'s:0:0':'もりあなた'},'s',0),'もりあなた')
+})
 // 来自手机词典的分类结构：本当は/副词、誰/代名词、が/助词、救わ/动词。
 test('复合副词中は读wa时，旧缓存及新拆词均恢复汉字注音，不改来源和人工校正',()=>{
   const source='ho n to u wa da re ga su ku wa re ta ku te'

@@ -1,3 +1,4 @@
+// 安卓2.0界面整合，旧实现注释对照见android-ui/legacy。
 import { useEffect, useRef, useState } from 'react'
 // 原导入图标 Upload 向上；改用 Download 向下，保留上传类操作的原图标。
 import { BookOpenCheck, Download, Grid2X2, List, MoreVertical, Search, Upload, X } from 'lucide-react'
@@ -9,7 +10,7 @@ function readView() {
 }
 
 // 安卓歌曲库独立呈现，封面、歌名、歌手和学习进度共用长按操作菜单。
-export default function AndroidSongLibrary({ songs, total, search, onSearch, onImport, artworkFor, learnedBySong, onOpen, onDelete, onArtwork, onEdit, deletingSongId, activeSongId, selectionMode = false }) {
+export default function AndroidSongLibrary({ songs, total, search, onSearch, onImport, artworkFor, learnedBySong, onOpen, onDelete, onArtwork, onEdit, deletingSongId, activeSongId, onBack, selectionMode = false }) {
   const [view, setView] = useState(readView)
   const [menuSong, setMenuSong] = useState(null)
   const pressTimer = useRef(null)
@@ -57,7 +58,7 @@ export default function AndroidSongLibrary({ songs, total, search, onSearch, onI
   }
 
   return <section className="android-library" aria-labelledby="library-title">
-    <header className="android-library-heading">
+    {onBack&&!selectionMode&&<button type="button" className="demo-library-back" onClick={onBack} aria-label="返回上一页"><span aria-hidden="true">‹</span>返回</button>}<header className="android-library-heading">
       {/* 选歌页复用歌曲库的搜索和展示方式，避免出现两套不同的操作。 */}
       <div><span className="android-library-kicker">我的音乐</span><h1 id="library-title">{selectionMode ? '选择歌曲' : '歌曲库'}</h1><p>{search ? `找到 ${songs.length} 首歌曲` : `${total} 首歌曲，等你继续学习`}</p></div>
       <div className="android-library-view" role="group" aria-label="歌曲展示样式">

@@ -16,7 +16,8 @@ const wordList=value=>(Array.isArray(value)?value:[]).filter(item=>typeof item?.
 const stamp=seconds=>{const value=Math.max(0,Math.floor(seconds));return `${String(Math.floor(value/60)).padStart(2,'0')}:${String(value%60).padStart(2,'0')}`}
 
 // 复习歌曲直接进入歌词详情，共用真实reviewItems，收藏、笔记、解析和复习进度随原备份保存。
-export default function ReviewBook({songs,items,onItemsChange,artworkFor,audioFor,sentenceCache,annotations,meaningOverrides,corrections,level,songSettings={},defaultReadingStyle,onReadingSettings,onOpenSong,onDetailChange}) {
+// 原参数列表至onDetailChange结束；新增主页状态回调只控制三栏手势，不改变复习详情导航。
+export default function ReviewBook({songs,items,onItemsChange,artworkFor,audioFor,sentenceCache,annotations,meaningOverrides,corrections,level,songSettings={},defaultReadingStyle,onReadingSettings,onOpenSong,onDetailChange,onHomeChange,active=true}) {
   const [songId,setSongId]=useState(null),[selected,setSelected]=useState(null),[session,setSession]=useState(null)
   // 原封面/列表偏好不再参与复习本展示，仅统一列表。
   // const [view,setView]=useState(()=>localStorage.getItem('uta-review-view-v1')==='list'?'list':'grid')
@@ -49,12 +50,17 @@ export default function ReviewBook({songs,items,onItemsChange,artworkFor,audioFo
   latest.current={units,identity,onItemsChange}
   useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),60000);return()=>clearInterval(timer)},[])
   useEffect(()=>{onDetailChange(detail);return()=>onDetailChange(false)},[detail])
+  // 歌曲编辑列表和歌词详情内保留自身操作，只有复习本歌曲首页参与三栏横滑。
+  useEffect(()=>{onHomeChange?.(!detail&&!editingSongId);return()=>onHomeChange?.(true)},[detail,editingSongId,onHomeChange])
+  // 主页切到其他标签时退出内部编辑状态，隐藏页不消费当前页面的系统返回。
+  useEffect(()=>{if(!active){setEditingSongId(null);setMenuTarget(null);setRemoveSongId(null)}},[active])
   useEffect(()=>{request.current?.abort();request.current=null;setBusy(false);setError('');setReveal(false);setNotice('');setRemove(null);setKnowledgeTab('words');setContextOpen(false);if(tools.current)tools.current.open=false},[identity])
   useEffect(()=>()=>request.current?.abort(),[])
   useEffect(()=>{
-    const back=event=>{if(menuTarget){event.preventDefault();setMenuTarget(null)}else if(removeSongId){event.preventDefault();setRemoveSongId(null)}else if(remove){event.preventDefault();setRemove(null)}else if(tools.current?.open){event.preventDefault();tools.current.open=false}else if(detail){event.preventDefault();closeDetail()}else if(editingSongId){event.preventDefault();setEditingSongId(null)}}
+    // 原处理不区分页面是否可见；常驻主页后先检查active，避免隐藏页面截获返回。
+    const back=event=>{if(!active)return;if(menuTarget){event.preventDefault();setMenuTarget(null)}else if(removeSongId){event.preventDefault();setRemoveSongId(null)}else if(remove){event.preventDefault();setRemove(null)}else if(tools.current?.open){event.preventDefault();tools.current.open=false}else if(detail){event.preventDefault();closeDetail()}else if(editingSongId){event.preventDefault();setEditingSongId(null)}}
     window.addEventListener('uta:navigate-back',back);return()=>window.removeEventListener('uta:navigate-back',back)
-  },[remove,detail,songId,menuTarget,removeSongId,editingSongId])
+  },[remove,detail,songId,menuTarget,removeSongId,editingSongId,active])
   // 详情占满当前视口，页面本身不滚动；离开时释放限定，歌曲列表恢复正常滚动。
   useEffect(()=>{if(!detail)return;document.body.classList.add('review-detail-open');window.scrollTo(0,0);return()=>document.body.classList.remove('review-detail-open')},[detail])
   // 点击歌曲即建立本歌复习队列；完成评价自动下一条，与今日复习使用同一套调度。

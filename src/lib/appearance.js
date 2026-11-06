@@ -1,4 +1,8 @@
+// 安卓2.0界面整合，旧实现注释对照见android-ui/legacy。
 import { customFontFamily, isCustomFont } from './customFonts.js'
+import {normalizeThemeOptions,resolvePalette,advancedThemeColor,rgb} from './themePalette.js'
+import {applyThemeBackground,loadThemeBackground} from './themeBackground.js'
+import {withBackgroundColors} from './backgroundColors.js'
 
 // 外观只保存在本机；不改变歌词内容、人工读音或网页端的默认样式。
 export const APPEARANCE_KEY = 'uta-appearance-v1'
@@ -22,7 +26,9 @@ export const THEMES = [
   { id: 'moon', name: '旅途麦金', hue: 39, ink: '#43372a', colors: ['#fcfaf6', '#806134', '#f0e8d9'] },
 ]
 // 原默认设置：{ theme: 'garden', textSize: 100, lyricSize: 100 }；旧存储未含字体时继续选用颜真卿。
+// 体验版新增系统字体，原有字体/下载/导入功能全部保留。
 export const FONTS = [
+  {id:'system',name:'系统字体'},
   { id: 'yan', name: '颜真卿多宝塔碑' },
   { id: 'flyflower', name: '飞花宋体' },
   { id: 'maoken', name: '猫啃珠圆体' },
@@ -58,7 +64,8 @@ export function normalizeAppearance(value = {}) {
   // 原校验仅允许内置字体与思源字重；导入文件使用 SHA-256 标识，避免任意值注入字体变量。
   // const validFont = FONTS.some(item => item.id === font) || SOURCE_HAN_WEIGHTS.some(item => item.id === font)
   const validFont = FONTS.some(item => item.id === font) || SOURCE_HAN_WEIGHTS.some(item => item.id === font) || isCustomFont(font)
-  return { theme: THEMES.some(theme => theme.id === value.theme) ? value.theme : 'garden', font: validFont ? font : 'yan', textSize: size(value.textSize ?? 100, 130), lyricSize: size(value.lyricSize ?? 100, 160) }
+  // 原返回仅theme/font/textSize/lyricSize；新字段可选，旧记录仍完全沿用浅色。
+  return { theme: THEMES.some(theme => theme.id === value.theme) ? value.theme : 'garden', font: validFont ? font : 'yan', textSize: size(value.textSize ?? 100, 130), lyricSize: size(value.lyricSize ?? 100, 160),...normalizeThemeOptions(value) }
 }
 export function readAppearance() {
   try { return normalizeAppearance(JSON.parse(localStorage.getItem(APPEARANCE_KEY) || '{}')) } catch { return { ...DEFAULT_APPEARANCE } }
@@ -66,7 +73,9 @@ export function readAppearance() {
 
 // 色彩保留原来的明度与透明度；错误红色、图片及高饱和装饰色不改写。
 // 原签名不含角色配色；可选参数兼容旧调用与现有测试。
-export function themeColor(red, green, blue, alpha, hue, semanticAccent = false, palette = null) {
+// 原签名在palette结束；新模式按声明用途处理正文/按钮/卡片，旧浅色转换继续保留。
+export function themeColor(red, green, blue, alpha, hue, semanticAccent = false, palette = null,property='',selector='') {
+  if(palette?.advanced)return advancedThemeColor(red,green,blue,alpha,property,palette,selector)
   const rgb = [red, green, blue].map(value => Number(value) / 255)
   const max = Math.max(...rgb), min = Math.min(...rgb), light = (max + min) / 2, delta = max - min
   const saturation = delta ? delta / (1 - Math.abs(2 * light - 1)) : 0
@@ -93,6 +102,7 @@ export function themeColor(red, green, blue, alpha, hue, semanticAccent = false,
 export function applyAppearance(value) {
   const appearance = normalizeAppearance(value)
   const theme = THEMES.find(item => item.id === appearance.theme)
+  const palette=resolvePalette(appearance,theme),activePalette=palette.advanced?{...theme,...palette}:theme
   const scoped = selector => selector.split(',').map(part => {
     const text = part.trim()
     // 原替换规则会把已有 :root.uta-android-font 错写成 :root:root.uta-android-font，
@@ -120,14 +130,20 @@ export function applyAppearance(value) {
     // 原规则跳过 garden：if (theme.id !== 'garden')；绿色主题现在也统一转换米色纸面。
     for (const property of rule.style) {
       if (!/color|background|border|shadow|^--/.test(property)) continue
+      // 启动画面、图片和明确的外观预览各自管理颜色，避免全局映射改掉对照色块。
+      if(/android-launch-screen|android-launch-title|android-launch-song|theme-live-preview|theme-role-swatch/.test(rule.selectorText))continue
       const original = rule.style.getPropertyValue(property)
       // 浏览器 CSSOM 把普通色值规范化为 rgb；变量定义中的十六进制单独处理。
-      const transformed = original.replace(/#([0-9a-f]{3,8})\b/gi, (match, hex) => {
+      // 新模式一次替换HEX或RGB，防止HEX生成的RGB被二次映射成另一种文字色。
+      const transformed = palette.advanced ? original.replace(/#[0-9a-f]{3,8}\b|rgba?\([\d.,\s]+\)/gi,match=>{
+        if(match.startsWith('#')){let value=match.slice(1);if(![3,4,6,8].includes(value.length))return match;if(value.length<5)value=[...value].map(c=>c+c).join('');return themeColor(parseInt(value.slice(0,2),16),parseInt(value.slice(2,4),16),parseInt(value.slice(4,6),16),value.length===8?parseInt(value.slice(6,8),16)/255:1,theme.hue,semanticAccent,activePalette,property,rule.selectorText)}
+        const values=match.match(/[\d.]+/g);return themeColor(values[0],values[1],values[2],values[3]??1,theme.hue,semanticAccent,activePalette,property,rule.selectorText)
+      }) : original.replace(/#([0-9a-f]{3,8})\b/gi, (match, hex) => {
         if (![3,4,6,8].includes(hex.length)) return match
         const full = hex.length < 5 ? [...hex].map(char => char + char).join('') : hex
         // 原转换只传 theme.hue 与 semanticAccent；现在同时传入角色的纸面与强调色。
-        return themeColor(parseInt(full.slice(0,2),16),parseInt(full.slice(2,4),16),parseInt(full.slice(4,6),16),full.length === 8 ? parseInt(full.slice(6,8),16)/255 : 1,theme.hue,semanticAccent,theme)
-      }).replace(/rgba?\(\s*([\d.]+)[, ]+([\d.]+)[, ]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)/g, (_,r,g,b,a) => themeColor(r,g,b,a ?? 1,theme.hue,semanticAccent,theme))
+        return themeColor(parseInt(full.slice(0,2),16),parseInt(full.slice(2,4),16),parseInt(full.slice(4,6),16),full.length === 8 ? parseInt(full.slice(6,8),16)/255 : 1,theme.hue,semanticAccent,activePalette,property,rule.selectorText)
+      }).replace(/rgba?\(\s*([\d.]+)[, ]+([\d.]+)[, ]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)/g, (_,r,g,b,a) => themeColor(r,g,b,a ?? 1,theme.hue,semanticAccent,activePalette,property,rule.selectorText))
       // 原规则只复制变色声明：if (transformed !== original) declarations.push(`${property}:${transformed}`)
       // 同时复制透明底色、边框重置等声明，保证主题覆盖仍遵守原有层叠顺序。
       // 否则早期通用按钮底色获得更高权重，压过安卓页面后续的透明样式。
@@ -140,7 +156,19 @@ export function applyAppearance(value) {
   style.textContent = [...document.styleSheets].filter(sheet => sheet.ownerNode !== style).map(sheet => {
     try { return build(sheet.cssRules) } catch { return '' }
   }).join('\n')
+  document.documentElement.style?.setProperty('--ref-font-scale',String(appearance.textSize/100))
+  document.documentElement.style?.setProperty('--ref-lyric-scale',String(appearance.lyricSize/100))
   document.documentElement.dataset.utaTheme = appearance.theme
+  // 语义变量仅限定安卓根，网页没有该类名；背景图片另外异步从本机恢复。
+  document.documentElement.dataset.utaMode=palette.mode
+  document.documentElement.dataset.utaAdvanced=palette.advanced?'on':'off'
+  document.documentElement.style?.setProperty('color-scheme',palette.mode)
+  for(const [key,value] of Object.entries({page:palette.page,surface:palette.surface,text:palette.text,muted:palette.muted,accent:palette.accent,'on-accent':palette.onAccent,border:palette.border,tint:palette.tint}))document.documentElement.style?.setProperty('--uta-'+key,value)
+  document.documentElement.style?.setProperty('--uta-surface-rgb',rgb(palette.surface).join(','))
+  document.documentElement.style?.setProperty('--uta-tint-rgb',rgb(palette.tint).join(','))
+  // 旧样式中的固定黑歌词/白卡片在深色时一并处理，实色弹窗不透背景。
+  if(palette.advanced)style.textContent+='\n:root.uta-android-font{--ink:var(--uta-text);--muted:var(--uta-muted);--paper:var(--uta-page);--line:var(--uta-border)}\n:root.uta-android-font body,:root.uta-android-font .android-main{background-color:var(--uta-page);color:var(--uta-text)}'
+  applyThemeBackground(appearance.background,palette)
   // 字体切换由安卓根节点控制；网页端没有该类名，继续使用原网页字体。
   document.documentElement.dataset.utaFont = appearance.font
   // 自定义字体的族名由本机文件摘要生成；CSS 仍统一通过 --uta-selected-font 作用于界面。
@@ -154,4 +182,10 @@ export function saveAppearance(value) {
   localStorage.setItem(APPEARANCE_KEY, JSON.stringify(normalized))
   applyAppearance(normalized)
   return normalized
+}
+// 已保存旧背景补配色；异步期间用户主动改变外观时不覆盖其新选择，不重复自动改写已取色的设置。
+export async function restoreBackgroundAppearance(){
+  const initial=readAppearance();if(!initial.background?.enabled||initial.background.seed)return
+  const image=await loadThemeBackground(),current=readAppearance()
+  if(image.seed&&JSON.stringify(initial)===JSON.stringify(current))saveAppearance(withBackgroundColors(current,image.seed))
 }

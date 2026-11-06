@@ -24,7 +24,8 @@ export default function ReadingLyric({ text, tokens, corrections, songId, lineId
       const romaji=token.is_symbol?'':displayReading(pronunciation,'romaji',token,manual||token.source_reading!=null)
       // 原先假名按整个含汉字词组居中；现在对最终读音做只读分配，罗马音仍横跨完整词组。
       // 原 originalRow=readingStyle==='both'?3:2；下方模式仍将假名固定在第1行。
-      const parts=kanjiReadingParts(surface,reading),originalRow=readingStyle==='both'&&!below?3:2
+      // 原：kanjiReadingParts(surface,reading)；合并组中有可靠词界时保留每个汉字各自的假名。
+      const parts=kanjiReadingParts(surface,reading,token.source_reading_tokens),originalRow=readingStyle==='both'&&!below?3:2
       if(readingStyle!=='romaji'&&parts.length>1)return <span className="word-aligned-token word-han-layout" key={token.index} style={{gridTemplateColumns:parts.map(()=>'max-content').join(' ')}} title={reading?`完整读音：${reading}`:undefined}>
         <span className="word-aligned-kana word-han-kana" lang="ja">{parts.map((part,index)=><span key={index} style={{gridColumn:index+1,gridRow:1}}>{part.kana||'\u00a0'}</span>)}</span>
         {readingStyle==='both'&&<span className="word-aligned-romaji" lang="ja-Latn" style={{gridColumn:'1 / -1',gridRow:below?3:2}}>{romaji||'\u00a0'}</span>}

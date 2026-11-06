@@ -4,6 +4,13 @@
 - Before every GitHub sync or push, review `README.md` against the current user-facing features and setup steps. Update it in the same commit when anything is missing or outdated.
 - Never commit API keys, browser-local data, copyrighted song files, or generated local song data.
 
+# Android local installation
+
+- 用户2026-11-05确认三星会将未限定用户的ADB安装同步到应用分身空间。今后真机安装必须显式使用 `adb -s <serial> install --user 0 --no-incremental -r <apk>`，默认只安装到机主用户；不得使用未指定用户或 `--user all` 的安装命令。
+- 优先使用 `node scripts/install-android.mjs --serial <serial> --apk <apk> --package <package>`，安装前核对APK包名，安装后检查对应包没有新增分身用户安装。正式版覆盖保留原包名与签名；不要默认额外安装调试包。Demo只有用户要求试用时才保留独立包。
+- 未设置SDK环境变量时，可额外传入 `--sdk <AndroidSdk绝对路径>`；不依赖先前构建进程中的临时变量。
+- 不删除整个三星分身用户或其他应用。清理多余UTA时按已授权包名和用户范围处理，保留机主正式版及资料；删除副本不是授权清空正式应用数据。
+
 # 任务接续与累计发布（2026-10-15 用户约定）
 
 - 接手 Android 任务时先阅读 `TASK_HANDOFF.md`（本机完整交接）和 `RELEASE_BACKLOG.json`（待发布清单），再核对 Git、版本及设备实际状态。旧 `ANDROID_APP_HANDOFF.md` 仅作历史参考，早期阶段计划不能覆盖最新约定。

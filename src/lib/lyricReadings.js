@@ -123,7 +123,9 @@ function prepare(input, importedRomaji = '', corrections = {}, songId, lineId) {
   if(!input?.length)return {tokens:input,sourceKana:sourceRomajiKana(importedRomaji),aligned:false,hasSource:Boolean(String(importedRomaji||'').trim())}
   // 上次编辑保存的派生来源随当前歌词重新计算，不把旧罗马音绑定永久缓存。
   // 源发音与假名字形属于派生信息，每次同来源读音一并更新。
-  const original=input.map(token=>{const copy={...token};delete copy.display_surface;delete copy.source_reading;delete copy.source_pronunciation;delete copy.reading_source;delete copy.manual_group_reading;return copy})
+  // 原清理未包含 source_reading_tokens；显示用词界证据必须随当前来源重新生成，不能沿用旧派生值。
+  // const original=input.map(token=>{const copy={...token};delete copy.display_surface;delete copy.source_reading;delete copy.source_pronunciation;delete copy.reading_source;delete copy.manual_group_reading;return copy})
+  const original=input.map(token=>{const copy={...token};delete copy.display_surface;delete copy.source_reading;delete copy.source_pronunciation;delete copy.reading_source;delete copy.manual_group_reading;delete copy.source_reading_tokens;return copy})
   const tokens=inlineTokens(original), raw=tokens.map(token=>token.surface).join('')
   // 兼容用户以前对括号内那个“词”做过的校正，合并后仍保留其人工读音。
   for(const token of tokens)if(token.legacy_reading_indices&&corrections[correctionKey(songId,lineId,token.index)]==null){
@@ -187,6 +189,10 @@ function prepare(input, importedRomaji = '', corrections = {}, songId, lineId) {
     if(members.length>1){
       merged.reading=members.filter(token=>!token.is_symbol).map(token=>token.reading||'').join('')
       merged.is_symbol=false
+      // 对齐仍保留整组和原校正索引；只有逐词读音完整吻合来源，才把原词界交给显示层。
+      // 例如“道 君”的みち/きみ，不能因中间空格不发音就丢掉两边已有的假名。
+      const readingTokens=members.map(token=>({surface:lyricSurface(token),reading:token.is_symbol?'':token.reading||''}))
+      if(phonetic(readingTokens.map(token=>token.reading).join(''))===phonetic(sourceReading))merged.source_reading_tokens=readingTokens
       if(members.some(token=>corrections[correctionKey(songId,lineId,token.index)]!=null)){
         const words=members.filter(token=>!token.is_symbol)
         // 旧人工校正的词边界可由吻合来源的原读音确定；只作锚点，不代替来源唱法。

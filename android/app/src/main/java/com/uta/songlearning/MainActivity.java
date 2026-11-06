@@ -19,6 +19,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AudioRoutePlugin.class);
         // 首页反馈邀请使用本机同步计数，前三次启动各展示一次。
         registerPlugin(FeedbackInvitePlugin.class);
+        // 安卓主题试用：系统明暗变化及状态栏/导航栏颜色。
+        registerPlugin(AppearancePlugin.class);
         // 原独立 WebView 接入保留对照；QQ 授权的 Cookie 回到浏览器，现复用已注册的 Browser 插件。
         // registerPlugin(FeedbackPlugin.class);
         // 新方案使用官方访客登录态，应用内直接发言，不再依赖 QQ 或浏览器登录。

@@ -1,3 +1,6 @@
+// 安卓2.0界面整合，旧实现注释对照见android-ui/legacy。
+import {useDemoStudyViewport,centerDemoLyric,studySelector} from './android-ui/studyViewport.js'
+import {DemoImportChoices,DemoDialogHeading} from './android-ui/ImportChoices.jsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
 // 原导入保留对照：import { Capacitor } from '@capacitor/core'
 import { Capacitor, registerPlugin } from '@capacitor/core'
@@ -6,7 +9,9 @@ import { BookOpenCheck, Bot, Check, ChevronDown, ChevronRight, Circle, CircleAle
 import AnnotatedLine from './components/AnnotatedLine'
 import ComputerImportDialog from './components/ComputerImportDialog'
 import ArtworkPicker from './components/ArtworkPicker'
-import AndroidHome, { AndroidBottomNav } from './components/AndroidHome'
+import AndroidHome, { AndroidBottomNav } from './android-ui/AndroidHome.jsx'
+// 安卓三主页采用跟手滑动容器，歌词/歌曲库等内页继续使用原路由。
+import AndroidHomePager from './components/AndroidHomePager.jsx'
 // 初版复习本支持单句/连续多句；收藏与掌握状态独立，沿用学习备份存储。
 import ReviewBook from './components/ReviewBook'
 // 原长按多句选择已移除：import ReviewCollector from './components/ReviewCollector'
@@ -18,7 +23,9 @@ import AndroidLessonHeader, { FloatingPlaybackSpeed } from './components/Android
 // 合并学习页保留旧组件，新增统一播放器与共享静音时间轴。
 import { songLanguage, songReadingStyle, annotationForLanguage } from './lib/songLanguage.js'
 import SongLanguageSelect from './components/SongLanguageSelect'
-import AndroidStudyPlayer, { AndroidStudyHeader } from './components/AndroidStudyPlayer'
+// 原播放器保留真实逻辑，仅将紧凑页头从体验层导入。
+import AndroidStudyPlayer from './components/AndroidStudyPlayer'
+import AndroidStudyHeader from './android-ui/StudyHeader.jsx'
 import useStudyPlayback from './lib/useStudyPlayback'
 // 每次调整即时保存当前句；调试会话只保留选句与初始偏移参照。
 import TimestampTuner from './components/TimestampTuner'
@@ -54,7 +61,8 @@ import JapaneseLevelOnboarding from './components/JapaneseLevelOnboarding'
 import {readLocalProfile,readJapaneseLevel} from './lib/localProfile'
 import {validJapaneseLevel} from './lib/japaneseLevel'
 import {currentSentenceEntry,visibleSentenceEntry,sentenceEntry,removeSentenceEntries,SentenceTaskGate,sentenceSongFingerprint} from './lib/sentenceAnalysis'
-import { applyAppearance, readAppearance } from './lib/appearance'
+import { applyAppearance, readAppearance, restoreBackgroundAppearance } from './lib/appearance'
+import {startAndroidThemeEnvironment} from './lib/androidThemeEnvironment.js'
 import { restoreRemoteFont } from './lib/remoteFonts'
 import { isCustomFont, restoreCustomFont } from './lib/customFonts'
 import { importedSongs } from './data/songs.generated'
@@ -178,6 +186,7 @@ function parseLrcTimestamp(value) {
 
 export default function App() {
   // 安卓每次启动检查官方版本，只提示更新，不自动下载安装。
+  // 正式版本继续使用原签名校验和双源更新通道。
   const appUpdates=useAppUpdates(IS_ANDROID_APP)
   // 未设置等级的既有用户也会在升级后首次询问；选择后不再重复打扰。
   const [japaneseLevel,setJapaneseLevel]=useState(readJapaneseLevel)
@@ -201,6 +210,7 @@ export default function App() {
   // 旧网页入口：useState('lesson')；安卓改为从三栏首页的“学习”页启动。
   const [activePage, setActivePage] = useState(IS_ANDROID_APP ? 'mobile-learn' : 'lesson')
   const [mobileTab, setMobileTab] = useState('learn')
+  const [reviewHomeVisible,setReviewHomeVisible]=useState(true)
   // 安卓页面原先只切换组件状态，系统返回键因此直接退出；现在记录实际访问顺序。
   const androidRouteRef = useRef({ page: IS_ANDROID_APP ? 'mobile-learn' : 'lesson', tab: 'learn' })
   const androidBackStackRef = useRef([])
@@ -227,6 +237,7 @@ export default function App() {
   useEffect(() => {
     if (!IS_ANDROID_APP) return undefined
     document.documentElement.classList.add('uta-android-font')
+    const stopThemeEnvironment=startAndroidThemeEnvironment()
     // 冷启动恢复本机主题与字号，页面内容和读音不受影响。
     const savedAppearance = readAppearance()
     applyAppearance(savedAppearance)
@@ -238,8 +249,11 @@ export default function App() {
     Promise.all([
       restoreRemoteFont(savedAppearance.font).catch(()=>false),
       isCustomFont(savedAppearance.font)?restoreCustomFont(savedAppearance.font).catch(()=>false):Promise.resolve(false),
+      // 旧版背景自动补取色，与字体恢复共同完成后再显示启动文案。
+      restoreBackgroundAppearance().catch(()=>false),
     ]).then(()=>{if(!disposed){applyAppearance(readAppearance());setAndroidFontReady(true)}})
-    return () => {disposed=true;document.documentElement.classList.remove('uta-android-font')}
+    // 原清理仅移除字族类名，现同时解除系统明暗监听。
+    return () => {disposed=true;stopThemeEnvironment();document.documentElement.classList.remove('uta-android-font')}
   }, [])
   useEffect(() => {
     if (!IS_ANDROID_APP) return undefined
@@ -328,6 +342,7 @@ export default function App() {
   const [deletingSongId, setDeletingSongId] = useState('')
   // 安卓删除先展示适配本机文案的圆角确认框；确认前不修改歌曲数据。
   const [songToDelete,setSongToDelete] = useState(null)
+  const [demoSettingsTab,setDemoSettingsTab]=useState(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [backupBusy, setBackupBusy] = useState('')
   const [backupPreview, setBackupPreview] = useState(null)
@@ -547,7 +562,8 @@ export default function App() {
   const playbackReady=Boolean(audioUrl)&&hasLyricTimeline(activeSong)
   // 安卓两种播放方式共用同页；无音频时由同一控制器按真实歌词时间轴计时。
   const unifiedStudy = IS_ANDROID_APP && activePage === 'lesson' && !practiceActive
-  const manualLyricScroll = useManualLyricScroll(unifiedStudy, activeSong.id, '.unified-study-page')
+  useDemoStudyViewport(unifiedStudy,activeSong.id)
+  const manualLyricScroll = useManualLyricScroll(unifiedStudy, activeSong.id, studySelector)
   const study = useStudyPlayback({ enabled: unifiedStudy, song: activeSong, audioRef, audioUrl, rate: playbackRate, onSelect: setActiveLineId, onError: setAudioError })
   // 时间轴配置更新后重新定位所选句；固定选中目标不随连续播放跨句而改变。
   useEffect(()=>{
@@ -650,7 +666,7 @@ export default function App() {
     return () => { active = false; listener?.remove() }
   }, [study.transport])
   // 进入学习或切歌时显示歌曲信息，避免沿用上一首的内部滚动位置。
-  useEffect(() => { if (unifiedStudy) document.querySelector('.unified-study-page')?.scrollTo({ top: 0, behavior: 'instant' }) }, [unifiedStudy, activeSong.id])
+  useEffect(() => { if (unifiedStudy) document.querySelector(studySelector)?.scrollTo({ top: 0, behavior: 'instant' }) }, [unifiedStudy, activeSong.id])
   useEffect(() => { if (unifiedStudy) setPlayingLineId(study.playing ? activeLineId : null) }, [unifiedStudy, study.playing, activeLineId])
   useEffect(() => {
     if (!unifiedStudy) return undefined
@@ -662,8 +678,8 @@ export default function App() {
       if (timestampEditing || !study.playing || manualLyricScroll.current?.paused() || document.body.style.overflow === 'hidden') return
       // 原列表单独滚动：const list = document.getElementById('lesson')
       // 歌曲信息与歌词一起滚动，自动跟随也以同一个页面容器为准。
-      const list = document.querySelector('.unified-study-page'), row = document.getElementById(`lyric-row-${activeSong.id}-${activeLineId}`)
-      if (list && row) list.scrollTo({ top: list.scrollTop + row.getBoundingClientRect().top - list.getBoundingClientRect().top - (list.clientHeight - row.offsetHeight) / 2, behavior: 'smooth' })
+      const list = document.querySelector(studySelector), row = document.getElementById(`lyric-row-${activeSong.id}-${activeLineId}`)
+      if (list && row) centerDemoLyric(list,row)
     }
     follow(); window.addEventListener('uta:study-follow', follow); window.addEventListener('uta:appearance-changed', follow); window.addEventListener('resize', follow)
     return () => { window.removeEventListener('uta:study-follow', follow); window.removeEventListener('uta:appearance-changed', follow); window.removeEventListener('resize', follow) }
@@ -2259,17 +2275,27 @@ export default function App() {
     {/* 原学习页只有 android-lesson-page；统一页单独声明布局，不改网页端。 */}
     {/* 主页单独占满可用高度，去掉品牌栏后不留下原栏占位。 */}
     {/* 原主容器没有滚动处理；选段期间滚动只取消手势，不取消已选起点。 */}
-    {/* <main id="top" className={...} data-reading-style={readingStyle}> */}
-    <main id="top" className={IS_ANDROID_APP ? `android-main ${activePage.startsWith('mobile-') ? 'android-home-main' : ''} ${activePage === 'lesson' ? `android-lesson-page ${unifiedStudy ? `unified-study-page ${timestampEditing?'timestamp-debug-mode':''}` : ''}` : ''}` : ''} data-reading-style={readingStyle} onScrollCapture={unifiedStudy ? () => { lyricTapRef.current?.cancel(); cancelLyricPress() } : undefined}>
+    {/* <main data-demo-route={activePage} id="top" className={...} data-reading-style={readingStyle}> */}
+    <main data-demo-route={activePage} id="top" className={IS_ANDROID_APP ? `android-main ${activePage.startsWith('mobile-') ? 'android-home-main' : ''} ${activePage === 'lesson' ? `android-lesson-page ${unifiedStudy ? `unified-study-page ${timestampEditing?'timestamp-debug-mode':''}` : ''}` : ''}` : ''} data-reading-style={readingStyle} onScrollCapture={unifiedStudy ? () => { lyricTapRef.current?.cancel(); cancelLyricPress() } : undefined}>
       {/* 首页反馈卡片优先于旧QQ群提醒；启动图、新手/更新、导入及设置不提前消耗机会。 */}
       {IS_ANDROID_APP&&<FeedbackInvite onVisibleChange={setFeedbackInviteVisible} enabled={activePage==='mobile-learn'&&!androidLaunchVisible&&localSongsReady&&!needsJapaneseLevel&&!settingsOpen&&!importOpen&&!importBusy&&!importPreparing&&!backupPreview&&!computerShare&&!appUpdates.checking&&!appUpdates.prompt&&!appUpdates.installing&&!appUpdates.downloadState.busy}/>}
       {/* 安卓三屏首页按确认稿呈现，模式卡片只负责进入现有功能。 */}
     {/* 复习主页接入三层复习本，其他主页保持原入口；原实现保留：
-      {IS_ANDROID_APP && activePage.startsWith('mobile-') && <AndroidHome tab={mobileTab} recentLearn={recentLearnSong ? { song: recentLearnSong, artwork: artworkForSong(recentLearnSong) } : null} recentSing={recentSingSong ? { song: recentSingSong, artwork: artworkForSong(recentSingSong) } : null} onEnterLearn={enterRecentLearning} onEnterSingAlong={showSingAlong} onEnterReview={showReviewQueue} onOpenLibrary={() => showLibraryPage()} onOpenSettings={() => setSettingsOpen(true)} />}
+      {IS_ANDROID_APP && activePage.startsWith('mobile-') && <AndroidHome songs={allSongs} artworkFor={artworkForSong} learnedBySong={learnedBySong} reviewItems={reviewItems} onOpenSong={chooseSongFromLibrary} onImport={openImportDialog} tab={mobileTab} recentLearn={recentLearnSong ? { song: recentLearnSong, artwork: artworkForSong(recentLearnSong) } : null} recentSing={recentSingSong ? { song: recentSingSong, artwork: artworkForSong(recentSingSong) } : null} onEnterLearn={enterRecentLearning} onEnterSingAlong={showSingAlong} onEnterReview={showReviewQueue} onOpenLibrary={() => showLibraryPage()} onOpenSettings={() => setSettingsOpen(true)} />}
     */}
-      {IS_ANDROID_APP && activePage.startsWith('mobile-') && activePage!=='mobile-review' && <AndroidHome tab={mobileTab} recentLearn={recentLearnSong?{song:recentLearnSong,artwork:artworkForSong(recentLearnSong)}:null} recentSing={recentSingSong?{song:recentSingSong,artwork:artworkForSong(recentSingSong)}:null} onEnterLearn={enterRecentLearning} onEnterSingAlong={showSingAlong} onEnterReview={showReviewQueue} onOpenLibrary={()=>showLibraryPage()} onOpenSettings={()=>setSettingsOpen(true)}/>}
-      {/* 复习按歌曲ID读写同一songSettings，不能套用另一首当前学习歌曲的注音偏好。 */}
+      {/* 原三个主页分别按路由挂载，切换时没有连续画面；完整旧渲染保留：
+      {IS_ANDROID_APP && activePage.startsWith('mobile-') && activePage!=='mobile-review' && <AndroidHome songs={allSongs} artworkFor={artworkForSong} learnedBySong={learnedBySong} reviewItems={reviewItems} onOpenSong={chooseSongFromLibrary} onImport={openImportDialog} tab={mobileTab} recentLearn={recentLearnSong?{song:recentLearnSong,artwork:artworkForSong(recentLearnSong)}:null} recentSing={recentSingSong?{song:recentSingSong,artwork:artworkForSong(recentSingSong)}:null} onEnterLearn={enterRecentLearning} onEnterSingAlong={showSingAlong} onEnterReview={showReviewQueue} onOpenLibrary={()=>showLibraryPage()} onOpenSettings={tab=>{setDemoSettingsTab(tab||null);setSettingsOpen(true)}}/>}
+      */}
+      {IS_ANDROID_APP&&activePage.startsWith('mobile-')&&<AndroidHomePager tab={mobileTab} onSelect={showMobileTab} enabled={!androidLaunchVisible&&!settingsOpen&&!feedbackInviteVisible&&!needsJapaneseLevel&&!appUpdates.prompt&&!importOpen&&(mobileTab!=='review'||reviewHomeVisible)} expanded={reviewDetailOpen} nested={!reviewHomeVisible}>{{
+        learn:<AndroidHome songs={allSongs} artworkFor={artworkForSong} learnedBySong={learnedBySong} reviewItems={reviewItems} onOpenSong={chooseSongFromLibrary} onImport={openImportDialog} tab="learn" recentLearn={recentLearnSong?{song:recentLearnSong,artwork:artworkForSong(recentLearnSong)}:null} recentSing={recentSingSong?{song:recentSingSong,artwork:artworkForSong(recentSingSong)}:null} onEnterLearn={enterRecentLearning} onEnterSingAlong={showSingAlong} onEnterReview={showReviewQueue} onOpenLibrary={()=>showLibraryPage()} onOpenSettings={tab=>{setDemoSettingsTab(tab||null);setSettingsOpen(true)}}/>,
+        review:<ReviewBook songs={allSongs} items={reviewItems} onItemsChange={setReviewItems} artworkFor={artworkForSong} audioFor={song=>song.isLocal?localAudioUrls[song.id]||'':song.audioFile?import.meta.env.BASE_URL+song.audioFile.split('/').map(encodeURIComponent).join('/'):''} sentenceCache={sentenceExplanationsBySong} annotations={annotationsBySong} meaningOverrides={meaningOverrides} corrections={corrections} level={japaneseLevel} songSettings={songSettings} defaultReadingStyle={defaultReadingStyle} onReadingSettings={(id,patch)=>updateLearningMap('songSettings',previous=>({...previous,[id]:{...previous?.[id],...patch}}),true)} onDetailChange={setReviewDetailOpen} onHomeChange={setReviewHomeVisible} active={mobileTab==='review'} onOpenSong={(id,lineId)=>{chooseSongFromLibrary(id);setActiveLineId(lineId)}}/>,
+        mine:<AndroidHome songs={allSongs} artworkFor={artworkForSong} learnedBySong={learnedBySong} reviewItems={reviewItems} onOpenSong={chooseSongFromLibrary} onImport={openImportDialog} tab="mine" recentLearn={recentLearnSong?{song:recentLearnSong,artwork:artworkForSong(recentLearnSong)}:null} recentSing={recentSingSong?{song:recentSingSong,artwork:artworkForSong(recentSingSong)}:null} onEnterLearn={enterRecentLearning} onEnterSingAlong={showSingAlong} onEnterReview={showReviewQueue} onOpenLibrary={()=>showLibraryPage()} onOpenSettings={tab=>{setDemoSettingsTab(tab||null);setSettingsOpen(true)}}/>
+      }}</AndroidHomePager>}
+      {/* 独立复习入口沿用同一songSettings；主页中的ReviewBook由滑动容器持有。 */}
+      {IS_ANDROID_APP&&activePage==='review-list'&&<ReviewBook songs={allSongs} items={reviewItems} onItemsChange={setReviewItems} artworkFor={artworkForSong} audioFor={song=>song.isLocal?localAudioUrls[song.id]||'':song.audioFile?import.meta.env.BASE_URL+song.audioFile.split('/').map(encodeURIComponent).join('/'):''} sentenceCache={sentenceExplanationsBySong} annotations={annotationsBySong} meaningOverrides={meaningOverrides} corrections={corrections} level={japaneseLevel} songSettings={songSettings} defaultReadingStyle={defaultReadingStyle} onReadingSettings={(id,patch)=>updateLearningMap('songSettings',previous=>({...previous,[id]:{...previous?.[id],...patch}}),true)} onDetailChange={setReviewDetailOpen} onOpenSong={(id,lineId)=>{chooseSongFromLibrary(id);setActiveLineId(lineId)}}/>}
+      {/* 旧主页复习渲染已由上方滑动容器接管，保留对照：
       {IS_ANDROID_APP&&(activePage==='mobile-review'||activePage==='review-list')&&<ReviewBook songs={allSongs} items={reviewItems} onItemsChange={setReviewItems} artworkFor={artworkForSong} audioFor={song=>song.isLocal?localAudioUrls[song.id]||'':song.audioFile?import.meta.env.BASE_URL+song.audioFile.split('/').map(encodeURIComponent).join('/'):''} sentenceCache={sentenceExplanationsBySong} annotations={annotationsBySong} meaningOverrides={meaningOverrides} corrections={corrections} level={japaneseLevel} songSettings={songSettings} defaultReadingStyle={defaultReadingStyle} onReadingSettings={(id,patch)=>updateLearningMap('songSettings',previous=>({...previous,[id]:{...previous?.[id],...patch}}),true)} onDetailChange={setReviewDetailOpen} onOpenSong={(id,lineId)=>{chooseSongFromLibrary(id);setActiveLineId(lineId)}}/>}
+      */}
       {/* 原独立界面实现保留供对照：
       {IS_ANDROID_APP && activePage === 'sing-along' && <AndroidSingAlong romajiPosition={activeSongSettings.romajiPosition} onRomajiPosition={romajiPosition=>updateSongSettings({romajiPosition})} song={activeSong} songs={allSongs} artwork={artworkForSong(activeSong)} audioReady={playbackReady} audioPresent={Boolean(audioUrl)} playing={singAlongPlaying} currentLineId={singAlongLineId} onSelectSong={chooseSong} onPlayFromStart={() => startContinuousPlayback(0, activeSong.lines[0]?.id ?? null)} onPlayFromLine={playSingAlongFromLine} onToggle={toggleSingAlong} error={audioError} onChoose={openStudySongPicker} annotations={annotations} corrections={corrections} readingStyle={readingStyle} onReadingStyle={setReadingStyle} />}
       */}
@@ -2281,7 +2307,7 @@ export default function App() {
       {/* 原独立界面实现保留供对照：
       {IS_ANDROID_APP && <AndroidLessonHeader song={activeSong} artwork={artworkForSong(activeSong)} learned={learnedLines.size} mode={mode} onMode={setMode} readingStyle={readingStyle} onReadingStyle={setReadingStyle} onChoose={openStudySongPicker} ready={readySentenceCount} generating={Boolean(sentenceExplanationJob)} onGenerate={generateCurrentSongExplanations} onWordDetails={openWordDetails} onReview={() => setLyricAiReviewSong(activeSong)} error={annotationError || audioError || sentenceExplanationError?.songId === activeSong.id && sentenceExplanationError.message} />}
       */}
-      {IS_ANDROID_APP && <AndroidStudyHeader song={activeSong} artwork={artworkForSong(activeSong)} learned={learnedLines.size} onChoose={openStudySongPicker} error={annotationError || audioError || sentenceExplanationError?.songId === activeSong.id && sentenceExplanationError.message} />}
+      {IS_ANDROID_APP && <AndroidStudyHeader transport={study.transport} onBack={goBackAndroid} song={activeSong} artwork={artworkForSong(activeSong)} learned={learnedLines.size} onChoose={openStudySongPicker} error={annotationError || audioError || sentenceExplanationError?.songId === activeSong.id && sentenceExplanationError.message} />}
       {/* 原独立界面实现保留供对照：
       {IS_ANDROID_APP && <FloatingPlaybackSpeed rate={playbackRate} onChange={choosePlaybackRate} />}
       */}
@@ -2447,7 +2473,7 @@ export default function App() {
       </section>}
 
       {activePage === 'library' && <section className="library-section library-page" id="library" aria-labelledby="library-title">
-        {IS_ANDROID_APP && <AndroidSongLibrary songs={androidLibrarySongs} total={androidLibraryTotal} search={librarySearch} onSearch={setLibrarySearch} onImport={openImportDialog} artworkFor={artworkForSong} learnedBySong={learnedBySong} onOpen={chooseSongFromLibrary} onDelete={removeImportedSong} onArtwork={openArtworkEditor} onEdit={setEditingDetailsSong} deletingSongId={deletingSongId} activeSongId={activeSong.id} />}
+        {IS_ANDROID_APP && <AndroidSongLibrary onBack={goBackAndroid} songs={androidLibrarySongs} total={androidLibraryTotal} search={librarySearch} onSearch={setLibrarySearch} onImport={openImportDialog} artworkFor={artworkForSong} learnedBySong={learnedBySong} onOpen={chooseSongFromLibrary} onDelete={removeImportedSong} onArtwork={openArtworkEditor} onEdit={setEditingDetailsSong} deletingSongId={deletingSongId} activeSongId={activeSong.id} />}
         {/* 原网页歌曲库保留作对照；安卓使用上方独立的简洁布局。 */}
         {!IS_ANDROID_APP && <>
         <div className="library-top"><div><p className="eyebrow">YOUR IMPORTED SONGS</p><h2 id="library-title">歌曲库</h2><p>从已导入的歌词中选一首，继续练习发音与词汇。</p></div><div className="library-top-actions"><label className="library-search"><Search size={14} /><input id="library-search" type="search" value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} placeholder="搜索歌名或歌手" aria-label="搜索歌名或歌手" />{librarySearch && <button type="button" onClick={() => setLibrarySearch('')} aria-label="清除搜索"><X size={13} /></button>}</label><span className="library-count">{librarySearch ? `找到 ${visibleLibrarySongs.length} / ${allSongs.length} 首` : `已导入 ${allSongs.length} 首`}</span><button className="library-import-trigger" type="button" onClick={openImportDialog}><Download size={14} /> 导入歌曲</button>{!IS_ANDROID_APP && <button className="library-import-trigger" type="button" onClick={shareComputerSongs}><Upload size={14} /> 共享到手机</button>}</div></div>
@@ -2497,7 +2523,7 @@ export default function App() {
     {/* 复习详情用评价栏，歌曲和单元列表保留原底部导航；原实现保留：
     {IS_ANDROID_APP && !unifiedStudy && <AndroidBottomNav activeTab={mobileTab} onSelect={showMobileTab} />}
     */}
-    {IS_ANDROID_APP&&!unifiedStudy&&!(reviewDetailOpen&&(activePage==='mobile-review'||activePage==='review-list'))&&<AndroidBottomNav activeTab={mobileTab} onSelect={showMobileTab}/>}
+    {IS_ANDROID_APP&&activePage.startsWith('mobile-')&&!unifiedStudy&&!(reviewDetailOpen&&(activePage==='mobile-review'||activePage==='review-list'))&&<AndroidBottomNav activeTab={mobileTab} onSelect={showMobileTab}/>}
 
     {/* 旧调用未传入当前封面：
     {editingDetailsSong && <SongDetailsEditor key={editingDetailsSong.id} song={editingDetailsSong} onClose={() => { if (!editingDetailsBusy) setEditingDetailsSong(null) }} onSave={saveSongDetails} busy={editingDetailsBusy} />}
@@ -2516,7 +2542,7 @@ export default function App() {
     {/* 旧网页页脚保留；安卓让底部主导航固定在屏幕下沿。 */}
     {!IS_ANDROID_APP && <footer><span>UTA. Learn Japanese, one lyric at a time.</span><span>自动注音在本机生成 · 词义数据：<a href="https://github.com/tomoshi-app/tomoshi-dict-data" target="_blank" rel="noreferrer">Tomoshi / EDRDG</a> · AI 请求仅在你主动点击后发起</span></footer>}
 
-    {settingsOpen && <SettingsDialog updates={appUpdates} onCloudExport={createCloudData} readingStyle={readingStyle} onReadingStyleChange={setReadingStyle} onClose={() => setSettingsOpen(false)} onExport={exportLearningData} onRestore={async (file) => { const ready = await prepareBackupRestore(file); if (ready) setSettingsOpen(false) }} backupBusy={backupBusy} backupError={backupError} />}
+    {settingsOpen && <SettingsDialog initialTab={demoSettingsTab} updates={appUpdates} onCloudExport={createCloudData} readingStyle={readingStyle} onReadingStyleChange={setReadingStyle} onClose={() => setSettingsOpen(false)} onExport={exportLearningData} onRestore={async (file) => { const ready = await prepareBackupRestore(file); if (ready) setSettingsOpen(false) }} backupBusy={backupBusy} backupError={backupError} />}
     {backupPreview && <div className="backup-backdrop" role="presentation" onClick={() => { if (backupBusy !== 'restore') { setBackupPreview(null); setBackupError('') } }}><section className="backup-dialog" role="dialog" aria-modal="true" aria-labelledby="backup-dialog-title" onClick={(event) => event.stopPropagation()}>
       <button className="backup-close" type="button" disabled={backupBusy === 'restore'} onClick={() => { setBackupPreview(null); setBackupError('') }} aria-label="关闭备份预览"><X size={18} /></button>
       <p className="eyebrow">RESTORE LOCAL DATA</p><h2 id="backup-dialog-title">确认恢复备份</h2>
@@ -2536,12 +2562,10 @@ export default function App() {
       {/* 手机先选来源；原有的手机文件导入表单仍可直接使用。 */}
       {importSource === null ? <section className="song-import-dialog import-source-dialog" role="dialog" aria-modal="true" aria-labelledby="import-source-title" onClick={(event) => event.stopPropagation()}>
         <button className="song-import-close" type="button" onClick={closeImportDialog} aria-label="关闭导入窗口"><X size={18} /></button>
-        {/* 原说明保留：<p className="eyebrow">CHOOSE A SOURCE</p> */}<h2 id="import-source-title">从哪里导入歌曲？</h2>
+        {/* 原说明保留：<p className="eyebrow">CHOOSE A SOURCE</p> */}<h2 id="import-source-title">导入歌曲</h2>
         {/* 原说明保留：<p className="song-import-intro">你可以选手机上的歌词和音频文件，也可以连接电脑网页，选择它已经保存的歌曲。</p> */}
-        <div className="import-source-options"><button type="button" onClick={() => setImportSource('phone')}><strong>从手机文件导入</strong>{/* 原说明保留：<span>可只导入歌词，音频以后补充。</span> */}</button><button type="button" onClick={() => setImportSource('computer')}><strong>从电脑网页导入</strong>{/* 原说明保留：<span>连接电脑后查看已有歌曲，可全部或部分导入。</span> */}</button></div>
-      </section> : importSource === 'computer' ? <ComputerImportDialog onClose={closeImportDialog} onImport={importSelectedComputerSongs} existingSongIds={localSongs.map((song) => song.id)} /> : <form className="song-import-dialog" onSubmit={(event) => { event.preventDefault(); importLocalSong() }} onClick={(event) => event.stopPropagation()}>
-      <button className="song-import-close" type="button" onClick={closeImportDialog} aria-label="关闭导入窗口"><X size={18} /></button>
-      {/* 原说明保留：<p className="eyebrow">ADD A LOCAL SONG</p> */}<h2>导入歌曲</h2>{/* 原说明保留：<p className="song-import-intro">导入歌词文件或搜索选用歌词即可保存；音频可选，无时间戳的歌词也能阅读。</p> */}
+        <DemoImportChoices onPhone={()=>setImportSource('phone')} onComputer={()=>setImportSource('computer')}/>
+      </section> : importSource === 'computer' ? <ComputerImportDialog onClose={closeImportDialog} onImport={importSelectedComputerSongs} existingSongIds={localSongs.map((song) => song.id)} /> : <form className="song-import-dialog refined-import-form" role="dialog" aria-modal="true" aria-label="导入歌曲" onSubmit={(event) => { event.preventDefault(); importLocalSong() }} onClick={(event) => event.stopPropagation()}><DemoDialogHeading title="导入歌曲" onClose={closeImportDialog}/><div className="refined-dialog-scroll">{/* 原说明保留：<p className="song-import-intro">导入歌词文件或搜索选用歌词即可保存；音频可选，无时间戳的歌词也能阅读。</p> */}
       {/* 旧版先选 LRC 再选音频；现在让音频在前，选中后即可自动搜索歌词。 */}
       {/* 原文件说明保留：<label className={`song-file-field ${importAudioFile ? 'selected' : ''}`}><span>01 · 原声音频（可选）</span><strong>{importAudioFile?.name || '选择 MP3、M4A、WAV、OGG 等音频'}</strong><small>{importAudioGuess?.title ? `识别：${importAudioGuess.title}${importAudioGuess.artist ? ` · ${importAudioGuess.artist}` : ''}，正在自动查找歌词` : '选择后会按音频标签或文件名自动查找歌词'}</small><input key={importAudioFile?.name || 'empty-audio'} type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.webm" onChange={(event) => chooseImportAudioFile(event.target.files?.[0] || null)} /></label> */}
       <label className={`song-file-field ${importAudioFile ? 'selected' : ''}`}><span>音频（可选）</span><strong>{importAudioFile?.name || '选择音频文件'}</strong><input type="file" accept="audio/*,.flac,.mp3,.m4a,.wav,.ogg,.webm" onChange={(event) => chooseImportAudioFile(event.target.files?.[0] || null)}/></label>
@@ -2569,7 +2593,7 @@ export default function App() {
       {/* 原后台说明保留：{importAiMode === 'background' && <p className="import-ai-disclosure"><Sparkles size={14} /> AI 生成期间可以继续在应用内学习。若应用被系统关闭，未完成的句子会在下次打开时续做；需要先在设置中配置 AI 服务。</p>} */}
       {/* 旧导入等待提示保留供对照：{importAiProgress && <p className="import-ai-progress">正在生成整句解析</p>} */}
       {importError && <p className="song-import-error"><CircleAlert size={14} /> {importError}</p>}
-      <div className="song-import-actions"><button type="button" onClick={closeImportDialog} disabled={importBusy}>取消</button><button className="song-import-submit" type="submit" disabled={importBusy || importPreparing || importArtworkStatus === 'loading'}>{importBusy ? <LoaderCircle className="spin" size={14} /> : <Download size={14} />}{importBusy ? '正在保存…' : importAiMode === 'background' ? '导入并后台生成' : '直接导入歌曲'}</button></div>
+      </div><div className="song-import-actions"><button type="button" onClick={closeImportDialog} disabled={importBusy}>取消</button><button className="song-import-submit" type="submit" disabled={importBusy || importPreparing || importArtworkStatus === 'loading'}>{importBusy ? <LoaderCircle className="spin" size={14} /> : <Download size={14} />}{importBusy ? '正在保存…' : importAiMode === 'background' ? '导入并后台生成' : '直接导入歌曲'}</button></div>
     </form>}</div>}
 
     {detailOpen && <div className="detail-backdrop" role="presentation" onClick={closeDetail}><section className={`word-detail ${detailView === 'ai' ? 'ai-only-detail' : ''}`} role="dialog" aria-modal="true" aria-labelledby="detail-title" onClick={(event) => event.stopPropagation()}>

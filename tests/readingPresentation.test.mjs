@@ -17,3 +17,12 @@ test('未知、主动留空和不能唯一定位的特殊唱法不猜读音，�
  const reading='だっこ';assert.ok(kanjiReadingParts('抱きしめ',reading).every(p=>p.kana===''));assert.equal(reading,'だっこ')
  assert.ok(kanjiReadingParts('見え見','みえみえみ').every(p=>p.kana===''))
 })
+
+// 无声空格无法决定读音切点；仅在原词界完整匹配时显示两边假名，不用词典替换来源唱法。
+test('跨空格汉字合并组使用完整吻合的原词界，人工改音和留空不会误套',()=>{
+ const evidence=[{surface:'森',reading:'もり'},{surface:' ',reading:''},{surface:'君',reading:'きみ'}]
+ assert.deepEqual(kanjiReadingParts('森 君','もりきみ',evidence),[{surface:'森',kana:'もり'},{surface:' ',kana:''},{surface:'君',kana:'きみ'}])
+ for(const reading of ['','もりあなた'])assert.ok(kanjiReadingParts('森 君',reading,evidence).every(p=>!p.kana))
+ assert.ok(kanjiReadingParts('海 君','もりきみ',evidence).every(p=>!p.kana))
+ assert.ok(kanjiReadingParts('森 君','もりきみ',[{},null]).every(p=>!p.kana))
+})

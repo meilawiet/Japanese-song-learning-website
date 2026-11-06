@@ -1,0 +1,67 @@
+// 安卓2.0界面整合，旧实现注释对照见android-ui/legacy。
+// 安卓主题语义色：只接收受限HEX值，不允许导入CSS/脚本；明暗分别保存。
+export const LIGHT_COLORS={accent:'#414c84',page:'#f8f9fc',surface:'#ffffff'}
+export const DARK_COLORS={accent:'#abb8ed',page:'#11151c',surface:'#202630'}
+const hex=(value,fallback)=>typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value)?value.toLowerCase():fallback
+const clamp=(value,min,max,fallback)=>Number.isFinite(Number(value))?Math.max(min,Math.min(max,Number(value))):fallback
+export const rgb=value=>[1,3,5].map(i=>parseInt(value.slice(i,i+2),16))
+export const mix=(a,b,amount)=>'#'+rgb(a).map((v,i)=>Math.round(v*(1-amount)+rgb(b)[i]*amount).toString(16).padStart(2,'0')).join('')
+export function luminance(value){const c=rgb(value).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722}
+export const contrast=(a,b)=>(Math.max(luminance(a),luminance(b))+.05)/(Math.min(luminance(a),luminance(b))+.05)
+// 将页面/卡片限制在所属模式的明度范围，避免一个纯黑一个纯白导致统一正文颜色不可读。
+function surfaceTone(value,dark){let result=value;for(let n=0;n<20&&(dark?luminance(result)>.12:luminance(result)<.65);n++)result=mix(result,dark?'#000000':'#ffffff',.12);return result}
+function colors(value,dark){const defaults=dark?DARK_COLORS:LIGHT_COLORS;return {accent:hex(value?.accent,defaults.accent),page:surfaceTone(hex(value?.page,defaults.page),dark),surface:surfaceTone(hex(value?.surface,defaults.surface),dark)}}
+export function normalizeThemeOptions(value={}){
+  // 老外观记录不增加新字段，升级后保持原配色/字体及既有备份断言。
+  if(value.mode==null&&value.customEnabled==null&&value.customColors==null&&value.background==null)return {}
+  // 种子仅保存HEX色值；旧背景参数不添加空字段，兼容已有外观记录。
+  return {mode:['light','dark','system'].includes(value.mode)?value.mode:'light',customEnabled:value.customEnabled===true,customColors:{light:colors(value.customColors?.light,false),dark:colors(value.customColors?.dark,true)},background:{enabled:value.background?.enabled===true,veil:clamp(value.background?.veil,70,95,78),blur:clamp(value.background?.blur,0,12,0),x:clamp(value.background?.x,0,100,50),y:clamp(value.background?.y,0,100,50),zoom:clamp(value.background?.zoom,1,3,1),cardOpacity:clamp(value.background?.cardOpacity,0,100,90),...(/^#[0-9a-f]{6}$/i.test(value.background?.seed||'')?{seed:value.background.seed.toLowerCase()}:{})}}
+}
+let nativeSystemDark=null
+export function setSystemDark(value){nativeSystemDark=Boolean(value)}
+// 原默认参数中的可选链在Android打包转译后产生越界临时变量，导致首次启动ReferenceError。
+// export function effectiveMode(value,systemDark=nativeSystemDark??globalThis.window?.matchMedia?.('(prefers-color-scheme: dark)').matches??false){return value.mode==='dark'||value.mode==='system'&&systemDark?'dark':'light'}
+// 将系统读取放入函数体，保留matchMedia接收对象，并兼容没有该接口的旧内核/测试环境。
+export function effectiveMode(value,systemDark){
+  if(systemDark==null){
+    systemDark=nativeSystemDark
+    if(systemDark==null){
+      const host=typeof window==='undefined'?null:window
+      const media=host&&typeof host.matchMedia==='function'?host.matchMedia('(prefers-color-scheme: dark)'):null
+      systemDark=media?media.matches:false
+    }
+  }
+  return value.mode==='dark'||value.mode==='system'&&systemDark?'dark':'light'
+}
+export function resolvePalette(appearance,preset,systemDark){
+  const options=normalizeThemeOptions(appearance),mode=effectiveMode(options,systemDark),dark=mode==='dark'
+  const chosen=appearance.customEnabled?colors(options.customColors?.[mode],dark):dark?{accent:mix(preset.colors[1],'#ffffff',.58),page:'#11151c',surface:'#202630'}:{accent:preset.colors[1],page:preset.colors[0],surface:'#ffffff'}
+  const text=dark?'#edf1f7':'#18212b',muted=mix(text,chosen.surface,.26),onAccent=contrast(chosen.accent,'#ffffff')>=contrast(chosen.accent,'#10151d')?'#ffffff':'#10151d'
+  let link=chosen.accent;for(let n=0;n<20&&contrast(link,chosen.page)<4.5;n++)link=mix(link,dark?'#ffffff':'#000000',.1)
+  return {...chosen,text,muted,onAccent,link,mode,dark,tint:mix(chosen.surface,chosen.accent,dark?.17:.1),border:mix(chosen.surface,text,.24),advanced:dark||appearance.customEnabled===true||options.background?.enabled===true}
+}
+export const rgba=(color,alpha=1)=>`rgba(${rgb(color).join(',')},${alpha})`
+// 原样式的用途决定映射，不能把深色正文和深色按钮背景映成同一颜色。
+export function advancedThemeColor(red,green,blue,alpha,property,palette,selector=''){
+  const value='#'+[red,green,blue].map(v=>Number(v).toString(16).padStart(2,'0')).join(''),light=luminance(value),a=Number(alpha)
+  if(/border|shadow|--line/.test(property))return rgba(palette.border,a)
+  const variable={'--ink':palette.text,'--muted':palette.muted,'--paper':palette.page,'--teal':palette.tint,'--orange':palette.accent,'--yellow':palette.accent}
+  if(variable[property])return rgba(variable[property],a)
+  const danger=Number(red)>Number(green)*1.35&&Number(red)>Number(blue)*1.2
+  if(property==='color'||/text-decoration|fill|stroke/.test(property)){
+    if(danger)return rgba(palette.dark?'#ffb4ac':'#a63830',a)
+    if(light>.85)return rgba(palette.onAccent,a)
+    const neutral=Math.max(red,green,blue)-Math.min(red,green,blue)<35
+    return rgba(neutral?(light>.12?palette.muted:palette.text):palette.link,a)
+  }
+  if(/background/.test(property)){
+    // 当前播放行是轻高亮，不能像模态遮罩一样被提到40%黑色，避免背景图上出现灰黑方块。
+    if(/\.lyric-row\.active/.test(selector))return rgba(palette.tint,1)
+    if(light<.14&&a<.8)return `rgba(0,0,0,${Math.max(a,.4)})`
+    if(danger&&light<.6)return rgba(palette.dark?'#6f3037':'#a63830',a)
+    if(light>.8)return rgba(/(?:^|,)\s*(?:body|:root)|android-main/.test(selector)?palette.page:palette.surface,a)
+    if(light>.45)return rgba(palette.tint,a)
+    return rgba(palette.accent,a)
+  }
+  return rgba(value,a)
+}

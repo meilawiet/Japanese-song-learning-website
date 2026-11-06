@@ -1,0 +1,43 @@
+/* 沿用Demo语义色与用户字体；仅图片交互区域禁止浏览器纵滚。 */
+:root.uta-image-gestures {--gesture-gap:12px;--gesture-radius:18px;--gesture-touch:48px;--gesture-page:var(--uta-page,#f6f7fb);--gesture-surface:var(--uta-surface,#fff);--gesture-text:var(--uta-text,#18212b);--gesture-accent:var(--uta-accent,#434d82);--gesture-border:var(--uta-border,#b9bdc7)}
+:root.uta-image-gestures .gesture-editor {width:100%;margin:auto;color:var(--gesture-text)}
+:root.uta-image-gestures .gesture-editor-avatar {max-width:280px;margin:0 auto 16px}
+:root.uta-image-gestures .gesture-image-shell {position:relative;overflow:hidden;border-radius:var(--gesture-radius);background:var(--gesture-surface);width:100%}
+:root.uta-image-gestures .gesture-image-surface {position:absolute;inset:0;overflow:hidden;touch-action:none;user-select:none;outline:none}
+:root.uta-image-gestures .gesture-image-surface:focus-visible {box-shadow:inset 0 0 0 3px var(--gesture-accent)}
+:root.uta-image-gestures .gesture-image-surface img {pointer-events:none;user-select:none;object-fit:fill;transform:none;border-radius:0;margin:0}
+:root.uta-image-gestures .gesture-avatar-guide {position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 80px #0005;border:1px solid #ffffffa0;pointer-events:none}
+:root.uta-image-gestures .gesture-hint {text-align:center;margin:10px 0 4px;font-size:calc(12px * var(--ref-font-scale,1));line-height:1.5;color:var(--uta-muted)}
+:root.uta-image-gestures .gesture-image-actions {display:flex;align-items:center;justify-content:center;gap:8px}
+:root.uta-image-gestures .gesture-image-actions button {min-width:48px;min-height:48px;border:0;background:transparent;color:var(--gesture-text);border-radius:12px;font-size:calc(15px * var(--ref-font-scale,1));padding:8px}
+:root.uta-image-gestures .gesture-image-actions button:disabled {opacity:.4}
+:root.uta-image-gestures .gesture-image-actions output {min-width:48px;text-align:center;font-size:calc(12px * var(--ref-font-scale,1));color:var(--uta-muted)}
+:root.uta-image-gestures .gesture-background-options {display:flex;flex-direction:column;gap:8px}
+:root.uta-image-gestures .gesture-position-button {width:100%;min-height:64px;border:1px solid var(--gesture-border);border-radius:14px;color:var(--gesture-text);background:transparent;text-align:left;padding:12px 16px;font-size:calc(15px * var(--ref-font-scale,1))}
+:root.uta-image-gestures .gesture-position-button span {display:block;font-size:calc(12px * var(--ref-font-scale,1));color:var(--uta-muted);margin-top:4px}
+:root.uta-image-gestures .safe-range {display:block;width:100%;padding:12px 0 0;margin:0}
+:root.uta-image-gestures .safe-range-caption {display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:calc(14px * var(--ref-font-scale,1));color:var(--gesture-text)}
+:root.uta-image-gestures .safe-range-caption label {display:block;margin:0;font-size:inherit;font-weight:500}
+:root.uta-image-gestures .safe-range-caption output {font-size:calc(13px * var(--ref-font-scale,1));font-variant-numeric:tabular-nums;color:var(--uta-muted)}
+:root.uta-image-gestures .safe-range-surface {position:relative;width:100%;height:48px;padding:0 10px;touch-action:pan-y;user-select:none;cursor:ew-resize;box-sizing:border-box}
+:root.uta-image-gestures .safe-range-track {position:absolute;left:10px;right:10px;top:23px;height:3px;border-radius:5px;background:var(--gesture-border);pointer-events:none}
+:root.uta-image-gestures .safe-range-track i {position:absolute;left:0;top:0;height:3px;border-radius:5px;background:var(--gesture-accent)}
+:root.uta-image-gestures .safe-range-track b {position:absolute;top:50%;width:20px;height:20px;border-radius:50%;transform:translate(-50%,-50%);background:var(--gesture-accent)}
+:root.uta-image-gestures .safe-range-surface input[type=range] {position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;margin:0;min-height:0}
+:root.uta-image-gestures .safe-range-surface:focus-within {outline:2px solid var(--gesture-accent);outline-offset:1px;border-radius:8px}
+:root.uta-image-gestures .gesture-opacity-example {background-size:cover;background-position:center;border-radius:14px;overflow:hidden;margin:6px 0}
+:root.uta-image-gestures .gesture-opacity-example>div {min-height:100px;margin:18px;padding:16px;border-radius:12px;display:flex;flex-direction:column;justify-content:center;gap:8px}
+:root.uta-image-gestures .gesture-opacity-example strong {font-size:calc(12px * var(--ref-font-scale,1));font-weight:500}
+:root.uta-image-gestures .gesture-opacity-example span {font-size:calc(16px * var(--ref-font-scale,1))}
+/* 单独调图页不依附设置滚动容器，避免溢出/遮挡；安全区由WebView窗口提供。 */
+:root.uta-image-gestures .gesture-dialog-backdrop {position:fixed;inset:0;z-index:10000;background:var(--gesture-page);color:var(--gesture-text)}
+:root.uta-image-gestures .gesture-dialog {height:100%;display:flex;flex-direction:column;max-width:600px;margin:auto;padding:16px;box-sizing:border-box}
+:root.uta-image-gestures .gesture-dialog>header {display:flex;align-items:center;justify-content:space-between;gap:12px;flex:none;padding-bottom:12px}
+:root.uta-image-gestures .gesture-dialog h2 {font-size:calc(20px * var(--ref-font-scale,1));margin:0;color:var(--gesture-text)}
+:root.uta-image-gestures .gesture-dialog header p {font-size:calc(12px * var(--ref-font-scale,1));color:var(--uta-muted);margin:6px 0 0}
+:root.uta-image-gestures .gesture-dialog header button {min-height:48px;min-width:64px;border:0;border-radius:14px;background:var(--gesture-accent);color:var(--uta-on-accent,#fff);font-size:calc(14px * var(--ref-font-scale,1))}
+:root.uta-image-gestures .gesture-dialog-content {min-height:0;flex:1;display:flex;justify-content:center;align-items:center;overflow:hidden}
+:root.uta-image-gestures .gesture-editor-background {width:min(100%,calc((100dvh - 210px) * .5));max-width:360px}
+@supports not (height:100dvh) {:root.uta-image-gestures .gesture-editor-background {width:min(100%,calc((100vh - 210px) * .5))}}
+/* 只调卡片底色alpha，不降低文字透明度；歌词列表仍保留上一轮无白色托底。 */
+:root.uta-image-gestures[data-uta-background=on] :is(.refined-shortcuts,.android-library-song,.review-album,.review-unit-card,.review-knowledge-workspace,.review-focus-card,.sentence-inline-analysis) {background:rgba(var(--uta-surface-rgb),var(--uta-card-opacity,.9))!important}

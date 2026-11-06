@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedOn": "2026-10-31",
+  "updatedOn": "2026-11-06",
   "reminderThreshold": 10,
   "policy": {
     "reminderPresentation": "达到10项待发布内容时，发版提醒必须同时逐项展示当前全部verified条目的名称和简要说明；不包含released或cancelled条目。",
@@ -35,17 +35,19 @@
     "branch": "android-dev"
   },
   "currentLocalInstall": {
-    "installedOn": "2026-10-31",
-    "device": "Xiaomi 23049RAD8C / Android15",
-    "package": "com.uta.songlearning",
-    "path": ".tools/conversation-artifacts/20261022-manual-reading/release-1.6.2/UTA-Android-1.6.2.apk",
     "version": "1.6.2",
     "versionCode": 29,
-    "size": 31372779,
-    "sha256": "39768a1eef52344bb3d044a99b7e0a810570951e5ba132184fc14a46330147ca",
+    "size": 31385067,
+    "sha256": "19412067f8e4f8f0a211d098c98b339cfc1c73566198062dfab64acd27009fff",
+    "path": ".tools/conversation-artifacts/20261022-manual-reading/tsubasa-reading-20261105/UTA-tsubasa-reading.apk",
+    "device": "Samsung SM-N9860",
+    "installedOn": "2026-11-05",
+    "package": "com.uta.songlearning",
     "signed": true,
-    "published": true,
-    "method": "原发行签名v2/v3，版本1.6.2/code29、调试关闭；前端逐字节匹配，保留数据-r升级Success/COLD Status ok，UID/首次安装时间不变，回读APK摘要一致，无该进程AndroidRuntime致命异常。"
+    "published": false,
+    "webFilesMatched": 23,
+    "debuggingEnabled": false,
+    "method": "相邻汉字组假名缺失修复本地包，原发行证书，调试关闭；313/313 Node及三星整首38句检查通过后保留数据-r覆盖；UID/首次安装时间不变，回读APK摘要一致，冷启动无当前进程AndroidRuntime致命异常。"
   },
   "reminder": {
     "lastRemindedItemIds": [
@@ -2974,6 +2976,159 @@
         "branch": "android-dev"
       },
       "releasedOn": "2026-10-31"
+    },
+    {
+      "id": "FEAT-20261031-062",
+      "type": "feature",
+      "title": "安卓明暗模式、自定义配色与本地背景主题",
+      "summary": "支持浅色、深色、跟随系统，浅深分别保存强调色/页面/卡片颜色并自动匹配可读文字；本地图片可调位置、遮罩、模糊及卡片不透明度。移动端吸顶实时预览和分组布局，保留四套预设/字体管理；背景不进入歌曲备份。 后续完善：取消背景文件体积/像素固定上限，生成最长边1920的显示副本；图片自动生成浅深两套主题并为旧背景补取色，当前播放句采用同源柔和高亮，修复误映为黑色遮罩的灰块。",
+      "files": [
+        "src/lib/themePalette.js",
+        "src/lib/themeBackground.js",
+        "src/lib/androidThemeEnvironment.js",
+        "src/components/AndroidThemeEditor.jsx",
+        "src/components/ThemePanel.jsx",
+        "src/lib/appearance.js",
+        "src/App.jsx",
+        "src/styles.css",
+        "android/app/src/main/java/com/uta/songlearning/AppearancePlugin.java",
+        "android/app/src/main/java/com/uta/songlearning/MainActivity.java",
+        "tests/themePalette.test.mjs",
+        "tests/themeBundle.test.mjs",
+        "README.md",
+        "src/lib/backgroundColors.js",
+        "tests/backgroundColors.test.mjs"
+      ],
+      "verification": [
+        "304/304 Node检查通过，包括Chrome80目标压缩代码首次调用回归，修复默认参数可选链转译后ReferenceError导致的启动失败。",
+        "小米Android15独立.dev主题9项行为通过，另验证学习页深色歌词/读音/译文显示，无JS异常；真实系统明暗切换后恢复原系统设置。",
+        "正式原签名包23项前端文件与APK逐字节一致、调试关闭；保留数据覆盖安装，UID/首次安装时间不变，回读APK摘要一致。",
+        "正式应用截图核验首页及原歌曲/字体正常，通过原生UI选择深色后再次冷启动正常并保存模式，停留在主题设置供试用。",
+        "未调用付费AI或用户WebDAV；背景验证使用原创PNG；仅小米当前设备试用，未验证所有相册格式/其他设备。",
+        "本轮310/310 Node、11项.dev实际触摸/背景行为及旧背景迁移通过；真实超过16MB原创PNG成功导入，浅深高亮原生截图核验。",
+        "原背景缺少种子时从本机JPEG副本回算；有损量化可相差一档色值，迁移成功且不要求原图逐字节同色；正式手机背景升级后无需重选。"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-31",
+      "completedOn": "2026-10-31",
+      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/android-theme-20261031",
+      "localBuild": {
+        "version": "1.6.2",
+        "versionCode": 29,
+        "size": 31385067,
+        "sha256": "335d73745cc0279c11c89215db71c48cd074c211097fca92983561ca4f67cb18",
+        "path": ".tools/conversation-artifacts/20261022-manual-reading/home-swipe-20261031/UTA-home-swipe.apk",
+        "device": "Xiaomi 23049RAD8C / Android15",
+        "installedOn": "2026-10-31",
+        "package": "com.uta.songlearning",
+        "signed": true,
+        "published": false,
+        "webFilesMatched": 23,
+        "debuggingEnabled": false,
+        "method": "首页横滑与图片自动配色本地试用包，原发行证书，调试关闭；310/310 Node、11项本轮真机及旧背景迁移通过后保留数据-r覆盖；UID/首次安装时间不变，回读APK摘要一致，冷启动无当前进程AndroidRuntime致命异常。"
+      }
+    },
+    {
+      "id": "FEAT-20261031-063",
+      "type": "feature",
+      "title": "安卓三主页跟手滑动与连续切页",
+      "summary": "学习、复习、我的支持手指拖动连续平移、松手吸附、端点回弹和底栏点击动画，保留各页纵向滚动；按用户现场反馈整体对调初版方向。仅主页开启，学习/复习歌词详情、编辑和模态窗口内禁用。修复隐式捕获移交误取消造成的颤抖。",
+      "files": [
+        "src/components/AndroidHomePager.jsx",
+        "src/lib/homeSwipe.js",
+        "src/components/ReviewBook.jsx",
+        "src/App.jsx",
+        "src/styles.css",
+        "tests/homeSwipe.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "310/310完整Node检查通过，含方向、轴锁定、短拖/快扫/取消及端点用例。",
+        "小米Android15独立.dev使用真实CDP触摸，本轮11项行为通过，无JS异常；中途截图两页同时可见，端点/取消/纵滚与位置保留、学习歌词/复习详情/设置内禁用均核验。",
+        "用户现场指出颤抖后，有界事件诊断定位子节点lostpointercapture冒泡，修复后完整触摸检查通过；用户再次要求对调当前方向后，调整HOME_PAGES并重跑11项及全套310项。",
+        "正式原签名包23个前端文件与APK逐字节匹配、调试关闭；-r保留资料覆盖小米成功，UID/首次安装时间不变，回读APK摘要一致。正式ADB真实双向滑动和再次冷启动截图已查看，原歌曲、字体及背景保留。",
+        "无付费AI/用户云盘调用，测试夹具仅.dev；未验证所有手机/旧内核下的触摸交互。"
+      ],
+      "status": "verified",
+      "startedOn": "2026-10-31",
+      "completedOn": "2026-10-31",
+      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/home-swipe-20261031",
+      "localBuild": {
+        "version": "1.6.2",
+        "versionCode": 29,
+        "size": 31385067,
+        "sha256": "335d73745cc0279c11c89215db71c48cd074c211097fca92983561ca4f67cb18",
+        "path": ".tools/conversation-artifacts/20261022-manual-reading/home-swipe-20261031/UTA-home-swipe.apk",
+        "device": "Xiaomi 23049RAD8C / Android15",
+        "installedOn": "2026-10-31",
+        "package": "com.uta.songlearning",
+        "signed": true,
+        "published": false,
+        "webFilesMatched": 23,
+        "debuggingEnabled": false,
+        "method": "首页横滑与图片自动配色本地试用包，原发行证书，调试关闭；310/310 Node、11项本轮真机及旧背景迁移通过后保留数据-r覆盖；UID/首次安装时间不变，回读APK摘要一致，冷启动无当前进程AndroidRuntime致命异常。"
+      }
+    },
+    {
+      "id": "FIX-20261105-064",
+      "type": "bugfix",
+      "title": "修复来源罗马音合并组中汉字假名缺失",
+      "summary": "来源读音对齐时保留与整组读音完整吻合的原词界证据，让相邻汉字段分别显示假名；不改歌词、缓存索引或人工校正，来源与词典不吻合时不强套。既有歌曲无需重新导入。",
+      "files": [
+        "src/lib/lyricReadings.js",
+        "src/lib/readingPresentation.js",
+        "src/components/ReadingLyric.jsx",
+        "tests/lyricReadings.test.mjs",
+        "tests/readingPresentation.test.mjs",
+        "tests/readingComponents.test.mjs",
+        "README.md"
+      ],
+      "verification": [
+        "313/313完整Node检查通过，含实际组件四种注音模式、上下位置、来源失配、派生证据失效与人工留空。",
+        "同一公开来源整首38句本地审计：修复前3句存在显示缺失，修复后0句缺失；此为显示完整性检查，不代表全部发音已通过音频核对。",
+        "三星SM-N9860独立.dev实际APK离线注音38句，5项行为检查通过，无JS异常；没有AI或用户WebDAV调用。",
+        "原发行签名、正式WebView调试关闭、23项前端字节一致；保留资料覆盖三星成功。主用户UID与首次安装时间不变，回读APK摘要一致、冷启动无当前进程致命异常。",
+        "正式原有歌曲第2、14、31句通过原生触摸打开并截图查看，缺失假名恢复，原字体与翻译保留。"
+      ],
+      "status": "verified",
+      "startedOn": "2026-11-05",
+      "completedOn": "2026-11-05",
+      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/tsubasa-reading-20261105",
+      "localBuild": {
+        "version": "1.6.2",
+        "versionCode": 29,
+        "size": 31385067,
+        "sha256": "19412067f8e4f8f0a211d098c98b339cfc1c73566198062dfab64acd27009fff",
+        "path": ".tools/conversation-artifacts/20261022-manual-reading/tsubasa-reading-20261105/UTA-tsubasa-reading.apk",
+        "device": "Samsung SM-N9860",
+        "installedOn": "2026-11-05",
+        "package": "com.uta.songlearning",
+        "signed": true,
+        "published": false,
+        "webFilesMatched": 23,
+        "debuggingEnabled": false,
+        "method": "相邻汉字组假名缺失修复本地包，原发行证书，调试关闭；313/313 Node及三星整首38句检查通过后保留数据-r覆盖；UID/首次安装时间不变，回读APK摘要一致，冷启动无当前进程AndroidRuntime致命异常。"
+      }
+    },
+    {
+      "id": "FEAT-20261106-065",
+      "type": "feature",
+      "title": "安卓2.0新版界面与图片手势",
+      "summary": "整合已试用Demo0.7的主页面及二三级布局、图片拖动捏合、防误触实时预览、歌词跟随和透明度，修复歌曲库及分割线显示。",
+      "status": "verified",
+      "startedOn": "2026-11-05",
+      "completedOn": "2026-11-06",
+      "verification": [
+        "313/313 Node检查通过，含原读音/备份/复习/时间戳/WebDAV音频复用。",
+        "Demo0.7三星分割线间距0、首尾自然边界、中间句居中及资料保留检查通过；正式整合后原签名2.0.0/code30保留数据升级与冷启动正常，无新增分身。"
+      ],
+      "files": [
+        "src/android-ui",
+        "src/App.jsx",
+        "src/main.jsx",
+        "src/components/ThemePanel.jsx"
+      ],
+      "evidenceDirectory": ".tools/conversation-artifacts/20261022-manual-reading/release-2.0.0-20261106"
     }
   ]
 }

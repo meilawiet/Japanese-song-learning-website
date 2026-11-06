@@ -1,0 +1,34 @@
+/* 歌曲库属于二级页，有明确返回入口，不继承主页底栏占位。 */
+:root.uta-android-font.uta-refined .android-main[data-demo-route=library]{height:100vh;min-height:100vh;padding-bottom:var(--ref-4);overflow:auto}
+@supports(height:100dvh){:root.uta-android-font.uta-refined .android-main[data-demo-route=library]{height:100dvh;min-height:100dvh}}
+.demo-library-back{min-height:48px;min-width:48px;display:flex;align-items:center;gap:8px;padding:0 4px;margin-bottom:8px;border:0;border-radius:10px;color:var(--ref-text);background:transparent;font-size:var(--ref-body)}
+/* 旧列表隐藏规则仍生效；只设尺寸不足以恢复封面，需显式恢复display。 */
+:root.uta-android-font.uta-refined .android-library-songs.list .android-library-cover{display:grid;flex:none}
+/* 首尾歌词也能落到可用歌词窗口中心；留白本身不添加白色卡片。 */
+:root.uta-android-font.uta-refined .unified-study-page .lyrics-list::before{content:'';display:block;height:var(--demo-leading-space,0px);pointer-events:none}
+:root.uta-android-font.uta-refined .unified-study-page .lyrics-list::after{content:'';display:block;height:var(--demo-trailing-space,0px);pointer-events:none}
+/* 保持主题同源高亮，只改变背景alpha；文字和左边的当前句标记保持清晰。 */
+:root.uta-android-font.uta-refined.uta-image-gestures[data-uta-background=on] .unified-study-page .lyric-row.active{background:rgba(var(--uta-tint-rgb),var(--uta-card-opacity,.9))!important}
+/* 实时预览从滚动正文移到页头下方；任何参数位置都能看到调整结果。 */
+:root.uta-android-font.uta-refined .demo-theme-preview-slot{flex:none;padding:0 var(--ref-4) var(--ref-3)}
+:root.uta-android-font.uta-refined .demo-theme-preview{position:relative;isolation:isolate;overflow:hidden;border-radius:var(--ref-radius);min-height:124px;margin:0;color:var(--ref-text)}
+.demo-theme-preview-wallpaper{position:absolute;inset:-14px;z-index:-1;background-repeat:no-repeat;background-size:cover;pointer-events:none}
+.demo-theme-preview-content{position:relative;padding:12px}
+.demo-theme-preview-label{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:var(--ref-small);line-height:1.5}
+.demo-theme-preview-label small{font-size:inherit}
+.demo-theme-preview-lyric{margin-top:10px;border-inline-start:2px solid;padding:10px 12px;border-radius:10px;display:flex;flex-direction:column;gap:5px}
+.demo-theme-preview-lyric strong{font-size:var(--ref-body);line-height:1.6;font-weight:600}
+.demo-theme-preview-lyric small{font-size:var(--ref-small);line-height:1.5}
+@media(max-height:650px){:root.uta-android-font.uta-refined .demo-theme-preview{min-height:100px}.demo-theme-preview-content{padding:8px}.demo-theme-preview-lyric{margin-top:5px;padding:5px 8px}}
+
+/* 首尾自然停靠，去掉上一轮为强制居中添加的留白。 */
+:root.uta-android-font.uta-refined .unified-study-page .lyrics-list::before,:root.uta-android-font.uta-refined .unified-study-page .lyrics-list::after{display:none;height:0}
+/* 歌曲库独占整个WebView，底色贯穿到底部，内容在此容器内滚动。 */
+:root.uta-android-font.uta-refined .android-main[data-demo-route=library]{position:fixed;inset:0;height:auto;min-height:0;max-width:none;margin:0;background:var(--ref-surface)!important;overflow-y:auto;overscroll-behavior:contain}
+
+/* 删除分割线下方旧12px外边距，让真实滚动窗口紧贴细线。 */
+:root.uta-android-font.uta-refined .refined-study-navigation{margin-block-end:0}
+:root.uta-android-font.uta-refined .refined-study-header{padding-block-end:0}
+
+/* 系统字体使用设备无衬线，不回落到内置书法字体。 */
+:root.uta-android-font[data-uta-font=system]{--uta-selected-font:system-ui}

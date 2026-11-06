@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { DEFAULT_APPEARANCE, FONTS, SOURCE_HAN_WEIGHTS, THEMES, applyAppearance, readAppearance, saveAppearance } from '../lib/appearance'
 import { deleteRemoteFont, downloadRemoteFont, isRemoteFont, listDownloadedRemoteFonts, remoteFontBytes, restoreRemoteFont } from '../lib/remoteFonts'
 import { deleteCustomFont, importCustomFont, isCustomFont, listCustomFonts, restoreCustomFont } from '../lib/customFonts'
+// 原主题编辑器保留，正式使用包含图片手势的新编排。
+import AndroidThemeEditor from '../android-ui/AndroidThemeEditor.jsx'
 
 // 即时预览并保存；失败时保留当前选择，明确提示用户。
 export default function ThemePanel() {
@@ -99,6 +101,9 @@ export default function ThemePanel() {
   }))
   // 原内容区另有“主题设置”标题；弹窗顶部已显示当前子页名称，避免同屏重复。
   return <div className="settings-content theme-panel"><p className="settings-description">调整后立即生效，保存在当前设备。</p>
+    {/* 明暗/配色/背景采用紧凑吸顶预览，原有字体与字号工具收在同一折叠组。 */}
+    <AndroidThemeEditor appearance={appearance} onChange={update}/>
+    <details className="theme-typography"><summary>字体与字号</summary>
     <label>歌词大小 <output>{appearance.lyricSize}%</output><input aria-label="歌词大小" type="range" min="80" max="160" step="5" value={appearance.lyricSize} onChange={event => update({ ...appearance, lyricSize: Number(event.target.value) })} /></label>
     <label>应用文字大小 <output>{appearance.textSize}%</output><input aria-label="应用文字大小" type="range" min="80" max="130" step="5" value={appearance.textSize} onChange={event => update({ ...appearance, textSize: Number(event.target.value) })} /></label>
     {/* 原单层选择框：<label className="theme-font-label">应用字体<select aria-label="应用字体" value={appearance.font} onChange={event => update({ ...appearance, font: event.target.value })}>{FONTS.map(font => <option key={font.id} value={font.id}>{font.name}</option>)}</select></label> */}
@@ -112,8 +117,11 @@ export default function ThemePanel() {
       {customFonts.length > 0 && <><h4>本机导入的字体</h4><ul>{customFonts.map(font => <li key={font.id}><span>{font.name}<small>{font.format.toUpperCase()} · {(font.bytes / 1024 / 1024).toFixed(1)} MB</small></span><button type="button" disabled={busy} onClick={() => removeStoredFont(font.id)}>{deleting === font.id ? '删除中…' : '删除自定义字体'}</button></li>)}</ul></>}
     </section>}
     <p className="theme-preview" lang="ja">好きな歌で、日本語を学ぶ<small>用喜欢的歌，练习日语。</small></p>
+    </details>
     {/* 主题卡片只显示配色与名称，保留由用户自行发现的设计彩蛋。 */}
+    {/* 原四张主题卡片已上移至配色分组，保留旧实现供对照：
     <h3>应用主题色</h3><div className="theme-options">{THEMES.map(theme => <button key={theme.id} type="button" aria-pressed={appearance.theme === theme.id} onClick={() => update({ ...appearance, theme: theme.id })}><span className="theme-swatches" aria-hidden="true">{theme.colors.map(color => <i key={color} style={{ background: color }} />)}</span>{theme.name}</button>)}</div>
+    */}
     {error && <p role="alert">{error}</p>}<button className="theme-reset" type="button" onClick={() => update(DEFAULT_APPEARANCE)}>恢复默认外观</button>
   </div>
 }

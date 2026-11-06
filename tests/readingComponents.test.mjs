@@ -17,6 +17,23 @@ before(async () => {
 })
 after(async () => { await server?.close() })
 
+// 同时检查逐句与跟唱的实际标记，避免只验证读音数据却漏掉显示层再次隐藏假名。
+test('跨空格相邻汉字各自显示可靠假名，四种模式和上下罗马音共用人工校正',()=>{
+ const tokens=[{index:0,surface:'森',reading:'もり'},{index:1,surface:' ',reading:'',is_symbol:true},{index:2,surface:'君',reading:'きみ'}]
+ const song={id:'s',title:'原创',language:'ja',lines:[{id:0,text:'森 君',romaji:'mo ri ki mi'}]}
+ for(const romajiPosition of ['above','below'])for(const readingStyle of ['hiragana','romaji','both','none']){
+  const props={tokens,corrections:{},songId:'s',lineId:0,mode:readingStyle==='none'?'original':'reading',interactive:false,readingStyle,romajiPosition,importedRomaji:'mo ri ki mi'}
+  const htmls=[renderToStaticMarkup(createElement(AnnotatedLine,props)),renderToStaticMarkup(createElement(AndroidSingAlong,{...props,song,annotations:[{id:0,tokens}],audioReady:true}))]
+  for(const html of htmls){
+   if(['hiragana','both'].includes(readingStyle)){assert.match(html,/grid-row:1[^>]*>もり/);assert.match(html,/grid-row:1[^>]*>きみ/)}
+   else assert.doesNotMatch(html,/word-han-kana/)
+   if(['romaji','both'].includes(readingStyle))assert.match(html,/morikimi/)
+  }
+ }
+ const cleared=renderToStaticMarkup(createElement(AnnotatedLine,{tokens,corrections:{'s:0:0':'','s:0:2':''},songId:'s',lineId:0,mode:'reading',interactive:false,readingStyle:'both',importedRomaji:'mo ri ki mi'}))
+ assert.doesNotMatch(cleared,/>もり|>きみ|morikimi/)
+})
+
 // 紧凑布局仍保留已有解析的管理入口、生成中禁用及调用费用提示。
 test('更多紧凑操作保留独立开关、解析管理与生成状态',async()=>{
   const Actions=(await server.ssrLoadModule('/src/components/StudyMoreActions.jsx')).default
@@ -66,7 +83,7 @@ test('主题字体列表显示所有字体粗细并去除刻明朝', async () =>
       const html = renderToStaticMarkup(createElement(ThemePanel))
       const main = html.match(/<select aria-label="应用字体"[^>]*>([\s\S]*?)<\/select>/)?.[1]
       assert.ok(main)
-      assert.equal((main.match(/<option /g) || []).length, 6)
+      assert.equal((main.match(/<option /g) || []).length, 7)
       assert.ok(main.includes('思源宋体'))
       assert.ok(!main.includes('刻明朝') && !main.includes('思源宋体·'))
       const label = font.startsWith('sourcehan') ? '思源宋体' : font === 'yan' ? '颜真卿多宝塔碑' : font === 'kinghwa' ? '京华老宋体' : '飞花宋体'

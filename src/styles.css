@@ -592,6 +592,16 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .android-home-eyebrow { margin:0 0 13px; color:#718079; font:12px var(--mono); letter-spacing:.15em; }
 /* 三个安卓主页取消品牌栏后，页签标签上移到原品牌中心的高度；原首页样式保留在上方供对照。 */
 .android-main.android-home-main { min-height:100dvh; }
+/* 三栏主页独立滚动并保留位置；页面随手指平移，底栏始终固定。原主容器底部留白由每一页承担。 */
+.android-main.android-home-main { height:100dvh; overflow:hidden; padding-bottom:0; }
+.android-home-pager { position:relative; height:100vh; overflow:hidden; touch-action:pan-y pinch-zoom; }
+@supports(height:100dvh) { .android-home-pager { height:100dvh; } }
+.android-home-pane { position:absolute; inset:0; overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:contain; padding-bottom:calc(89px + env(safe-area-inset-bottom,0px)); transition:transform 240ms cubic-bezier(.22,.7,.2,1); backface-visibility:hidden; }
+.android-home-pane[aria-hidden=true] { pointer-events:none; visibility:hidden; }
+.android-home-pager[data-moving=true] .android-home-pane { visibility:visible; will-change:transform; }
+.android-home-pager[data-dragging=true] .android-home-pane { transition:none; user-select:none; }
+.android-home-pager[data-expanded=true] .android-home-pane[data-home-page=review] { overflow:hidden; padding-bottom:0; }
+@media(prefers-reduced-motion:reduce) { .android-home-pane { transition-duration:0ms; } }
 .android-home-main .android-home { min-height:calc(100dvh - 89px - env(safe-area-inset-bottom, 0px)); padding-top:30px; }
 .android-home h1,.android-review-detail h1 { margin:0; color:#1f2827; font:700 clamp(28px,7vw,36px)/1.25 var(--serif); }
 .android-home-intro,.android-review-detail > p:not(.android-home-eyebrow) { margin:15px 0 0; color:#718079; font-size:14px; line-height:1.7; }
@@ -992,6 +1002,57 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .line-editor-sync { margin-top:18px; }
 .line-editor-sync>button { width:100%; min-height:46px; border:1px solid #c7dac0; border-radius:12px; background:#e8f1e3; color:#426550; font:15px var(--serif); }
 .line-editor-sync>p { margin:8px 0; color:var(--muted); font:12px/1.6 var(--sans); }
+/* 安卓主题：移动端预览随父设置窗口吸顶，编辑分组不遮挡预览。 */
+.android-theme-editor { min-width:0; }
+.theme-live-preview { position:sticky; top:0; z-index:4; margin:0 -4px 20px; padding:14px; border:1px solid var(--uta-border,#d7e2d3); border-radius:18px; background-color:var(--preview-page); background-size:cover; color:var(--preview-text); box-shadow:0 5px 16px #0000000d; }
+.theme-preview-top { display:flex; justify-content:space-between; gap:12px; color:var(--preview-muted); font:11px/1.5 var(--sans); letter-spacing:.06em; }
+.theme-preview-content { display:grid; grid-template-columns:1.1fr 1fr; align-items:center; gap:14px; margin-top:10px; }
+.theme-preview-content strong { font:600 16px/1.6 var(--serif); }
+.theme-preview-content p { margin:6px 0 0; font:11px/1.6 var(--sans); color:var(--preview-muted); }
+.theme-preview-mini-card { padding:11px; border:1px solid var(--uta-border); border-radius:12px; background:var(--preview-surface); }
+.theme-preview-mini-card>span { display:block; font:10px/1.5 var(--sans); color:var(--preview-muted); }
+.theme-preview-mini-card b { display:flex; justify-content:space-between; align-items:center; gap:6px; margin-top:8px; font:12px var(--sans); }
+.theme-preview-mini-card i { padding:5px 9px; border-radius:8px; background:var(--preview-accent); color:var(--preview-on-accent); font-style:normal; }
+.theme-editor-section { padding:18px 0; border-bottom:1px solid var(--line); }
+.theme-panel .theme-editor-section h3 { margin:0 0 13px; font:600 17px/1.5 var(--serif); }
+.theme-section-title { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.theme-panel .theme-section-note { margin:10px 0 0; color:var(--muted); font:12px/1.7 var(--sans); }
+.theme-mode-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.theme-mode-options button,.theme-preset-grid button,.theme-custom-toggle,.theme-image-tools>button { min-height:44px; padding:9px 10px; border:1px solid var(--line); border-radius:12px; background:var(--uta-surface,#fff); color:var(--ink); font:14px/1.5 var(--sans); }
+.theme-mode-options button[aria-pressed=true],.theme-preset-grid button[aria-pressed=true],.theme-custom-toggle[aria-pressed=true] { border-color:var(--uta-accent,#28634b); background:var(--uta-tint,#e2efe7); box-shadow:inset 0 0 0 1px var(--uta-accent,#28634b); }
+.theme-preset-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+.theme-preset-grid button { display:flex; flex-direction:column; align-items:flex-start; gap:8px; text-align:left; }
+.theme-custom-toggle { width:100%; margin-top:10px; }
+.theme-text-action { min-height:40px; padding:4px 0; border:0; background:transparent; color:var(--uta-accent,#426550); font:12px/1.6 var(--sans); }
+.theme-role-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:15px 0 8px; }
+.theme-role-tile,.theme-auto-text { min-width:0; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--uta-surface,#fff); }
+.theme-role-tile>span,.theme-auto-text>span { display:block; margin-bottom:10px; font:13px var(--sans); }
+.theme-role-tile>div { display:flex; align-items:center; gap:7px; }
+.theme-role-tile input[type=color] { flex:none; width:30px; height:34px; min-width:0; padding:0; border:0; background:none; }
+.theme-role-tile input[type=text] { width:100%; min-width:0; min-height:36px; padding:4px; border:1px solid var(--line); border-radius:7px; background:transparent; color:inherit; font:12px var(--mono); }
+.theme-role-tile small { color:#b54b42; font-size:11px; }
+.theme-auto-text strong { display:block; padding:4px; border-radius:6px; font:16px var(--serif); }
+.theme-auto-text small { display:block; margin-top:5px; color:var(--muted); font-size:10px; }
+.theme-image-tools { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+.theme-image-tools small { min-width:0; overflow-wrap:anywhere; color:var(--muted); font-size:11px; }
+.theme-background-switch { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:16px 0; min-height:44px; font:14px var(--sans); }
+.theme-background-switch input { width:20px; height:20px; accent-color:var(--uta-accent); }
+.theme-background-sliders>label,.theme-typography>label { display:grid; grid-template-columns:1fr auto; gap:8px; margin:18px 0; font:14px/1.6 var(--sans); }
+.theme-background-sliders output { color:var(--muted); font:12px var(--mono); }
+.theme-background-sliders input[type=range] { grid-column:1/-1; width:100%; }
+.theme-typography { margin:20px 0; border-bottom:1px solid var(--line); }
+.theme-typography>summary { padding:12px 0 20px; cursor:pointer; font:600 17px/1.5 var(--serif); }
+.theme-typography .theme-font-label { grid-template-columns:1fr; }
+.theme-editor-error { color:#b54b42; font-size:13px; }
+/* 背景层不参与触摸，正文与工具条在其上；弹窗实色，歌词卡片有最低不透明度。 */
+#uta-theme-wallpaper { position:fixed; inset:-14px; z-index:0; pointer-events:none; background-repeat:no-repeat; background-size:cover; }
+:root.uta-android-font[data-uta-background=on] #root { position:relative; z-index:1; }
+:root.uta-android-font[data-uta-background=on] .android-main { background:transparent; }
+:root.uta-android-font[data-uta-background=on] :is(.lyrics-list,.android-mode-card,.android-home-link,.android-library-song,.review-album,.review-unit-card,.review-knowledge-workspace,.review-focus-card) { background:rgba(var(--uta-surface-rgb),var(--uta-card-opacity,.9)); }
+:root.uta-android-font[data-uta-background=on] .lyrics-list { border-radius:18px; padding:10px; }
+/* 图片主题当前句使用同源柔和色，替代旧暗色被误当遮罩后的灰块；时间戳模式沿用独立选段颜色。 */
+:root.uta-android-font[data-uta-background=on] .unified-study-page:not(.timestamp-debug-mode) .lyric-row.active { background:var(--uta-tint); border-radius:10px; box-shadow:inset 3px 0 var(--uta-accent); }
+:root.uta-android-font[data-uta-advanced=on] :is(.settings-dialog,.study-options,.line-editor,.song-editor,.review-confirm,.review-collector,.feedback-invite-card,.community-invite-dialog) { background:var(--uta-surface); color:var(--uta-text); }
 /* 选段调整提示不复用播放收藏工具条，文字为右侧调节条保留空间。 */
 .timestamp-selection-note { margin:12px 0; padding-right:76px; color:var(--muted); font:13px/1.7 var(--sans); }
 

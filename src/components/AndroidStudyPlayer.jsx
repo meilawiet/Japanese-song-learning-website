@@ -1,3 +1,4 @@
+// 安卓2.0界面整合，旧实现注释对照见android-ui/legacy。
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 // 原图标导入保留对照：import { ChevronDown, LoaderCircle, MoreHorizontal, Pause, Play, X } from 'lucide-react'
 import { LoaderCircle, Menu, MoreHorizontal, Pause, Play, X } from 'lucide-react'
@@ -25,6 +26,8 @@ export function AndroidStudyHeader({ song, artwork, learned, onChoose, error }) 
 export default function AndroidStudyPlayer({ transport, rate, onRate, onChooseSong, readingStyle, onReadingStyle, showTranslation, onTranslation, chat, onReview, ready, total, generating, onGenerate, onRegenerate, onDeleteAnalyses, hasAnalyses=false, generationProgress, timestampEditing=false, onTimestampEditing, timestampBusy=false, song, onLanguage, readingOptions = {}, onReadingOptions }) {
   const state = useSyncExternalStore(transport.subscribe, transport.getSnapshot, transport.getSnapshot)
   const [panel, setPanel] = useState(null)
+  // 页头的更多按钮打开同一业务面板，不另造一套设置。
+  useEffect(()=>{const show=()=>setPanel('more');window.addEventListener('uta:demo-study-options',show);return()=>window.removeEventListener('uta:demo-study-options',show)},[])
   // 原来另存拖动预览：const [scrub, setScrub] = useState(null)
   // 原生 range 可能先 pointerup 再派发最后一次 input；旧预览会被重新写入且无法清空。
   // seek 已同步发布播放时间，直接订阅这一份状态，避免出现声音继续、进度冻结。
@@ -49,9 +52,9 @@ export default function AndroidStudyPlayer({ transport, rate, onRate, onChooseSo
   return <footer className="unified-study-player" ref={root} aria-label="学习播放器">
     {/* 原时间轴提示只区分未就绪/静音；复用此位置显示起点和选段说明，不额外弹窗。 */}
     {/* <p className="study-timeline-note" role="status">{!state.ready ? '歌词缺少完整时间戳，可阅读和编辑，补全后可跟随播放。' : state.silent ? `仅歌词 · ${state.mode === 'continuous' ? '静音跟唱' : '静音计时'}` : '\u00a0'}</p> */}
-    {/* 原提示先判断时间轴，保留对照：<p id="study-range-note" className="study-timeline-note" role="status">{!state.ready ? '歌词缺少完整时间戳，可阅读和编辑，补全后可跟随播放。' : state.rangeAnchorId != null ? `已选第 ${song.lines.findIndex(line => line.id === state.rangeAnchorId) + 1} 句，请双击另一句确定范围` : state.range ? `选段播放 · 第 ${state.range.startIndex + 1}～${state.range.endIndex + 1} 句 · 单击播放或暂停，双击退出` : state.silent ? `仅歌词 · ${state.mode === 'continuous' ? '静音跟唱' : '静音计时'}` : '\u00a0'}</p> */}
+    {/* 原提示先判断时间轴，保留对照：<p hidden={state.ready&&!state.silent&&state.rangeAnchorId==null&&!state.range} id="study-range-note" className="study-timeline-note" role="status">{!state.ready ? '歌词缺少完整时间戳，可阅读和编辑，补全后可跟随播放。' : state.rangeAnchorId != null ? `已选第 ${song.lines.findIndex(line => line.id === state.rangeAnchorId) + 1} 句，请双击另一句确定范围` : state.range ? `选段播放 · 第 ${state.range.startIndex + 1}～${state.range.endIndex + 1} 句 · 单击播放或暂停，双击退出` : state.silent ? `仅歌词 · ${state.mode === 'continuous' ? '静音跟唱' : '静音计时'}` : '\u00a0'}</p> */}
     {/* 收藏可用于纯歌词；说明当前起点/选段，避免误导为未选中或可以播放。 */}
-    <p id="study-range-note" className="study-timeline-note" role="status">{state.rangeAnchorId != null ? `已选第 ${song.lines.findIndex(line => line.id === state.rangeAnchorId) + 1} 句，可收藏本句，或双击另一句选段` : state.range ? `已选第 ${state.range.startIndex + 1}～${state.range.endIndex + 1} 句，可收藏本段${state.ready ? '；单击播放或暂停，双击退出' : '；补全时间戳后可播放'}` : !state.ready ? '歌词缺少完整时间戳，可双击收藏，补全后可跟随播放。' : state.silent ? `仅歌词 · ${state.mode === 'continuous' ? '静音跟唱' : '静音计时'}` : '\u00a0'}</p>
+    <p hidden={state.ready&&!state.silent&&state.rangeAnchorId==null&&!state.range} id="study-range-note" className="study-timeline-note" role="status">{state.rangeAnchorId != null ? `已选第 ${song.lines.findIndex(line => line.id === state.rangeAnchorId) + 1} 句，可收藏本句，或双击另一句选段` : state.range ? `已选第 ${state.range.startIndex + 1}～${state.range.endIndex + 1} 句，可收藏本段${state.ready ? '；单击播放或暂停，双击退出' : '；补全时间戳后可播放'}` : !state.ready ? '歌词缺少完整时间戳，可双击收藏，补全后可跟随播放。' : state.silent ? `仅歌词 · ${state.mode === 'continuous' ? '静音跟唱' : '静音计时'}` : '\u00a0'}</p>
     {/* 原拖动预览事件保留对照：
       <input type="range" value={scrub ?? state.time} onPointerDown={() => setScrub(state.time)}
         onChange={event => { const time = Number(event.target.value); setScrub(time); transport.seek(time) }}

@@ -1,3 +1,4 @@
+// 安卓2.0界面整合，旧实现注释对照见android-ui/legacy。
 import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { Database, Download, Eye, EyeOff, KeyRound, Languages, UserRound, LoaderCircle, Save, Upload, X } from 'lucide-react'
@@ -16,7 +17,7 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
   useModalScrollLock()
   // 原安卓默认直接打开数据管理；现在先显示五个纵向入口。
   // const [tab, setTab] = useState(Capacitor.isNativePlatform() && initialTab === 'reading' ? 'data' : initialTab)
-  const [tab, setTab] = useState(Capacitor.isNativePlatform() ? null : initialTab)
+  const [tab, setTab] = useState(Capacitor.isNativePlatform() ? initialTab||null : initialTab)
   // 数据管理先展示云备份与来源管理两个入口，再进入具体功能。
   const [dataTab, setDataTab] = useState(null)
   const [draft, setDraft] = useState(loadAiSettings)
@@ -109,11 +110,11 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
   return <div className="settings-backdrop" onClick={onClose}>
     <section className="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabIndex={-1} ref={dialogRef} onClick={(event) => event.stopPropagation()}>
       {/* 用户要求移除“管理学习数据，连接你的 AI 服务。”说明行；分类标题取代固定“设置”。 */}
-      <header className="settings-heading"><div><p className="eyebrow">MAKE IT YOURS</p><h2 id="settings-title">{dialogTitle}</h2></div><button type="button" className="settings-close" onClick={onClose} aria-label="关闭设置"><X size={21} /></button></header>
+      <header className="settings-heading">{tab&&<button type="button" className="settings-back" aria-label="返回设置上一级" onClick={()=>closeRef.current()}><ArrowLeft size={22}/></button>}<div><h2 id="settings-title">{dialogTitle}</h2></div><button type="button" className="settings-close" onClick={onClose} aria-label="关闭设置"><X size={21}/></button></header>{tab==='theme'&&<div id="demo-theme-preview-slot" className="demo-theme-preview-slot"/>}<div className="refined-settings-scroll">
       {/* 旧注音设置入口保留供电脑端使用；安卓将个人资料与其他分类放在同一行。 */}
       {/* 原横向分类栏保留供对照，安卓改为目录与子页面，网页继续使用旧分类栏。 */}
       {/* <div className="settings-tabs" aria-label="设置分类">{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}><UserRound size={17} /> 个人资料</button> : <button type="button" aria-pressed={tab === 'reading'} onClick={() => setTab('reading')}><Languages size={17} /> 注音显示</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => setTab('data')}><Database size={17} /> 数据管理</button><button type="button" aria-pressed={tab === 'ai'} onClick={() => setTab('ai')}><KeyRound size={17} /> AI 服务</button>{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>setTab('about')}>关于</button>}</div> */}
-      {isAndroid ? !tab ? <nav className="settings-directory" aria-label="设置分类">{[['profile','个人资料',UserRound],['data','数据管理',Database],['ai','AI服务',KeyRound],['theme','主题设置',Palette],['about','关于',Info]].map(([id,label,Icon]) => <button key={id} type="button" onClick={() => { setTab(id); dialogRef.current?.scrollTo({top:0}) }}><Icon size={22} /><span>{label}</span><ChevronRight size={20} /></button>)}</nav> : null : <div className="settings-tabs" aria-label="设置分类">{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}><UserRound size={17} /> 个人资料</button> : <button type="button" aria-pressed={tab === 'reading'} onClick={() => setTab('reading')}><Languages size={17} /> 注音显示</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => setTab('data')}><Database size={17} /> 数据管理</button><button type="button" aria-pressed={tab === 'ai'} onClick={() => setTab('ai')}><KeyRound size={17} /> AI 服务</button>{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>setTab('about')}>关于</button>}</div>}
+      {isAndroid ? !tab ? <nav className="settings-directory" aria-label="设置分类">{[['profile','个人资料',UserRound],['data','数据管理',Database],['ai','AI服务',KeyRound],['theme','主题设置',Palette],['about','关于',Info]].map(([id,label,Icon]) => <button key={id} type="button" onClick={() => { setTab(id); dialogRef.current?.querySelector('.refined-settings-scroll')?.scrollTo({top:0}) }}><Icon size={22} /><span>{label}</span><ChevronRight size={20} /></button>)}</nav> : null : <div className="settings-tabs" aria-label="设置分类">{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}><UserRound size={17} /> 个人资料</button> : <button type="button" aria-pressed={tab === 'reading'} onClick={() => setTab('reading')}><Languages size={17} /> 注音显示</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => setTab('data')}><Database size={17} /> 数据管理</button><button type="button" aria-pressed={tab === 'ai'} onClick={() => setTab('ai')}><KeyRound size={17} /> AI 服务</button>{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>setTab('about')}>关于</button>}</div>}
       {/* 个人资料编辑集中在安卓设置页，主页头像只用于查看。 */}
       {/* 原独立个人资料按钮已移入上方分类栏。 */}
       {/* 安卓新增关于页，其他设置分类保持同一行。 */}
@@ -158,6 +159,6 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
         {message && <p className={`settings-message ${message.kind}`} role="status">{message.text}</p>}
         <div className="settings-form-actions"><button type="button" disabled={busy} onClick={async () => { try { await clearAiSettings(); setDraft({ ...DEFAULT_AI_SETTINGS }); setVisible(false); setMessage({ kind: 'success', text: isAndroid ? '已清除手机中的 AI 配置与密钥。' : '已清除浏览器中的 AI 配置与密钥，恢复服务端默认配置。' }) } catch { setMessage({ kind: 'error', text: '无法清除 AI 配置。' }) } }}>清除配置</button><span /><button type="button" disabled={busy} onClick={test}>{busy && <LoaderCircle size={15} className="spin" />}{busy ? '测试中…' : '测试连接'}</button><button type="submit" disabled={busy} className="settings-primary"><Save size={15} /> 保存设置</button></div>
       </form>}
-    </section>
+</div>    </section>
   </div>
 }

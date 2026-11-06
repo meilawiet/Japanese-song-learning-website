@@ -1,7 +1,15 @@
 import {toHiragana} from 'wanakana'
 
 // 在来源读音/人工校正已经确定之后，仅生成显示片段；不修改原分词、读音或校正索引。
-export function kanjiReadingParts(surface, reading='') {
+// 原签名：kanjiReadingParts(surface, reading='')；可选词界只作显示依据，不写回分词缓存。
+export function kanjiReadingParts(surface, reading='', readingTokens=null) {
+  // 只采用完整词面与当前读音都一致的证据；人工改音、主动留空或旧来源不能套用旧词界。
+  if(reading&&Array.isArray(readingTokens)&&readingTokens.length>1
+    &&readingTokens.every(token=>typeof token?.surface==='string'&&typeof token?.reading==='string')
+    &&readingTokens.map(token=>token.surface).join('')===surface
+    &&toHiragana(readingTokens.map(token=>token.reading).join(''),{passRomaji:true})===toHiragana(reading,{passRomaji:true})){
+    return readingTokens.flatMap(token=>kanjiReadingParts(token.surface,token.reading))
+  }
   const parts=String(surface).match(/[\p{Script=Han}々]+|[^\p{Script=Han}々]+/gu)||[]
   const han=part=>/^[\p{Script=Han}々]+$/u.test(part)
   const fallback=()=>parts.map(surface=>({surface,kana:han(surface)&&parts.length===1?reading:''}))

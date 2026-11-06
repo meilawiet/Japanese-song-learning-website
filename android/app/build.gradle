@@ -71,8 +71,10 @@ android {
         // 1.6.1 新增首页三次反馈邀请和关于页固定表单入口。
         // 旧正式版：versionCode 28 / versionName "1.6.1"。
         // 1.6.2 发布人工注音整曲同步与时间戳双击选段批量调整。
-        versionCode 29
-        versionName "1.6.2"
+        // 旧正式版：versionCode 29 / versionName "1.6.2"。
+        // 2.0.0整合新版界面、主题图片手势及既有修复，允许原签名保留数据升级。
+        versionCode 30
+        versionName "2.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

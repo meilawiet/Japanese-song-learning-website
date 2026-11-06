@@ -1,3 +1,4 @@
+// 安卓2.0界面整合，旧实现注释对照见android-ui/legacy。
 import { useRef, useState } from 'react'
 import { ChevronDown, Plus, Trash2, X } from 'lucide-react'
 import { parseLrcFile } from '../lib/localSongStore'
@@ -17,8 +18,9 @@ const parseTime = (value) => {
 
 // 每一分区独立展开；不打开联网分区时不发起封面或歌词请求。
 function EditorSection({ title, children, onOpen }) {
-  const [open, setOpen] = useState(false)
-  return <details className="song-editor-section" onToggle={(event) => { setOpen(event.currentTarget.open); onOpen?.(event.currentTarget.open) }}><summary>{title}<ChevronDown size={18}/></summary>{open && <div className="song-editor-section-body">{children}</div>}</details>
+  // 常用资料默认可编辑；其余分区仍按需展开。
+  const [open, setOpen] = useState(title==='歌曲和歌手名称')
+  return <details open={open} className="song-editor-section" onToggle={(event) => { setOpen(event.currentTarget.open); onOpen?.(event.currentTarget.open) }}><summary>{title}<ChevronDown size={18}/></summary>{open && <div className="song-editor-section-body">{children}</div>}</details>
 }
 export default function SongDetailsEditor({ song, artwork, onClose, onSave, busy }) {
   const [title, setTitle] = useState(song.title)
