@@ -21,6 +21,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(FeedbackInvitePlugin.class);
         // 安卓主题试用：系统明暗变化及状态栏/导航栏颜色。
         registerPlugin(AppearancePlugin.class);
+        // 歌词制卡写入手机上的 AnkiDroid。
+        registerPlugin(AnkiPlugin.class);
         // 原独立 WebView 接入保留对照；QQ 授权的 Cookie 回到浏览器，现复用已注册的 Browser 插件。
         // registerPlugin(FeedbackPlugin.class);
         // 新方案使用官方访客登录态，应用内直接发言，不再依赖 QQ 或浏览器登录。

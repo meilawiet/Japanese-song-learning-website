@@ -1,0 +1,186 @@
+/* 帮助沿用当前主题。目录在右侧抽屉，宽屏正文旁保留本页索引。 */
+:root.uta-refined .android-main[data-demo-route="help"] {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: var(--ref-page);
+}
+
+.uta-help {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  font-family: var(--sans);
+  color: var(--ref-text);
+}
+
+.uta-help-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ref-2);
+  padding: var(--ref-1) var(--ref-4);
+  border-bottom: 1px solid var(--ref-line);
+}
+
+.uta-help-header h1 {
+  flex: 1;
+  margin: 0;
+  font-size: var(--ref-title);
+}
+
+.uta-help-header a {
+  color: var(--ref-accent);
+  font-size: var(--ref-body);
+}
+
+.uta-help-body {
+  flex: 1;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.uta-help-layout {
+  display: grid;
+  max-width: 1160px;
+  gap: var(--ref-4);
+  margin-inline: auto;
+  padding: var(--ref-4) var(--ref-4) max(var(--ref-6), env(safe-area-inset-bottom));
+}
+
+.uta-help-index { display: none; }
+
+/* 原窄屏下拉目录
+.uta-help-mobile-directory {
+  display: grid;
+  gap: var(--ref-2);
+  color: var(--ref-muted);
+  font-size: var(--ref-small);
+}
+
+.uta-help-mobile-directory select {
+  min-height: var(--ref-touch);
+  border: 1px solid var(--ref-line);
+  border-radius: var(--ref-radius-sm);
+  padding-inline: var(--ref-3);
+  color: var(--ref-text);
+  background: var(--ref-surface);
+  font: inherit;
+  font-size: var(--ref-body);
+}
+*/
+
+.uta-help-article {
+  min-width: 0;
+  padding: clamp(16px, 3vw, 32px);
+  border: 1px solid var(--ref-line);
+  border-radius: var(--ref-radius);
+  background: var(--ref-surface);
+}
+
+.uta-help-article h2 {
+  margin: 0 0 var(--ref-3);
+  font-size: calc(var(--ref-title) * 1.25);
+}
+
+.uta-help-article h3 {
+  margin: 0 0 var(--ref-2);
+  font-size: var(--ref-heading);
+}
+
+.uta-help-article p {
+  margin: 0;
+  color: var(--ref-muted);
+  font-size: var(--ref-body);
+  line-height: 1.8;
+}
+
+.uta-help-article section {
+  margin-top: var(--ref-5);
+  padding-top: var(--ref-4);
+  border-top: 1px solid var(--ref-line);
+  scroll-margin-top: var(--ref-4);
+}
+
+.uta-help-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  background: rgb(0 0 0 / .35);
+}
+
+.uta-help-drawer {
+  display: flex;
+  flex-direction: column;
+  width: min(86%, 320px);
+  background: var(--ref-page);
+  box-shadow: -6px 0 24px rgb(0 0 0 / .18);
+}
+
+.uta-help-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ref-1) var(--ref-4);
+  border-bottom: 1px solid var(--ref-line);
+}
+
+.uta-help-drawer-header h2 {
+  margin: 0;
+  font-size: var(--ref-title);
+}
+
+.uta-help-directory {
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--ref-4) max(var(--ref-4), env(safe-area-inset-bottom));
+}
+
+.uta-help-group { margin-top: var(--ref-5); }
+.uta-help-group h3, .uta-help-index h2 {
+  margin: 0 0 var(--ref-2);
+  font-size: var(--ref-small);
+}
+
+.uta-help-directory button, .uta-help-index button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--ref-2);
+  border: 0;
+  border-radius: var(--ref-radius-sm);
+  background: transparent;
+  color: var(--ref-muted);
+  font-size: var(--ref-body);
+  text-align: start;
+}
+
+.uta-help-directory button[aria-current] {
+  background: var(--ref-tint);
+  color: var(--ref-accent);
+  font-weight: 700;
+}
+
+/* 原宽屏常驻目录布局，现统一使用右侧抽屉。
+@media (min-width: 700px) {
+  .uta-help-layout { grid-template-columns: minmax(176px, 1fr) minmax(0, 3fr); align-items: start; }
+  .uta-help-directory {
+    display: block;
+    position: sticky;
+    top: var(--ref-4);
+    max-height: calc(100vh - var(--ref-touch) - var(--ref-12));
+    max-height: calc(100dvh - var(--ref-touch) - var(--ref-12));
+    overflow-y: auto;
+    padding: var(--ref-4);
+  }
+  .uta-help-mobile-directory { display: none; }
+}
+*/
+
+@media (min-width: 920px) {
+  .uta-help-layout { grid-template-columns: minmax(0, 1fr) 150px; align-items: start; }
+  .uta-help-index { display: block; padding: var(--ref-4) 0 0 var(--ref-3); border-inline-start: 1px solid var(--ref-line); }
+}

@@ -3,7 +3,7 @@ import {Capacitor,registerPlugin} from '@capacitor/core'
 import {reviewPlaybackBounds} from './reviewBook.js'
 
 // 复习独立播放器：按所选首尾句截取一次，离页/切句/断耳机/进后台立即取消。
-export default function useReviewAudio(unit,source,rate) {
+export default function useReviewAudio(unit,source,rate,clipBounds) {
   const ref=useRef(null),version=useRef(0),cancelWait=useRef(null),end=useRef(null)
   const [playing,setPlaying]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('')
   function stop(){version.current++;cancelWait.current?.();ref.current?.pause();end.current=null;setPlaying(false);setBusy(false)}
@@ -34,11 +34,15 @@ export default function useReviewAudio(unit,source,rate) {
         audio.addEventListener('loadedmetadata',loaded,{once:true});audio.addEventListener('error',failed,{once:true});audio.load()
       })
       if(own!==version.current)return
-      const bounds=reviewPlaybackBounds(unit.song,unit.lines,audio.duration)
+      // 制卡试听可传入已校验的裁剪范围，普通复习仍按歌词起止点播放。
+      // const bounds=reviewPlaybackBounds(unit.song,unit.lines,audio.duration)
+      const bounds=clipBounds??reviewPlaybackBounds(unit.song,unit.lines,audio.duration)
       if(!bounds||bounds.end<=bounds.start)throw new Error('这段歌词缺少可播放的有效时间范围。')
       audio.currentTime=bounds.start;audio.playbackRate=rate;end.current=bounds.end
       await audio.play()
-      if(own!==version.current){audio.pause();return}
+      // stop 已暂停旧请求，迟到的结果不能反过来暂停新的试听。
+      // if(own!==version.current){audio.pause();return}
+      if(own!==version.current)return
       setPlaying(true)
     }catch(failure){if(own===version.current){audio.pause();end.current=null;setError(failure.message||'播放失败，请检查音频。')}}
     finally{if(own===version.current)setBusy(false)}

@@ -125,7 +125,8 @@ export function explainSelectionWithAi(payload) {
 // 原请求只有 {lines}；增加语种上下文，避免把外语解释成日语。
 // 原签名仅接收 lines/language：return postAi('/api/ai/explain-sentences', { lines, language })
 export function explainSentenceBatchWithAi(lines, language = 'ja', options = {}) {
-  const payload=Capacitor.isNativePlatform()?prepareSentenceRequest(lines,language,options.japaneseLevel):{lines,language}
+  // 安卓解析请求携带讲解预设，网页继续沿用原后端协议。
+  const payload=Capacitor.isNativePlatform()?prepareSentenceRequest(lines,language,options.japaneseLevel,options.teachingMode):{lines,language}
   return postAi('/api/ai/explain-sentences', payload, undefined, options.signal)
 }
 

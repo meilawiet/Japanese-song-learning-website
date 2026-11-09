@@ -119,7 +119,8 @@ export class StudyTransport {
   }
   // 等待真实媒体元信息，取消、离页或换歌后旧 Promise 不得重新启动播放。
   waitMetadata(audio) {
-    if (audio.readyState >= 1) return Promise.resolve(true)
+    // 原来只看 readyState。媒体保留错误状态时，重试需要重新载入源。
+    if (audio.readyState >= 1 && !audio.error) return Promise.resolve(true)
     return new Promise(resolve => {
       let timer
       const finish = success => { clearTimeout(timer); audio.removeEventListener('loadedmetadata', loaded); audio.removeEventListener('error', failed); this.cancelWait = null; resolve(success) }
@@ -159,7 +160,8 @@ export class StudyTransport {
     } catch (error) {
       if (version !== this.version) return
       this.publish({ playing: false, busy: false })
-      this.options.onError?.(error.message || '未能开始播放，请重试。')
+      // 原来直接显示 WebView 的英文错误；格式或来源错误给出明确的中文提示。
+      this.options.onError?.(error.name === 'NotSupportedError' ? '音频来源不可用或格式不受支持，请重试或检查歌曲文件。' : error.message || '未能开始播放，请重试。')
     }
   }
   toggle = () => {
@@ -168,7 +170,9 @@ export class StudyTransport {
     this.singleOverride = false
     // 原完成后仅按练习模式重置：if (this.finished) time = this.state.mode === 'sentence' ? this.song.lines.find(line => line.id === this.segmentId)?.start || 0 : 0
     if (this.state.rangeAnchorId != null) return // 尚未选终点时等待用户完成或点其他句退出。
-    if (this.finished) time = this.rangeBounds()?.start ?? (this.state.mode === 'sentence' ? this.song.lines.find(line => line.id === this.segmentId)?.start || 0 : 0)
+    // 原来仅凭 finished 判断。手动拖到曲末也应从整曲、选段或当前句的起点重播。
+    const atEnd = this.hasAudio && (this.audio()?.ended || (this.state.duration > 0 && time >= this.state.duration))
+    if (this.finished || atEnd) time = this.rangeBounds()?.start ?? (this.state.mode === 'sentence' ? this.song.lines.find(line => line.id === this.segmentId)?.start || 0 : 0)
     void this.start(time)
   }
   seek = value => {
@@ -210,24 +214,42 @@ export class StudyTransport {
     this.publish({ mode })
   }
   setRate(rate) { this.tick(); this.options.rate = rate; if (this.hasAudio && this.audio()) this.audio().playbackRate = rate }
+  playbackEnd() {
+    // 选段优先，其次为单句试听或整曲的边界。
+    return this.rangeBounds()?.end ?? (this.state.mode === 'sentence' || this.singleOverride ? studyLineEnd(this.song.lines, this.segmentId, this.state.duration) : this.state.duration)
+  }
+  finishPlayback(time, atMediaEnd) {
+    // 选段停止时保留段尾高亮；跟唱停在实际播放到的最后一句。
+    if (this.state.range) this.select(this.state.range.endId)
+    else if (this.state.mode === 'continuous') this.select(studyLineAt(this.song.lines, time)?.id)
+    this.finished = true
+    this.pause()
+    // 原来每次停止都会回写 currentTime。自然播完时保留媒体自身的结束状态。
+    if (!atMediaEnd) this.audioTime(time)
+    this.publish({ time })
+  }
+  handleMediaEnd = () => {
+    const audio = this.hasAudio ? this.audio() : null
+    // pause 可能早于 ended 到达。允许在已暂停时结算，但忽略切歌或重播后的旧事件。
+    if (!this.enabled || !audio?.ended || this.finished || this.state.busy) return
+    this.finishPlayback(Math.min(audio.currentTime, this.playbackEnd()), true)
+  }
   tick = () => {
     if (!this.state.playing || !this.enabled) return
     const now = this.now(), elapsed = Math.max(0, (now - this.lastTick) / 1000)
     this.lastTick = now
-    let time = this.hasAudio ? this.audio()?.currentTime ?? this.state.time : this.state.time + elapsed * (this.options.rate || 1)
+    const audio = this.hasAudio ? this.audio() : null
+    const time = this.hasAudio ? audio?.currentTime ?? this.state.time : this.state.time + elapsed * (this.options.rate || 1)
     // 原边界仅分单句与整曲；选段优先，包含结束句且只播放一次，不自动无限循环。
     // const end = this.state.mode === 'sentence' || this.singleOverride ? studyLineEnd(this.song.lines, this.segmentId, this.state.duration) : this.state.duration
-    const end = this.rangeBounds()?.end ?? (this.state.mode === 'sentence' || this.singleOverride ? studyLineEnd(this.song.lines, this.segmentId, this.state.duration) : this.state.duration)
-    if (time >= end || this.hasAudio && this.audio()?.ended) {
-      time = Math.min(time, end)
-      // 原连续模式会选中边界外的下一句；选段停止时固定在结束句内。
-      // if (this.state.mode === 'continuous') this.select(studyLineAt(this.song.lines, time)?.id)
-      if (this.state.range) this.select(this.state.range.endId)
-      else if (this.state.mode === 'continuous') this.select(studyLineAt(this.song.lines, time)?.id)
-      this.pause()
-      this.audioTime(time)
-      this.finished = true
-      this.publish({ time })
+    const end = this.playbackEnd()
+    if (audio?.ended) {
+      this.handleMediaEnd()
+      return
+    }
+    if (time >= end) {
+      // 到达真实曲末时无需重复定位；媒体时钟若越过目标边界，仍按原规则校正。
+      this.finishPlayback(end, Boolean(audio && end === audio.duration && time === end))
       return
     }
     // 选段时按真实播放位置跟随段内当前句，段外高亮不会被误选中。

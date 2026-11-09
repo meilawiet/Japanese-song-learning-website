@@ -20,3 +20,51 @@ test('连续播放多次前后跳转后，时间仍从真实媒体持续刷新',
  const {t}=fixture(audio);t.setMode('continuous');await t.start()
  for(const target of [2,6,1,5,3,7,2,4,1,6,3,5]){t.seek(target);audio.currentTime=target+.4;t.tick();assert.equal(t.state.time,target+.4);assert.equal(t.state.playing,true);assert.equal(audio.paused,false)}
 })
+
+// 模拟媒体先暂停、后派发结束事件；用独立的计时值记录应用对 currentTime 的回写。
+test('自然播完结算最后一句且不重写曲末位置，跟唱可从头重播', async () => {
+  let mediaTime = 0
+  const seeks = []
+  const audio = {
+    duration: 9, readyState: 1, paused: true, ended: false,
+    get currentTime() { return mediaTime },
+    set currentTime(time) { seeks.push(time); mediaTime = time; this.ended = false },
+    pause() { this.paused = true },
+    async play() { this.paused = false },
+  }
+  const { t, errors } = fixture(audio)
+  t.setMode('continuous')
+  await t.start()
+  mediaTime = 6
+  t.tick()
+  t.pause()
+  mediaTime = audio.duration
+  audio.ended = true
+  const seekCount = seeks.length
+  t.handleMediaEnd()
+  t.handleMediaEnd()
+  assert.equal(t.state.playing, false)
+  assert.equal(t.state.time, 9)
+  assert.equal(t.selected, 4)
+  assert.equal(seeks.length, seekCount)
+  t.toggle()
+  await Promise.resolve()
+  await Promise.resolve()
+  assert.equal(t.state.playing, true)
+  assert.equal(t.state.time, 0)
+  assert.equal(t.selected, 1)
+  assert.deepEqual(errors.filter(Boolean), [])
+})
+
+// 拖到曲末时媒体可能不报告 ended；主播放键仍应从对应的起点开始。
+test('暂停时拖到曲末后，逐句模式重播最后一句', async () => {
+  const audio = { duration: 9, readyState: 1, currentTime: 0, pause() {}, async play() {} }
+  const { t } = fixture(audio)
+  t.seek(audio.duration)
+  t.toggle()
+  await Promise.resolve()
+  await Promise.resolve()
+  assert.equal(audio.currentTime, 7)
+  assert.equal(t.state.time, 7)
+  assert.equal(t.state.playing, true)
+})

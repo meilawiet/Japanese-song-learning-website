@@ -25,15 +25,20 @@ export default function useStudyPlayback({ enabled, song, audioRef, audioUrl, ra
     const audio = audioRef.current, tick = window.setInterval(transport.tick, 60)
     const metadata = () => transport.refreshDuration()
     // 浏览器可能延迟派发上一次 pause，先核对媒体当前是否真的暂停。
-    const paused = () => { if (audio?.paused && transport.state.playing) transport.pause() }
+    // 原 pause 一律停止计时。自然播完时先结算结束状态，再处理普通暂停。
+    const paused = () => {
+      if (audio?.ended) transport.handleMediaEnd()
+      else if (audio?.paused && transport.state.playing) transport.pause()
+    }
     const failed = () => { transport.pause(); latest.current.onError('音频无法播放，请检查歌曲文件。') }
     audio?.addEventListener('loadedmetadata', metadata)
     audio?.addEventListener('pause', paused)
-    audio?.addEventListener('ended', transport.tick)
+    // 原 ended 走 tick，先收到 pause 时会因已停止而跳过结算。
+    audio?.addEventListener('ended', transport.handleMediaEnd)
     audio?.addEventListener('error', failed)
     return () => {
       clearInterval(tick); transport.pause()
-      audio?.removeEventListener('loadedmetadata', metadata); audio?.removeEventListener('pause', paused); audio?.removeEventListener('ended', transport.tick)
+      audio?.removeEventListener('loadedmetadata', metadata); audio?.removeEventListener('pause', paused); audio?.removeEventListener('ended', transport.handleMediaEnd)
       audio?.removeEventListener('error', failed)
     }
   }, [enabled, song.id, audioUrl, timeline])

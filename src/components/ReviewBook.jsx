@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from 'react'
-import {ArrowLeft,ChevronDown,ChevronRight,Grid2X2,List,Play,Pause,History,Trash2,LoaderCircle,BookOpen,Undo2,NotebookPen,MoreHorizontal,Sparkles} from 'lucide-react'
+import {ArrowLeft,ChevronDown,ChevronRight,Grid2X2,List,Play,Pause,History,Trash2,LoaderCircle,BookOpen,BookCheck,Undo2,NotebookPen,MoreHorizontal,Sparkles} from 'lucide-react'
 // 笔记不再提供重点分类勾选；历史focus字段仍由原复习条目保留。
 import {reviewGroups,reviewKey,reviewDue,gradeReview,createReviewUnit,reviewAnalysis,reviewAnalysisKey,reviewRequestLine,reviewDictionaryWords} from '../lib/reviewBook.js'
 import {explainSentenceBatchWithAi} from '../lib/annotationApi'
@@ -10,6 +10,8 @@ import useReviewAudio from '../lib/useReviewAudio'
 import ReadingLyric from './ReadingLyric'
 import ReadingStyleOptions from './ReadingStyleOptions'
 import {songReadingStyle} from '../lib/songLanguage.js'
+import {isMasteredWord,masteredWordsForLine,wordWithReading} from '../lib/masteredWords.js'
+import {MasteredWordButton} from './MasteredWords'
 
 const strings=value=>(Array.isArray(value)?value:[]).filter(item=>typeof item==='string'&&item.trim())
 const wordList=value=>(Array.isArray(value)?value:[]).filter(item=>typeof item?.surface==='string'&&typeof item?.meaning==='string')
@@ -17,7 +19,7 @@ const stamp=seconds=>{const value=Math.max(0,Math.floor(seconds));return `${Stri
 
 // 复习歌曲直接进入歌词详情，共用真实reviewItems，收藏、笔记、解析和复习进度随原备份保存。
 // 原参数列表至onDetailChange结束；新增主页状态回调只控制三栏手势，不改变复习详情导航。
-export default function ReviewBook({songs,items,onItemsChange,artworkFor,audioFor,sentenceCache,annotations,meaningOverrides,corrections,level,songSettings={},defaultReadingStyle,onReadingSettings,onOpenSong,onDetailChange,onHomeChange,active=true}) {
+export default function ReviewBook({songs,items,onItemsChange,artworkFor,audioFor,sentenceCache,annotations,meaningOverrides,corrections,level,songSettings={},defaultReadingStyle,onReadingSettings,onOpenSong,onDetailChange,onHomeChange,active=true,masteredWords=[],onMasterWord,onOpenMasteredWords}) {
   const [songId,setSongId]=useState(null),[selected,setSelected]=useState(null),[session,setSession]=useState(null)
   // 原封面/列表偏好不再参与复习本展示，仅统一列表。
   // const [view,setView]=useState(()=>localStorage.getItem('uta-review-view-v1')==='list'?'list':'grid')
@@ -41,6 +43,12 @@ export default function ReviewBook({songs,items,onItemsChange,artworkFor,audioFo
   const analysis=unit?reviewAnalysis(unit,sentenceCache,level):{entry:null,current:false}
   // 原来只读取整段/单句entry：const explanation=analysis.entry?.explanation
   const explanation=analysis.explanation
+  // 只取仍与收藏原文相符的注音，并用分隔符防止把跨行词片拼在一起。
+  const wordLanguage=unit?songLanguage(unit.song):'ja'
+  const wordTokens=unit?.lines.flatMap(line=>{
+    const tokens=annotations?.[unit.song.id]?.find(row=>row.id===line.id&&row.tokens?.map(token=>token.surface).join('')===line.text)?.tokens||[]
+    return [...tokens.map(token=>({...token,reading:corrections?.[`${unit.song.id}:${line.id}:${token.index}`]??token.reading})),{surface:'\n'}]
+  })
   // 原组件未接收songSettings/defaultReadingStyle/onReadingSettings；新增参数用于同步歌词页注音。
   // 注音偏好跟随当前复习歌曲，不能误用学习页上一次打开的另一首歌。
   const readingOptions=songSettings[unit?.song.id]||{}
@@ -77,7 +85,8 @@ export default function ReviewBook({songs,items,onItemsChange,artworkFor,audioFo
     setBusy(true);setError('')
     try{
       const line=reviewRequestLine(target),language=songLanguage(target.song)
-      const result=await explainSentenceBatchWithAi([line],language,{japaneseLevel:level,signal:controller.signal})
+      const mastered=masteredWordsForLine(masteredWords,language,line.text,wordTokens)
+      const result=await explainSentenceBatchWithAi([mastered.length?{...line,mastered_words:mastered}:line],language,{japaneseLevel:level,signal:controller.signal})
       if(controller.signal.aborted||latest.current.identity!==snapshot)return
       const explanation=result.explanations.find(value=>value.line_id===line.id&&value.source_text===line.text)
       if(!explanation)throw new Error('解析未与整个复习单元对应，结果未保存。')
@@ -115,7 +124,8 @@ export default function ReviewBook({songs,items,onItemsChange,artworkFor,audioFo
     else closeDetail()
   }
   const due=units.filter(value=>reviewDue(value.item,now)&&!value.missing)
-  const words=wordList(explanation?.vocabulary).length?wordList(explanation.vocabulary):unit?reviewDictionaryWords(unit,annotations,meaningOverrides,corrections):[]
+  const sourceWords=wordList(explanation?.vocabulary).length?wordList(explanation.vocabulary):unit?reviewDictionaryWords(unit,annotations,meaningOverrides,corrections):[]
+  const words=sourceWords.filter(word=>!isMasteredWord(masteredWords,wordWithReading(word,wordTokens),wordLanguage))
   const grammar=strings(explanation?.grammar)
   const position=session?Math.min(session.position+1,session.keys.length):(group?.units.findIndex(value=>value.key===currentKey)??0)+1
   const total=session?session.keys.length:group?.units.length||0
@@ -126,9 +136,11 @@ export default function ReviewBook({songs,items,onItemsChange,artworkFor,audioFo
         {/* 编辑只管理复习收藏，原歌曲、歌词和学习解析不受删除影响。 */}
         <header className="review-page-header"><button type="button" aria-label="返回复习本" onClick={()=>setEditingSongId(null)}><ArrowLeft size={23}/></button><h1>编辑复习</h1></header>
         <div className="review-song-identity">{cover(editGroup.song)}<div><h2>{editGroup.song.title}</h2><p>{editGroup.song.artist} · {editGroup.units.length} 个复习单元</p></div></div>
-        <div className="review-unit-list">{editGroup.units.map(value=><ReviewPressItem key={value.key} className="review-unit-card" label={'复习第'+(value.position+1)+'行起的歌词'} onOpen={()=>openUnit(value)} onHold={()=>setMenuTarget({kind:'unit',key:value.key})}><span className="review-unit-meta">第{value.position+1}行起 · {value.lines.length}行{value.lines.length>1?'一组':''}</span><span className="review-unit-text">{value.lines.map((line,index)=><span key={index}>{line.text}</span>)}</span><span className="review-unit-bottom">查看关键表达与语法<ChevronRight size={18}/></span></ReviewPressItem>)}</div>
+        <div className="review-unit-list">{editGroup.units.map(value=><ReviewPressItem key={value.key} className="review-unit-card" label={'复习第'+(value.position+1)+'行起的歌词'} onOpen={()=>openUnit(value)} onHold={()=>setMenuTarget({kind:'unit',key:value.key})}><span className="review-unit-meta">第{value.position+1}行起 · {value.lines.length}行{value.lines.length>1?'一组':''}</span><span className="review-unit-text">{value.lines.map((line,index)=><span key={index}>{line.text}</span>)}</span><span className="review-unit-bottom">查看单词与语法<ChevronRight size={18}/></span></ReviewPressItem>)}</div>
       </>:<>
-        <p className="android-home-eyebrow">REVIEW / 复习</p><div className="review-heading"><div><h1>复习本</h1><p>{groups.length}首歌曲待复习</p></div></div>
+        <p className="android-home-eyebrow">REVIEW / 复习</p><div className="review-heading"><div><h1>复习本</h1><p>{groups.length}首歌曲待复习</p></div>
+          {onOpenMasteredWords&&<button className="review-mastered-entry" type="button" onClick={onOpenMasteredWords}><BookCheck size={17}/>已掌握单词 <span>{masteredWords.length}</span></button>}
+        </div>
         {groups.length?<>
           {/* 今日队列放在所有歌曲之前；直接点歌曲仍从该歌收藏的第一单元开始。 */}
           <button type="button" className="review-today" disabled={!due.length} onClick={()=>{setSession({keys:due.map(value=>value.key),position:0});setSongId(due[0].song.id)}}><History size={21}/><span><strong>开始今日复习</strong><small>{due.length?due.length+' 个复习单元等待回顾':'今日到期内容已复习完成'}</small></span><ChevronRight size={21}/></button>
@@ -169,14 +181,14 @@ export default function ReviewBook({songs,items,onItemsChange,artworkFor,audioFo
             {knowledgeTab!=='notes'&&analysis.entry&&!analysis.current&&<p className="review-warning">解析可能尚未适配当前歌词或日语水平。</p>}
             <div className="review-tab-pane" role="tabpanel" id="review-panel-words" aria-labelledby="review-tab-words" hidden={knowledgeTab!=='words'}>
               {/* 页签按新要求显示关键表达/语法与语境；紧凑词条直接按“单词：释义；用法”阅读，注音共用歌词渲染器。 */}
-              {words.length?words.map((word,index)=><article className="review-word review-vocab-row" key={index}><strong className="review-vocab-title"><ReviewWordReading word={word} unit={unit} annotations={annotations} corrections={corrections} readingStyle={readingStyle} romajiPosition={readingOptions.romajiPosition}/></strong><span className="review-vocab-definition">：{word.meaning}{typeof word.usage==='string'&&word.usage.trim()&&<>；{word.usage}</>}</span></article>):<p className="review-hint">暂无单词讲解，可在更多中生成本单元解析。</p>}
+              {words.length?words.map((word,index)=><article className="review-word review-vocab-row" key={index}><span className="mastered-word-label"><strong className="review-vocab-title"><ReviewWordReading word={word} unit={unit} annotations={annotations} corrections={corrections} readingStyle={readingStyle} romajiPosition={readingOptions.romajiPosition}/></strong>{onMasterWord&&<MasteredWordButton word={word} onClick={()=>onMasterWord(wordWithReading(word,wordTokens),wordLanguage)}/>}</span><span className="review-vocab-definition">：{word.meaning}{typeof word.usage==='string'&&word.usage.trim()&&<>；{word.usage}</>}</span></article>):<p className="review-hint">{sourceWords.length?'本单元的单词已全部掌握。':'暂无单词讲解，可在更多中生成本单元解析。'}</p>}
             </div>
             <div className="review-tab-pane" role="tabpanel" id="review-panel-grammar" aria-labelledby="review-tab-grammar" hidden={knowledgeTab!=='grammar'}>{grammar.length?grammar.map((point,index)=><p className="review-grammar" key={index}>{point}</p>):<p className="review-hint">暂无语法讲解，可在更多中生成本单元解析。</p>}</div>
             <div className="review-tab-pane" role="tabpanel" id="review-panel-notes" aria-labelledby="review-tab-notes" hidden={knowledgeTab!=='notes'}><ReviewNotes key={`review-notes-${unit.key}`} panel item={unit.item} onSave={patch=>{update(unit,patch);setNotice('笔记已保存。')}}/></div>
         {reveal&&contextOpen&&<div className="review-context"><h2>前后文</h2>{unit.song.lines[unit.position-1]&&<p>{unit.song.lines[unit.position-1].text}</p>}<p className="review-context-current">{unit.text}</p>{unit.song.lines[unit.position+unit.lines.length]&&<p>{unit.song.lines[unit.position+unit.lines.length].text}</p>}</div>}
           </div>
           <div className="review-knowledge-tabs" role="tablist" aria-label="复习内容分类" onKeyDown={event=>{const tabs=['words','grammar','notes'];let index=tabs.indexOf(knowledgeTab);if(event.key==='ArrowRight')index=(index+1)%3;else if(event.key==='ArrowLeft')index=(index+2)%3;else if(event.key==='Home')index=0;else if(event.key==='End')index=2;else return;event.preventDefault();setKnowledgeTab(tabs[index]);document.getElementById('review-tab-'+tabs[index])?.focus()}}>
-            {[['words','关键表达'],['grammar','语法与语境'],['notes','笔记']].map(([value,label])=><button key={value} type="button" role="tab" id={'review-tab-'+value} aria-controls={'review-panel-'+value} aria-selected={knowledgeTab===value} tabIndex={knowledgeTab===value?0:-1} className={knowledgeTab===value?'selected':''} onClick={()=>setKnowledgeTab(value)}>{value==='notes'&&<NotebookPen size={18}/>}<span>{label}</span></button>)}
+            {[['words','单词'],['grammar','语法'],['notes','笔记']].map(([value,label])=><button key={value} type="button" role="tab" id={'review-tab-'+value} aria-controls={'review-panel-'+value} aria-selected={knowledgeTab===value} tabIndex={knowledgeTab===value?0:-1} className={knowledgeTab===value?'selected':''} onClick={()=>setKnowledgeTab(value)}>{value==='notes'&&<NotebookPen size={18}/>}<span>{label}</span></button>)}
           </div>
         </section>}
         {error&&<p className="review-error" role="alert">{error}</p>}{notice&&<p className="review-notice" role="status">{notice}</p>}

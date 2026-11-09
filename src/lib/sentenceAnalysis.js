@@ -5,11 +5,32 @@ import {normalizeJapaneseLevel,JAPANESE_TEACHING_VERSION} from './japaneseLevel.
 // v2解析必须携带原文回显及请求标识；旧缓存保留供用户查看、删除，不默认为已核验。
 export const SENTENCE_ANALYSIS_VERSION=2
 const clean=(value,max)=>typeof value==='string'?value.trim().slice(0,max):''
-export function prepareSentenceRequest(lines,language='ja',level='beginner') {
+
+// 独立附上前后三行，保持歌曲顺序，并排除当前句或整个制卡选段。
+export function sentenceLyricContext(lines,start,end=start){
+  if(start<0||start>=lines.length||end<start||end>=lines.length)return {}
+  const context=rows=>rows.map(line=>({
+    text:clean(line.text,300),
+    translation:clean(line.translation,300),
+  })).filter(line=>line.text)
+  return {
+    context_before:context(lines.slice(Math.max(0,start-3),start)),
+    context_after:context(lines.slice(end+1,end+4)),
+  }
+}
+// 原简略模式共享两个名额；现在两类各有两个名额，允许任意一类留空。
+export function sentenceLessonPoints({ vocabulary, grammar }, mode) {
+  const words = Array.isArray(vocabulary) ? vocabulary : []
+  const structures = Array.isArray(grammar) ? grammar : []
+  if (mode !== 'concise') return { vocabulary: words, grammar: structures }
+  return { vocabulary: words.slice(0, 2), grammar: structures.slice(0, 2) }
+}
+
+export function prepareSentenceRequest(lines,language='ja',level='beginner',mode) {
   const requestId=globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`
   // 原返回仅带 japanese_level；新请求明确要求歌词教学结构，不改变逐句绑定规则。
   // return {language,...(language==='ja'?{japanese_level:normalizeJapaneseLevel(level)}:{}),lines:lines.map((line,index)=>({...line,line_key:`${requestId}:${index}:${line.id}`}))}
-  return {language,...(language==='ja'?{japanese_level:normalizeJapaneseLevel(level),teaching_version:JAPANESE_TEACHING_VERSION}:{}),lines:lines.map((line,index)=>({...line,line_key:`${requestId}:${index}:${line.id}`}))}
+  return {language,...(mode?{teaching_mode:mode}:{}),...(language==='ja'?{japanese_level:normalizeJapaneseLevel(level),teaching_version:JAPANESE_TEACHING_VERSION}:{}),lines:lines.map((line,index)=>({...line,line_key:`${requestId}:${index}:${line.id}`}))}
 }
 
 // 绝不按返回顺序、压缩后的重复歌词位置或猜测句号进行配对。
@@ -31,19 +52,31 @@ export function validateSentenceResult(result,payload) {
     if(!meaning)continue
     // 日语新增内容采用有界白名单；缺少关键教学字段时不覆盖旧解析，允许重试。
     const japaneseTeaching=payload.language==='ja'&&payload.teaching_version===JAPANESE_TEACHING_VERSION
+    const mode = payload.teaching_mode
     const usageNote=clean(item.usage_note,600)
     const learningFocus=(Array.isArray(item.learning_focus)?item.learning_focus:[]).map(value=>clean(value,260)).filter(Boolean).slice(0,2)
     const example={sentence:clean(item.everyday_example?.sentence,300),meaning:clean(item.everyday_example?.meaning,300)}
-    if(japaneseTeaching&&(!usageNote||!learningFocus.length||!Array.isArray(item.expression_notes)||!item.everyday_example||typeof item.everyday_example!=='object'||Array.isArray(item.everyday_example)||Boolean(example.sentence)!==Boolean(example.meaning)))continue
+    if(!mode&&japaneseTeaching&&(!usageNote||!learningFocus.length||!Array.isArray(item.expression_notes)||!item.everyday_example||typeof item.everyday_example!=='object'||Array.isArray(item.everyday_example)||Boolean(example.sentence)!==Boolean(example.meaning)))continue
     // 原词汇仅保留surface/meaning，详细字段只用于新日语教学，外语仍按原结构。
     // vocabulary:vocabulary.map(value=>({surface:clean(value?.surface,100),meaning:clean(value?.meaning,260)})).filter(value=>value.surface&&value.meaning).slice(0,4),
-    explanations.push({line_id:line.id,line_key:line.line_key,source_text:line.text,meaning,
-      grammar:(Array.isArray(item.grammar)?item.grammar:[]).map(value=>clean(value,400)).filter(Boolean).slice(0,3),
-      vocabulary:vocabulary.map(value=>({surface:clean(value?.surface,100),meaning:clean(value?.meaning,260),...(japaneseTeaching?{reading:clean(value?.reading,100),dictionary_form:clean(value?.dictionary_form,100),usage:clean(value?.usage,300)}:{})})).filter(value=>value.surface&&value.meaning).slice(0,4),
+    const grammar = (Array.isArray(item.grammar)?item.grammar:[]).map(value=>clean(value,400)).filter(Boolean)
+    // 原教学字段仍可读取；新词性字段有界清洗，制卡只接受原文中连续存在的词面。
+    const words = vocabulary.map(value=>({surface:clean(value?.surface,100),meaning:clean(value?.meaning,260),...(japaneseTeaching?{reading:clean(value?.reading,100),dictionary_form:clean(value?.dictionary_form,100),usage:clean(value?.usage,300)}:{})}))
+      .map((word,index)=>{
+        if(!japaneseTeaching||!mode)return word
+        const value=vocabulary[index]
+        return {...word,kind:value?.kind==='phrase'?'phrase':'word',...Object.fromEntries(['dictionary_reading','part_of_speech','verb_class','transitivity','form'].map(key=>[key,clean(value?.[key],100)]))}
+      }).filter(word=>word.surface&&word.meaning)
+    // 制卡复用正常解析结果，词条排序由解析模式决定。
+    // 旧版最多三条语法、四条表达。详细模式保留全部合法项，简略模式两类各保留前两项。
+    const lesson = mode ? sentenceLessonPoints({ vocabulary: words, grammar }, mode) : { vocabulary: words.slice(0,4), grammar: grammar.slice(0,3) }
+    explanations.push({line_id:line.id,line_key:line.line_key,source_text:line.text,meaning,...lesson,
       // 原结尾仅有 pronunciation_tip 和 binding_version；教学版本不提升原文绑定版本。
       // pronunciation_tip:payload.language==='ja'?clean(item.pronunciation_tip,320):'',binding_version:SENTENCE_ANALYSIS_VERSION})
-      pronunciation_tip:payload.language==='ja'?clean(item.pronunciation_tip,320):'',binding_version:SENTENCE_ANALYSIS_VERSION,
-      ...(japaneseTeaching?{teaching_version:JAPANESE_TEACHING_VERSION,expression_notes:item.expression_notes.map(value=>clean(value,400)).filter(Boolean).slice(0,3),usage_note:usageNote,everyday_example:example,learning_focus:learningFocus}:{})})
+      pronunciation_tip:!mode&&payload.language==='ja'?clean(item.pronunciation_tip,320):'',binding_version:SENTENCE_ANALYSIS_VERSION,
+      ...(mode?{teaching_mode:mode}:{}),
+      ...(japaneseTeaching?{teaching_version:JAPANESE_TEACHING_VERSION}:{}),
+      ...(!mode&&japaneseTeaching?{expression_notes:item.expression_notes.map(value=>clean(value,400)).filter(Boolean).slice(0,3),usage_note:usageNote,everyday_example:example,learning_focus:learningFocus}:{})})
   }
   const rejected_count=payload.lines.length-explanations.length
   // 原提示仅含错位原因；缺少日语教学内容也拒绝，且不清除已有解析。
@@ -53,6 +86,39 @@ export function validateSentenceResult(result,payload) {
 }
 export function visibleSentenceEntry(entry,line,language='ja') {
   return entry?.text===line.text&&(entry.language||'ja')===language&&typeof entry.explanation?.meaning==='string'&&Boolean(entry.explanation.meaning.trim())
+}
+
+// 只引用同一首歌前面的有效解析。按词面筛选并限制请求体，保留不同义项及用法供模型区分。
+const expressionKey = ({ surface, reading, dictionary_form, meaning, usage }) =>
+  JSON.stringify([surface, reading, dictionary_form, meaning, usage].map(value => clean(value, 400)))
+
+export function earlierSentenceExpressions(lines, index, cache, language, before = index) {
+  const current = lines[index]?.text ?? ''
+  if (!current || before < 1) return []
+  const seen = new Map()
+  for (const line of lines.slice(0, before)) {
+    const entry = cache[line.id]
+    if (!visibleSentenceEntry(entry, line, language)) continue
+    const { vocabulary } = sentenceLessonPoints(entry.explanation)
+    for (const word of vocabulary) {
+      const surface = clean(word?.surface, 100)
+      const dictionaryForm = clean(word?.dictionary_form, 100)
+      const meaning = clean(word?.meaning, 260)
+      if (!surface || !meaning || !line.text.includes(surface)) continue
+      if (!current.includes(surface) && !(dictionaryForm && current.includes(dictionaryForm))) continue
+      const expression = { surface, meaning, reading: clean(word.reading, 100), dictionary_form: dictionaryForm, usage: clean(word.usage, 300) }
+      seen.set(expressionKey(expression), expression)
+    }
+  }
+  return [...seen.values()]
+}
+
+// 旧解析原文不改动。只有词面、读音、原形、义项和用法一致才折叠，避免吞掉同形词的新用法。
+export function splitRepeatedSentenceExpressions(words, earlier) {
+  const keys = new Set(earlier.map(expressionKey))
+  const fresh = [], repeated = []
+  for (const word of words) (word && keys.has(expressionKey(word)) ? repeated : fresh).push(word)
+  return { fresh, repeated }
 }
 export function currentSentenceEntry(entry,line,language='ja',level='beginner',strict=true) {
   if(!visibleSentenceEntry(entry,line,language))return false

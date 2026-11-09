@@ -73,8 +73,9 @@ android {
         // 1.6.2 发布人工注音整曲同步与时间戳双击选段批量调整。
         // 旧正式版：versionCode 29 / versionName "1.6.2"。
         // 2.0.0整合新版界面、主题图片手势及既有修复，允许原签名保留数据升级。
-        versionCode 30
-        versionName "2.0.0"
+        // 旧正式版：versionCode 30 / versionName "2.0.0"。
+        versionCode 31
+        versionName "2.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -93,15 +94,22 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    lint {
+        // AnkiDroid 客户端带入 Crowdin 的翻译检查；UTA 的包名和标题有意复用相同值。
+        disable 'DuplicateCrowdInStrings'
+    }
 }
 
 repositories {
+    // AnkiDroid 官方制卡客户端通过 JitPack 提供。
+    maven { url 'https://jitpack.io'; content { includeGroup 'com.github.ankidroid' } }
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
     }
 }
 
 dependencies {
+    implementation 'com.github.ankidroid:Anki-Android:api-v1.1.0'
     // WebDAV 使用原生流式传输和标准扩展方法，避免大歌曲整包 Base64 导致内存溢出。
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation fileTree(include: ['*.jar'], dir: 'libs')

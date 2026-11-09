@@ -166,6 +166,8 @@ export function applyAppearance(value) {
   for(const [key,value] of Object.entries({page:palette.page,surface:palette.surface,text:palette.text,muted:palette.muted,accent:palette.accent,'on-accent':palette.onAccent,border:palette.border,tint:palette.tint}))document.documentElement.style?.setProperty('--uta-'+key,value)
   document.documentElement.style?.setProperty('--uta-surface-rgb',rgb(palette.surface).join(','))
   document.documentElement.style?.setProperty('--uta-tint-rgb',rgb(palette.tint).join(','))
+  // 选段用同一主题色的两档透明度区分范围和当前句。
+  document.documentElement.style?.setProperty('--uta-accent-rgb',rgb(palette.accent).join(','))
   // 旧样式中的固定黑歌词/白卡片在深色时一并处理，实色弹窗不透背景。
   if(palette.advanced)style.textContent+='\n:root.uta-android-font{--ink:var(--uta-text);--muted:var(--uta-muted);--paper:var(--uta-page);--line:var(--uta-border)}\n:root.uta-android-font body,:root.uta-android-font .android-main{background-color:var(--uta-page);color:var(--uta-text)}'
   applyThemeBackground(appearance.background,palette)

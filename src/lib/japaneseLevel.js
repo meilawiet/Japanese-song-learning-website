@@ -28,10 +28,14 @@ const instructions = {
 export const japaneseTeachingInstruction = value => instructions[normalizeJapaneseLevel(value)]
 
 // 各等级共用的歌词阅读边界：艺术表达不能直接当成日常会话范本。
-export const JAPANESE_LYRIC_GUIDANCE = [
+export const JAPANESE_LYRIC_CONTEXT = [
   '先理解本条原文，再结合相邻歌词判断；一行歌词不一定是完整句子，跨行未完句要说明，不擅自补成确定事实。提供的翻译和词典分析只是参考，可能有误。',
   '省略主语、宾语或助词并不自动意味着语法错误。只有有依据时才指出省略；推测补出的成分必须标注“可能/例如/推测”，不能断言说话者、对象、性别、关系或作者意图。歧义须说明依据及不能确定之处。',
   '按实际情况解释口语缩略、倒装、文艺/书面表达、比喻和特殊读法，没有的现象不硬凑。常规读音不等于原唱唱法；仅有文本不能确认演唱、节奏、音调或歌手的发音。',
+]
+// 原先词句共用全部规则；新整句模式共用前三条，按所选模式单独约束教学篇幅。
+export const JAPANESE_LYRIC_GUIDANCE = [
+  ...JAPANESE_LYRIC_CONTEXT,
   // 原文将整句JSON字段写进共用规则；改为语义描述，选词释义也可复用而不要求多余字段。
   // 'usage_note必须说明是否适合日常使用及场合、对象或语气；口语化不等于不规范，文学表达也不等于错误，不建议照搬粗鲁或强烈亲密的措辞到不合适场合。',
   // 'everyday_example是帮助迁移的原创日常例句/改写及中文意思，必须明确标为示例，不冒充歌词原文、唯一补全或等义翻译。无法可靠给出时两个字段都留空，不伪造“原始完整句”。',

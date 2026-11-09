@@ -8,7 +8,8 @@
 :root.uta-android-font.uta-refined .unified-study-page .lyrics-list::before{content:'';display:block;height:var(--demo-leading-space,0px);pointer-events:none}
 :root.uta-android-font.uta-refined .unified-study-page .lyrics-list::after{content:'';display:block;height:var(--demo-trailing-space,0px);pointer-events:none}
 /* 保持主题同源高亮，只改变背景alpha；文字和左边的当前句标记保持清晰。 */
-:root.uta-android-font.uta-refined.uta-image-gestures[data-uta-background=on] .unified-study-page .lyric-row.active{background:rgba(var(--uta-tint-rgb),var(--uta-card-opacity,.9))!important}
+/* 已选段的当前句由选段规则单独着色，壁纸规则只处理普通当前句。 */
+:root.uta-android-font.uta-refined.uta-image-gestures[data-uta-background=on] .unified-study-page .lyric-row.active:not(.lyric-range-selected){background:rgba(var(--uta-tint-rgb),var(--uta-card-opacity,.9))!important}
 /* 实时预览从滚动正文移到页头下方；任何参数位置都能看到调整结果。 */
 :root.uta-android-font.uta-refined .demo-theme-preview-slot{flex:none;padding:0 var(--ref-4) var(--ref-3)}
 :root.uta-android-font.uta-refined .demo-theme-preview{position:relative;isolation:isolate;overflow:hidden;border-radius:var(--ref-radius);min-height:124px;margin:0;color:var(--ref-text)}

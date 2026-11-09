@@ -8,18 +8,21 @@ import ProfilePanel from './ProfilePanel'
 import { webSearchAvailable } from '../lib/mobileWebSearch'
 import WebDavPanel from './WebDavPanel'
 import {AboutPanel} from './AppUpdates'
-import { ArrowLeft, ChevronRight, Info, Palette } from 'lucide-react'
+import { ArrowLeft, BookOpen, ChevronRight, Info, Palette } from 'lucide-react'
 import ThemePanel from './ThemePanel'
 import ResourceSourcesPanel from './ResourceSourcesPanel'
 import useModalScrollLock from '../lib/useModalScrollLock'
+import LearningSettings,{AnkiSettingsPanel} from './LearningSettings'
 
-export default function SettingsDialog({ onClose, onExport, onRestore, onCloudExport, updates, backupBusy, backupError, readingStyle = 'hiragana', onReadingStyleChange, initialTab = 'data' }) {
+export default function SettingsDialog({ onClose, onExport, onRestore, onCloudExport, updates, backupBusy, backupError, readingStyle = 'hiragana', onReadingStyleChange, initialTab = 'data', japaneseLevel, teachingMode, onTeachingModeChange }) {
   useModalScrollLock()
   // 原安卓默认直接打开数据管理；现在先显示五个纵向入口。
   // const [tab, setTab] = useState(Capacitor.isNativePlatform() && initialTab === 'reading' ? 'data' : initialTab)
   const [tab, setTab] = useState(Capacitor.isNativePlatform() ? initialTab||null : initialTab)
   // 数据管理先展示云备份与来源管理两个入口，再进入具体功能。
   const [dataTab, setDataTab] = useState(null)
+  // 学习复习下单独打开 Anki 配置，返回时仍显示学习设置。
+  const [ankiOpen,setAnkiOpen]=useState(false)
   const [draft, setDraft] = useState(loadAiSettings)
   const [visible, setVisible] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -31,17 +34,22 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
   const isAndroid = Capacitor.isNativePlatform()
   // 原弹窗标题固定为“设置”；安卓进入子页面后改用当前分类名称，数据管理的二级页也显示自身名称。
   // const dialogTitle = '设置'
-  const dialogTitle = !isAndroid || !tab ? '设置' : tab === 'data' ? dataTab === 'webdav' ? 'WebDAV云备份' : dataTab === 'sources' ? '歌曲与歌词来源' : '数据管理' : ({ profile: '个人资料', ai: 'AI服务', theme: '主题设置', about: '关于' })[tab] || '设置'
+  const dialogTitle = !isAndroid || !tab ? '设置' : tab === 'data' ? dataTab === 'webdav' ? 'WebDAV云备份' : dataTab === 'sources' ? '歌曲与歌词来源' : '数据管理' : ({ profile: '个人资料', learning:ankiOpen?'Anki 配置':'学习复习', ai: 'AI服务', theme: '主题设置', about: '关于' })[tab] || '设置'
   const closeRef = useRef(onClose)
   // 子页面返回设置目录，目录返回才关闭设置。
   // closeRef.current = onClose
-  closeRef.current = () => { if (isAndroid && tab === 'data' && dataTab) setDataTab(null); else if (isAndroid && tab) setTab(null); else onClose() }
+  closeRef.current = () => {
+    if (isAndroid && tab==='learning' && ankiOpen) setAnkiOpen(false)
+    else if (isAndroid && tab==='data' && dataTab) setDataTab(null)
+    else if (isAndroid && tab) setTab(null)
+    else onClose()
+  }
   useEffect(() => {
     if (!isAndroid || !tab) return undefined
-    const back = event => { if(event.defaultPrevented)return;event.preventDefault();if(tab==='data'&&dataTab)setDataTab(null);else setTab(null) }
+    const back = event => { if(event.defaultPrevented)return;event.preventDefault();closeRef.current() }
     window.addEventListener('uta:navigate-back', back)
     return () => window.removeEventListener('uta:navigate-back', back)
-  }, [isAndroid, tab, dataTab])
+  }, [isAndroid, tab])
 
   useEffect(() => {
     const previousFocus = document.activeElement
@@ -114,11 +122,11 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
       {/* 旧注音设置入口保留供电脑端使用；安卓将个人资料与其他分类放在同一行。 */}
       {/* 原横向分类栏保留供对照，安卓改为目录与子页面，网页继续使用旧分类栏。 */}
       {/* <div className="settings-tabs" aria-label="设置分类">{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}><UserRound size={17} /> 个人资料</button> : <button type="button" aria-pressed={tab === 'reading'} onClick={() => setTab('reading')}><Languages size={17} /> 注音显示</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => setTab('data')}><Database size={17} /> 数据管理</button><button type="button" aria-pressed={tab === 'ai'} onClick={() => setTab('ai')}><KeyRound size={17} /> AI 服务</button>{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>setTab('about')}>关于</button>}</div> */}
-      {isAndroid ? !tab ? <nav className="settings-directory" aria-label="设置分类">{[['profile','个人资料',UserRound],['data','数据管理',Database],['ai','AI服务',KeyRound],['theme','主题设置',Palette],['about','关于',Info]].map(([id,label,Icon]) => <button key={id} type="button" onClick={() => { setTab(id); dialogRef.current?.querySelector('.refined-settings-scroll')?.scrollTo({top:0}) }}><Icon size={22} /><span>{label}</span><ChevronRight size={20} /></button>)}</nav> : null : <div className="settings-tabs" aria-label="设置分类">{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}><UserRound size={17} /> 个人资料</button> : <button type="button" aria-pressed={tab === 'reading'} onClick={() => setTab('reading')}><Languages size={17} /> 注音显示</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => setTab('data')}><Database size={17} /> 数据管理</button><button type="button" aria-pressed={tab === 'ai'} onClick={() => setTab('ai')}><KeyRound size={17} /> AI 服务</button>{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>setTab('about')}>关于</button>}</div>}
+      {isAndroid ? !tab ? <nav className="settings-directory" aria-label="设置分类">{[['profile','个人资料',UserRound],['learning','学习复习',BookOpen],['data','数据管理',Database],['ai','AI服务',KeyRound],['theme','主题设置',Palette],['about','关于',Info]].map(([id,label,Icon]) => <button key={id} type="button" onClick={() => { setTab(id); dialogRef.current?.querySelector('.refined-settings-scroll')?.scrollTo({top:0}) }}><Icon size={22} /><span>{label}</span><ChevronRight size={20} /></button>)}</nav> : null : <div className="settings-tabs" aria-label="设置分类">{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}><UserRound size={17} /> 个人资料</button> : <button type="button" aria-pressed={tab === 'reading'} onClick={() => setTab('reading')}><Languages size={17} /> 注音显示</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => setTab('data')}><Database size={17} /> 数据管理</button><button type="button" aria-pressed={tab === 'ai'} onClick={() => setTab('ai')}><KeyRound size={17} /> AI 服务</button>{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>setTab('about')}>关于</button>}</div>}
       {/* 个人资料编辑集中在安卓设置页，主页头像只用于查看。 */}
       {/* 原独立个人资料按钮已移入上方分类栏。 */}
       {/* 安卓新增关于页，其他设置分类保持同一行。 */}
-      {tab === null && isAndroid ? null : tab === 'theme' && isAndroid ? <ThemePanel /> : tab === 'about' && isAndroid ? <AboutPanel updates={updates}/> : tab === 'profile' && isAndroid ? <div className="settings-content"><ProfilePanel editable /></div> : tab === 'reading' && !isAndroid ? <div className="settings-content">
+      {tab === null && isAndroid ? null : tab === 'theme' && isAndroid ? <ThemePanel /> : tab === 'about' && isAndroid ? <AboutPanel updates={updates}/> : tab === 'profile' && isAndroid ? <div className="settings-content"><ProfilePanel editable /></div> : tab === 'learning' && isAndroid ? ankiOpen ? <AnkiSettingsPanel /> : <LearningSettings japaneseLevel={japaneseLevel} teachingMode={teachingMode} onTeachingModeChange={onTeachingModeChange} onOpenAnki={()=>{setAnkiOpen(true);dialogRef.current?.querySelector('.refined-settings-scroll')?.scrollTo({top:0})}}/> : tab === 'reading' && !isAndroid ? <div className="settings-content">
         <h3>选择你习惯的注音</h3><p className="settings-description">切换后立即生效，并在当前浏览器保存。歌词原文不会改变。</p>
         <fieldset className="reading-style-options"><legend>注音方式</legend>
           <label><input type="radio" name="reading-style" value="hiragana" checked={readingStyle === 'hiragana'} onChange={() => onReadingStyleChange('hiragana')} /><span><b>平假名</b><small>夢 → ゆめ　·　学校 → がっこう</small></span></label>
@@ -141,6 +149,7 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
         {/* 安卓同样展示备份解析错误，避免下载完成但预览失败时没有任何反馈。 */}
         {isAndroid && dataTab === 'webdav' && backupError && <p className="settings-message error" role="alert">{backupError}</p>}
       </div> : <form className="settings-content" onSubmit={save}>
+        {/* 原「AI 服务」页的讲解预设已移到「学习复习」，服务连接和密钥留在此页。 */}
         <fieldset disabled={busy} className="settings-fields">
           {!isAndroid && <label className="settings-checkbox"><input type="checkbox" checked={draft.useServerDefault} onChange={(event) => update('useServerDefault', event.target.checked)} /> 使用服务端默认配置</label>}
           {!isAndroid && draft.useServerDefault ? <div className="settings-server-note"><b>{serverStatus?.configured ? `${serverStatus.provider} · ${serverStatus.model}` : '服务端默认配置'}</b><p>{serverStatus === null ? '无法确认服务状态，可点击测试连接。' : serverStatus.configured ? '已检测到服务端密钥，可以直接测试和使用。密钥不会返回浏览器。' : '服务端尚未配置密钥，请取消上方勾选并填写自己的服务。'}</p></div> : <>

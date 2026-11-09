@@ -24,6 +24,13 @@
 .refined-statistics strong{font-size:var(--ref-title);line-height:1.4;font-weight:650;color:var(--ref-text)}.refined-statistics small{font-size:var(--ref-small);line-height:1.5;color:var(--ref-muted)}
 .refined-shortcuts{overflow:hidden;border-radius:var(--ref-radius);background:var(--ref-surface);border:var(--ref-hairline) solid var(--ref-line)}
 .refined-shortcuts>button{display:flex;align-items:center;gap:var(--ref-4);width:100%;min-height:var(--ref-song-row);padding:var(--ref-3) var(--ref-4);border:0;border-block-end:var(--ref-hairline) solid var(--ref-line);border-radius:0;background:transparent;color:var(--ref-text);text-align:start}
+/* 原 68px 高的五个入口会伸到横屏底栏。短屏压缩上下留白，保留至少 48px 的触控区域。 */
+@media (max-height: 720px) {
+  .refined-mine .refined-shortcuts > button {
+    min-height: var(--ref-touch);
+    padding-block: var(--ref-2);
+  }
+}
 .refined-shortcuts>button:last-child{border-block-end:0}.refined-shortcuts>button>svg:first-child{color:var(--ref-accent)}.refined-shortcuts>button>svg:last-child{color:var(--ref-muted)}.refined-shortcuts>button>span{flex:1;min-width:0}.refined-shortcuts strong{display:block;font-size:var(--ref-body);line-height:1.5;font-weight:620}.refined-shortcuts small{display:block;font-size:var(--ref-small);line-height:1.5;color:var(--ref-muted);margin-block-start:var(--ref-1)}
 /* 学习首页不再用宣传标题和重复复习提醒占据屏幕；只有实际封面、歌曲和导入。 */
 .refined-continue{position:relative;isolation:isolate;display:block;width:100%;height:var(--ref-hero);padding:0;overflow:hidden;border:0;border-radius:var(--ref-radius);text-align:start;color:var(--ref-on-cover)}
@@ -37,12 +44,31 @@
 .refined-import{display:flex;align-items:center;justify-content:center;gap:var(--ref-2);width:100%;min-height:var(--ref-touch);margin-block-start:var(--ref-4);border:var(--ref-hairline) dashed var(--ref-line);border-radius:var(--ref-radius-sm);background:transparent;color:var(--ref-accent);font-size:var(--ref-body)}
 .refined-empty{display:flex;align-items:center;flex-direction:column;gap:var(--ref-3);padding:var(--ref-8) var(--ref-4);border:var(--ref-hairline) dashed var(--ref-line);border-radius:var(--ref-radius);text-align:center}.refined-empty h2{font-size:var(--ref-heading);margin:0}.refined-empty p{font-size:var(--ref-small);margin:0;color:var(--ref-muted)}.refined-empty button{min-height:var(--ref-touch);padding:var(--ref-3) var(--ref-6);border:0;border-radius:var(--ref-radius-sm);background:var(--ref-accent);color:var(--uta-on-accent)}
 :root.uta-android-font.uta-refined .refined-nav{height:var(--ref-nav);padding:var(--ref-2) var(--ref-4) max(var(--ref-2),env(safe-area-inset-bottom));border-block-start:var(--ref-hairline) solid var(--ref-line);background:var(--ref-page);box-shadow:none}
+/* 原主页只用底部内边距留空，滚动内容仍会从透明底栏下方透出。把滚动窗口截在底栏上沿。 */
+:root.uta-android-font.uta-refined .android-home-pager[data-expanded="false"] .android-home-pane {
+  bottom: var(--ref-nav);
+  padding-bottom: var(--ref-2);
+}
 :root.uta-android-font.uta-refined .refined-nav>button{display:flex;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:var(--ref-1);min-height:var(--ref-touch);padding:0;background:transparent;color:var(--ref-muted);border-radius:0}:root.uta-android-font.uta-refined .refined-nav>button>span{display:grid;place-items:center;width:var(--ref-avatar);height:var(--ref-8);border-radius:var(--ref-radius)}:root.uta-android-font.uta-refined .refined-nav>button.active{background:transparent;color:var(--ref-accent)}:root.uta-android-font.uta-refined .refined-nav>button.active>span{background:var(--ref-tint)}:root.uta-android-font.uta-refined .refined-nav small{font-size:var(--ref-small)}
 /* 歌词页固定紧凑页头，只有歌词正文滚动，消除重复大封面、进度条和说明行。 */
 :root.uta-android-font.uta-refined .android-main.unified-study-page{display:flex;flex-direction:column;height:calc(100vh - var(--study-player-height,130px));min-height:0;overflow:hidden;padding:0 var(--ref-4)}
 .refined-study-header{flex:none;padding-block:var(--ref-2) 0;background:transparent;color:var(--ref-text)}.refined-study-identity{display:flex;align-items:center;gap:var(--ref-2);min-height:var(--ref-touch)}.refined-study-identity>.refined-icon{flex:none}.refined-study-cover{width:var(--ref-cover);height:var(--ref-touch);flex:none;padding:0;border:0;border-radius:var(--ref-radius-sm);overflow:hidden;display:grid;place-items:center;background:var(--ref-tint);color:var(--ref-accent)}.refined-study-cover img{display:block;width:100%;height:100%;object-fit:cover}.refined-study-identity>div{min-width:0;flex:1}.refined-study-identity h1{margin:0;font-size:var(--ref-heading);line-height:1.4;font-weight:660;overflow-wrap:anywhere}.refined-study-identity p{margin:var(--ref-1) 0 0;font-size:var(--ref-small);line-height:1.5;color:var(--ref-muted)}
 .refined-study-navigation{display:flex;align-items:center;justify-content:space-between;border-block-end:var(--ref-hairline) solid var(--ref-line);margin-block:var(--ref-2) var(--ref-3);gap:var(--ref-2)}.refined-study-navigation>div{display:flex;gap:var(--ref-4)}.refined-study-navigation button{min-height:var(--ref-touch);padding:0 var(--ref-1);border:0;border-block-end:var(--ref-focus) solid transparent;border-radius:0;background:transparent;color:var(--ref-muted);font-size:var(--ref-small)}.refined-study-navigation button[aria-pressed=true]{color:var(--ref-accent);border-block-end-color:var(--ref-accent);font-weight:700}.refined-study-navigation>span{font-size:var(--ref-small);color:var(--ref-muted);white-space:nowrap}.refined-study-error{font-size:var(--ref-small);line-height:1.5;color:var(--ref-danger);margin:var(--ref-2) 0}
 :root.uta-android-font.uta-refined .unified-study-page .practice-layout{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 0 var(--ref-5);margin:0;scrollbar-width:none}:root.uta-android-font.uta-refined .unified-study-page .lyrics-panel{background:transparent;border:0;border-radius:0;padding:0;box-shadow:none}:root.uta-android-font.uta-refined .unified-study-page .lyrics-list{margin:0;padding:0;background:transparent;border:0}
+/* 原 margin:0 取消了歌词列的水平居中。宽屏保留可读行宽，歌词与播放器共用居中的内容列。 */
+:root.uta-android-font.uta-refined .unified-study-page { --study-content-width: 720px; }
+:root.uta-android-font.uta-refined .unified-study-page .practice-layout {
+  max-width: var(--study-content-width);
+  margin-inline: auto;
+}
+:root.uta-android-font.uta-refined .unified-study-page .unified-study-player {
+  /* 原先继承宽屏 footer 的横向布局，导致进度条与播放键分居两侧。 */
+  display: block;
+}
+:root.uta-android-font.uta-refined .unified-study-player :is(.study-seek, .study-player-controls, .study-timeline-note) {
+  max-width: var(--study-content-width);
+  margin-inline: auto;
+}
 :root.uta-android-font.uta-refined .unified-study-page .lyric-row{padding:var(--ref-3) var(--ref-2) var(--ref-4);margin-block:var(--ref-1);border:var(--ref-hairline) solid transparent;border-inline-start:var(--ref-focus) solid transparent;border-radius:var(--ref-radius-sm);background:transparent;box-shadow:none}:root.uta-android-font.uta-refined .unified-study-page .lyric-row.active{border-inline-start-color:var(--ref-accent);background:var(--ref-tint);border-block-end-color:transparent}:root.uta-android-font.uta-refined .unified-study-page .line-number{margin-block-end:var(--ref-2);font-size:var(--ref-kana)}:root.uta-android-font.uta-refined .unified-study-page .japanese:has(.word-aligned-lyrics){font-size:var(--ref-lyric);line-height:1.4}:root.uta-android-font.uta-refined .unified-study-page .word-aligned-lyrics{column-gap:var(--ref-1);row-gap:var(--ref-3)}:root.uta-android-font.uta-refined .unified-study-page .word-aligned-kana{font-size:var(--ref-kana)}:root.uta-android-font.uta-refined .unified-study-page .word-aligned-romaji{font-size:var(--ref-romaji)}:root.uta-android-font.uta-refined .unified-study-page .translation{font-size:var(--ref-small);line-height:1.7;margin-block-start:var(--ref-2)}
 :root.uta-android-font.uta-refined .unified-study-page .line-actions{width:var(--ref-touch)}:root.uta-android-font.uta-refined .unified-study-page .line-actions .line-mastery,:root.uta-android-font.uta-refined .unified-study-page .line-actions .sentence-explain-link{width:var(--ref-touch);min-height:var(--ref-touch);border:0;background:transparent}:root.uta-android-font.uta-refined .unified-study-page .lyric-row{grid-template-columns:minmax(0,1fr) var(--ref-touch)}
 /* 解析快捷按钮在当前句或已展开解析的句子出现；选择其他句后仍可生成/查看。 */
@@ -55,3 +81,96 @@
 @supports(height:100dvh){:root.uta-android-font.uta-refined .android-main.unified-study-page{height:calc(100dvh - var(--study-player-height,130px))}}
 @media(max-height:700px){:root.uta-refined{--ref-hero:160px}.refined-page-heading{margin-block-end:var(--ref-2)}.refined-identity{margin-block-end:var(--ref-4)}.refined-statistics{padding-block:var(--ref-3);margin-block-end:var(--ref-4)}}
 @media(prefers-reduced-motion:reduce){:root.uta-android-font.uta-refined *,:root.uta-android-font.uta-refined *::before,:root.uta-android-font.uta-refined *::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+/* 「熟」用斜置印章，保留足够大的触摸区并沿用当前主题。 */
+.mastered-word-label { display:inline-flex; align-items:center; gap:0 3px; }
+.mastered-word-mark { display:inline-grid; place-items:center; position:relative; isolation:isolate; flex:none; min-width:44px; min-height:44px; padding:0; border:0; background:transparent; color:var(--uta-accent,#46548f); font:800 16px/1 var(--serif); }
+.mastered-word-mark::before { content:""; position:absolute; z-index:-1; width:25px; height:25px; border:1.5px solid currentColor; border-radius:5px; background:var(--uta-tint,#e9edf9); transform:rotate(-9deg); }
+.has-mastery .sentence-analysis-section dl>div { grid-template-columns:minmax(100px,1fr) minmax(0,2fr); }
+.review-mastered-entry { display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 10px; border:1px solid var(--uta-border,#e4e7f0); border-radius:12px; background:var(--uta-tint,#e9edf9); color:var(--uta-accent,#46548f); font-size:13px; }
+.review-mastered-entry span { font-variant-numeric:tabular-nums; }
+.mastered-words-page .review-page-header h1 { font-size:clamp(19px,6vw,26px); }
+/* 熟词本提示放在标题下方，空列表和非空列表都可见。 */
+.mastered-words-hint { margin:0 0 14px; color:var(--uta-muted,#667087); font-size:14px; line-height:1.6; }
+.mastered-words-list { list-style:none; margin:0; padding:0; overflow:hidden; border:1px solid var(--uta-border,#e4e7f0); border-radius:16px; background:var(--uta-surface,#fff); color:var(--uta-text,#202537); }
+.mastered-words-list li { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:9px 14px; }
+.mastered-words-list li+li { border-block-start:1px solid var(--uta-border,#e4e7f0); }
+.mastered-words-list small { margin-inline-start:8px; color:var(--uta-muted,#667087); }
+.mastered-words-list p { margin:3px 0 0; font-size:13px; color:var(--uta-muted,#667087); }
+.mastered-words-list button { min-height:44px; flex:none; padding:0 10px; border:0; background:transparent; color:var(--uta-accent,#46548f); }
+
+/* 制卡复用歌词操作弹层和主题变量，内容长时只滚动弹层。 */
+/* 牌组名较长时，原自适应列会把手机弹层撑出右边缘。 */
+/* 原弹层宽度：width:min(100% - 32px,560px)。 */
+.anki-card-dialog { box-sizing:border-box; width:100%; max-width:560px; min-width:0; max-height:85vh; overflow:auto; padding:18px; border-radius:16px; background:var(--uta-surface,#fff); color:var(--uta-text,#202537); display:grid; grid-template-columns:minmax(0,1fr); gap:10px; }
+.anki-card-dialog h2,.anki-card-dialog p { margin:0; }
+.anki-card-dialog label { display:grid; gap:5px; }
+.anki-card-dialog label>input:not([type=checkbox]),.anki-card-dialog label>select { width:100%; min-width:0; box-sizing:border-box; }
+.anki-card-dialog label.anki-audio-option { display:flex; align-items:center; gap:8px; }
+/* 试听默认可见，裁剪控制按需展开并沿用当前主题色。 */
+.anki-clip-options,.anki-trim-fields { display:grid; gap:8px; }
+.anki-clip-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.anki-clip-tools span { margin-inline-end:auto; color:var(--uta-muted,#667087); font-size:.9em; }
+.anki-card-dialog .anki-trim-fields { padding:8px 10px; border-radius:8px; background:var(--uta-tint,#e9edf9); }
+.anki-card-dialog .anki-trim-fields input[type=range] { padding:0; accent-color:var(--uta-accent,#46548f); touch-action:pan-y; }
+.anki-trim-fields button { justify-self:start; }
+.anki-card-dialog input:not([type=checkbox]),.anki-card-dialog select,.anki-card-dialog button,.sentence-add-anki { min-height:40px; border:1px solid var(--uta-border,#e4e7f0); border-radius:8px; padding:6px 10px; background:var(--uta-surface,#fff); color:var(--uta-accent,#46548f); }
+.anki-card-dialog button[aria-pressed=true],.anki-card-actions button:last-child { background:var(--uta-tint,#e9edf9); }
+/* 原 footer 会继承网页页脚的深色背景；操作区使用弹窗自己的样式。 */
+/* .anki-card-dialog footer { display:flex; gap:8px; justify-content:flex-end; } */
+.anki-card-actions { display:flex; gap:8px; justify-content:flex-end; }
+.anki-card-dialog .anki-existing { display:grid; gap:4px; text-align:start; }
+.anki-card-dialog .anki-context,.anki-preview { white-space:pre-wrap; overflow-wrap:anywhere; padding:8px 10px; border-radius:8px; background:var(--uta-tint,#e9edf9); }
+.anki-word-choices { display:flex; flex-wrap:wrap; gap:5px; }
+/* 制卡预览与编辑在同一滚动弹窗，长语法和多行歌词可自然换行。 */
+.anki-word-choices button { max-width:100%; text-align:start; overflow-wrap:anywhere; }
+.anki-editor-title,.anki-preview h3 { margin:0; }
+.anki-preview h3 { color:var(--uta-muted,#667087); font-size:.85em; margin-block-end:6px; }
+.anki-preview .uta-example + .uta-example { margin-block-start:8px; }
+.anki-preview .uta-meta { color:var(--uta-muted,#667087); font-size:.85em; }
+.anki-edit-fields { display:grid; gap:8px; }
+.anki-edit-fields textarea { box-sizing:border-box; width:100%; min-width:0; padding:8px 10px; border:1px solid var(--uta-border,#e4e7f0); border-radius:8px; color:var(--uta-text,#202537); background:var(--uta-surface,#fff); font:inherit; }
+.sentence-inline-analysis li .sentence-add-anki { display:block; margin-block:6px; }
+.sentence-word-type { display:block; color:var(--uta-muted,#667087); }
+.sentence-add-anki { margin-top:4px; }
+/* 用主题色和下划线标识 Anki 官网链接。 */
+:root.uta-android-font.uta-refined .anki-website-link {
+  color: var(--ref-accent);
+  text-decoration: underline;
+  text-underline-offset: .2em;
+}
+/* 给 Anki 配置步骤留出行间距，让窄屏换行也易读。 */
+:root.uta-android-font.uta-refined .anki-setup-steps {
+  padding-inline-start: 1.4em;
+  font-size: var(--ref-small);
+  line-height: 1.6;
+}
+:root.uta-android-font.uta-refined .anki-setup-steps li + li { margin-block-start: var(--ref-2); }
+/* 配置页单个操作按钮占满原双列宽度。 */
+:root.uta-android-font.uta-refined .anki-connect-action > button { grid-column: 1 / -1; }
+
+/* 播放和时间戳模式共用连续的选区底色，当前行使用更浓的主题色。 */
+:root.uta-android-font.uta-refined[data-uta-background=on] .unified-study-page {
+  --study-range-opacity:var(--uta-card-opacity,1);
+}
+:root.uta-android-font.uta-refined .unified-study-page .lyric-row.lyric-range-selected {
+  margin-block:0;
+  border-radius:0;
+  border-inline-start-color:var(--ref-accent);
+  background:rgba(var(--uta-accent-rgb,70,84,143),calc(.16 * var(--study-range-opacity,1)));
+}
+:root.uta-android-font.uta-refined .unified-study-page .lyric-row.lyric-range-selected.active {
+  background:rgba(var(--uta-accent-rgb,70,84,143),calc(.34 * var(--study-range-opacity,1)));
+}
+:root.uta-android-font.uta-refined .unified-study-page .lyric-row.lyric-range-selected.range-start {
+  border-start-start-radius:var(--ref-radius-sm);
+  border-start-end-radius:var(--ref-radius-sm);
+}
+:root.uta-android-font.uta-refined .unified-study-page .lyric-row.lyric-range-selected.range-end {
+  border-end-start-radius:var(--ref-radius-sm);
+  border-end-end-radius:var(--ref-radius-sm);
+}
+/* 单句起点用圆角实线，去掉圆角处渲染出锯齿的虚线轮廓。 */
+:root.uta-android-font.uta-refined .unified-study-page .lyric-row.lyric-range-anchor {
+  outline:none;
+  border-color:var(--ref-accent);
+}

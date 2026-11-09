@@ -115,11 +115,12 @@ test('其他语言不携带日语等级，不生成日语发音提示，错位�
   }finally{globalThis.fetch=old}
 })
 
-test('解析界面显示目标原文、旧缓存提示和两项管理；个人资料提供六级选择',async()=>{
+test('解析卡片省去重复原文，保留旧缓存提示和两项管理；个人资料提供六级选择',async()=>{
   const Analysis=(await vite.ssrLoadModule('/src/components/SentenceAnalysis.jsx')).default
   const Profile=(await vite.ssrLoadModule('/src/components/ProfilePanel.jsx')).default
   const html=renderToStaticMarkup(createElement(Analysis,{line:lines[0],entry:{language:'ja',japaneseLevel:'N4'},explanation:{meaning:'测试释义'},stale:true,currentLevel:'N1',onDelete:()=>{},onRegenerate:()=>{}}))
-  for(const phrase of ['对应歌词','尚未','删除本句解析','重新生成本句解析','N4','N1'])assert.ok(html.includes(phrase),phrase)
+  assert.doesNotMatch(html,/对应歌词/)
+  for(const phrase of ['尚未','删除本句解析','重新生成本句解析','N4','N1'])assert.ok(html.includes(phrase),phrase)
   const profile=renderToStaticMarkup(createElement(Profile,{editable:true}))
   for(const {label}of JAPANESE_LEVELS)assert.ok(profile.includes(label))
   assert.ok(profile.includes('日语水平'))

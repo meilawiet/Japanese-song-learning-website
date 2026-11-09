@@ -597,6 +597,8 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .android-home-pager { position:relative; height:100vh; overflow:hidden; touch-action:pan-y pinch-zoom; }
 @supports(height:100dvh) { .android-home-pager { height:100dvh; } }
 .android-home-pane { position:absolute; inset:0; overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:contain; padding-bottom:calc(89px + env(safe-area-inset-bottom,0px)); transition:transform 240ms cubic-bezier(.22,.7,.2,1); backface-visibility:hidden; }
+/* 原 touch-action 只在外层分页容器。独立滚动栏也需声明，避免平板把横滑交给原生滚动。 */
+.android-home-pane { touch-action:pan-y pinch-zoom; }
 .android-home-pane[aria-hidden=true] { pointer-events:none; visibility:hidden; }
 .android-home-pager[data-moving=true] .android-home-pane { visibility:visible; will-change:transform; }
 .android-home-pager[data-dragging=true] .android-home-pane { transition:none; user-select:none; }
@@ -1411,6 +1413,20 @@ body[style*="overflow: hidden"] .unified-study-page .practice-layout{overflow:vi
 .japanese-level-dialog button:last-child { color:#fff; background:#426550; }
 .japanese-level-dialog button:disabled { opacity:.55; }
 .japanese-level-dialog>small { display:block; margin-top:14px; color:var(--muted); font-size:13px; line-height:1.6; }
+/* 学习引导跟随安卓主题，并用底色提示当前选项。 */
+:root.uta-refined .japanese-level-dialog { background:var(--ref-page); color:var(--ref-text); }
+:root.uta-refined .japanese-level-dialog label { border-color:var(--ref-line); }
+:root.uta-refined .japanese-level-dialog label:has(input:checked) { border-color:var(--ref-accent); background:var(--ref-tint); }
+:root.uta-refined .japanese-level-dialog input { accent-color:var(--ref-accent); }
+:root.uta-refined .japanese-level-dialog button { border-color:var(--ref-accent); color:var(--ref-accent); background:transparent; }
+/* 容器用于接收初始焦点，操作控件保留各自的键盘焦点环。 */
+.japanese-level-dialog:focus { outline:none; }
+:root.uta-android-font.uta-refined .japanese-level-dialog .japanese-level-save {
+  border-color:var(--uta-accent, #426550);
+  background:var(--uta-accent, #426550) !important;
+  color:var(--uta-on-accent, #fff);
+}
+.japanese-level-dialog label small { display:block; margin-top:4px; color:var(--ref-muted, var(--muted)); font-size:.8em; }
 
 /* 导入首屏只保留文件、操作与状态，长内容由用户按需展开。 */
 .import-extra { margin:16px 0; padding:12px 0; border-top:1px solid #e4eade; }
