@@ -22,16 +22,16 @@
     }
   },
   "lastPublished": {
-    "version": "2.1.0",
-    "versionCode": 31,
-    "commit": "b0b58383702fa98236c0c506191a0be163ed1224",
-    "tag": "v2.1.0",
-    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.0",
-    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.0",
-    "asset": "UTA-Android-2.1.0.apk",
+    "version": "2.1.1",
+    "versionCode": 32,
+    "commit": "3876e9df51b584eded73cc206915daa90c405b0f",
+    "tag": "v2.1.1",
+    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.1",
+    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.1",
+    "asset": "UTA-Android-2.1.1.apk",
     "size": 31425879,
-    "sha256": "16eeec405f1bd2adf2d097bf9d0a5a441466d41f33e341f9958cdd1214213995",
-    "publishedOn": "2026-11-09",
+    "sha256": "60076181999a026167e0452abdf3a8f0c64f87ad6b1be25a26fe4981aa527f5e",
+    "publishedOn": "2026-11-14",
     "branch": "android-dev"
   },
   "currentLocalInstall": {
@@ -76,11 +76,25 @@
       "type": "fix",
       "title": "罗马音未对齐时保留词典假名",
       "summary": "改善片假名长音和哼唱写法的来源对齐。无法唯一对齐时保留有效词典假名并提示来源状态，遵循人工注音和主动留空。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-14",
       "completedOn": "2026-11-14",
       "verification": ["335 项 Node 测试及安卓前端构建通过。覆盖未对齐、词典回退、人工留空和无有效词典读音。"],
-      "files": ["src/lib/lyricReadings.js", "src/components/ReadingLyric.jsx", "tests/lyricReadings.test.mjs"]
+      "files": ["src/lib/lyricReadings.js", "src/components/ReadingLyric.jsx", "tests/lyricReadings.test.mjs"],
+      "releasedOn": "2026-11-14",
+      "release": {
+        "version": "2.1.1",
+        "versionCode": 32,
+        "commit": "3876e9df51b584eded73cc206915daa90c405b0f",
+        "tag": "v2.1.1",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.1",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.1",
+        "asset": "UTA-Android-2.1.1.apk",
+        "size": 31425879,
+        "sha256": "60076181999a026167e0452abdf3a8f0c64f87ad6b1be25a26fe4981aa527f5e",
+        "publishedOn": "2026-11-14",
+        "branch": "android-dev"
+      }
     },
     {
       "id": "FIX-20261015-001",
