@@ -31,6 +31,8 @@ const phonetic = value => {
 export function sourceRomajiKana(romaji, text = '') {
   // 排版撇号与普通撇号同样表示拨音边界，不让 n’ai 被解释为残留英文字母。
   let source = String(romaji || '').trim().normalize('NFKC').toLowerCase().replace(/[’‘ʼ]/g,"'")
+  // 哼唱轨常用 la；只在原文明确写成连续「ラ」时转换，避免影响英语或其他转写。
+  if(/^ラ+[～〜~]*$/u.test(String(text).trim())&&/^(?:la\s*)+[～〜~]*$/u.test(source))source=source.replace(/la/g,'ra')
   const protectedWords = []
   for (const word of [...new Set(String(text).match(/[a-zA-Z]+/g) || [])].sort((a,b)=>b.length-a.length)) {
     source = source.replace(new RegExp(`\\b${word}\\b`, 'gi'), match => {const id=protectedWords.push(match)-1;return `\uE000${id}\uE001`})
@@ -141,6 +143,12 @@ function prepare(input, importedRomaji = '', corrections = {}, songId, lineId) {
     if(token.source_reading!=null&&!hasKanji(surface)){units.push({members:[token],fixed:[phonetic(token.source_reading)]});continue}
     if(!hasKanji(surface)){
       const fixed=phonetic(surface),variants=[fixed]
+      // ō 在汉字词里通常对应「おう」，片假名长音也可能转写成 ō。
+      // 只在实际写有片假名长音的固定片段增加匹配项，优先原字形读法。
+      if(/[ァ-ヺ]ー/u.test(surface)){
+        const alternate=phonetic(surface.replace(/([ァ-ヺ])ー/gu,(match,kana)=>toRomaji(kana).endsWith('o')?`${kana}ウ`:match))
+        if(alternate!==fixed)variants.push(alternate)
+      }
       // 原来只接受明确标为助词的 token，继承“副词”标签的“は”会使全句失败。
       // if(token.part_of_speech?.startsWith('助詞')&&({は:'わ',へ:'え',を:'お'})[fixed])variants.push(({は:'わ',へ:'え',を:'お'})[fixed])
       // units.push({members:[token],fixed:variants});continue
@@ -171,8 +179,16 @@ function prepare(input, importedRomaji = '', corrections = {}, songId, lineId) {
   const spans=sourceKana?(align(anchored,sourceKana)||align(units,sourceKana)):null
   if(!spans){
     // 原来把所有汉字的 source_reading 清空，连已明确的括号假名也被抹掉。
-    // 仅隐藏没有可靠来源的猜测；括号假名保留，人工校正/主动留空仍由 tokenReading 优先处理。
-    return {tokens:tokens.map(token=>hasKanji(lyricSurface(token))&&token.reading_source!=='inline'?{...token,source_reading:'',reading_source:'unmatched'}:token),sourceKana,aligned:false,hasSource:true}
+    // 原整句对齐失败时会抹掉词典假名：return {tokens:tokens.map(token=>hasKanji(lyricSurface(token))&&token.reading_source!=='inline'?{...token,source_reading:'',reading_source:'unmatched'}:token),sourceKana,aligned:false,hasSource:true}
+    // 来源无法按词分配时保留有效词典假名，并继续将来源标为未对齐。人工校正与括号假名优先。
+    const fallback=tokens.map(token=>{
+      if(!hasKanji(lyricSurface(token))||token.reading_source==='inline')return token
+      const reading=toHiragana(token.reading||'',{passRomaji:true})
+      return /^[\u3041-\u3096ー]+$/u.test(reading)
+        ?{...token,reading_source:'dictionary'}
+        :{...token,source_reading:'',reading_source:'unmatched'}
+    })
+    return {tokens:fallback,sourceKana,aligned:false,hasSource:true}
   }
   const resolved=units.map((unit,index)=>{
     const members=unit.members,first=members[0],surface=members.map(token=>token.surface).join(''),visible=members.map(lyricSurface).join('')

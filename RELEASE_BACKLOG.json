@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedOn": "2026-11-09",
+  "updatedOn": "2026-11-14",
   "reminderThreshold": 10,
   "policy": {
     "reminderPresentation": "达到10项待发布内容时，发版提醒必须同时逐项展示当前全部verified条目的名称和简要说明；不包含released或cancelled条目。",
@@ -71,6 +71,17 @@
     "userDecision": "用户要求三星真机测试并增加学习复习设置。当前累计 12 项待发布，已逐项提醒。"
   },
   "items": [
+    {
+      "id": "FIX-20261114-091",
+      "type": "fix",
+      "title": "罗马音未对齐时保留词典假名",
+      "summary": "改善片假名长音和哼唱写法的来源对齐。无法唯一对齐时保留有效词典假名并提示来源状态，遵循人工注音和主动留空。",
+      "status": "verified",
+      "startedOn": "2026-11-14",
+      "completedOn": "2026-11-14",
+      "verification": ["335 项 Node 测试及安卓前端构建通过。覆盖未对齐、词典回退、人工留空和无有效词典读音。"],
+      "files": ["src/lib/lyricReadings.js", "src/components/ReadingLyric.jsx", "tests/lyricReadings.test.mjs"]
+    },
     {
       "id": "FIX-20261015-001",
       "type": "bugfix",

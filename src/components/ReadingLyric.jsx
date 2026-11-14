@@ -39,7 +39,10 @@ export default function ReadingLyric({ text, tokens, corrections, songId, lineId
       </span>
     })}
     {/* 来源无法可靠分配到词时仍显示完整来源，明确区分尚未词级对齐。 */}
-    {prepared.hasSource&&!prepared.aligned&&readingStyle!=='hiragana'&&<small className="word-aligned-unresolved">来源罗马音（尚未按词对齐）：{importedRomaji}</small>}
+    {/* 来源仍单独显示。假名模式说明词典回退，避免把词典读法当成原唱。 */}
+    {prepared.hasSource&&!prepared.aligned&&<small className="word-aligned-unresolved">
+      {readingStyle==='hiragana'?'来源读音未对齐，词典注音仅供参考。':`来源罗马音（未按词对齐，逐词注音可参考词典）：${importedRomaji}`}
+    </small>}
   </span>
   return prepared.tokens.map((token) => {
     const key = correctionKey(songId, lineId, token.index)

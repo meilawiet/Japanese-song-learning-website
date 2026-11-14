@@ -8,6 +8,14 @@ import { commitEditedLine } from '../src/lib/lyricEditing.js'
 import {splitKanjiOkuriganaTokens} from '../src/lib/defaultSegmentation.js'
 
 const tokens=parts=>parts.map(([surface,reading,is_symbol=false],index)=>({index,surface,reading,is_symbol}))
+
+test('来源长音 ō 可对齐片假名长音和汉字词，同句假名正常显示',()=>{
+  const input=tokens([['透明','とうめい'],['な','な'],['アルコール','あるこーる'],['と','と'],['サイダー','さいだー']])
+  const result=prepareLyricReadings(input,'Tōmei na arukōru to saidā')
+  assert.equal(result.aligned,true)
+  assert.equal(result.tokens[0].source_reading,'とうめい')
+  assert.equal(prepareLyricReadings(tokens([['ラララ','ららら'],['～','',true]]),'La la la~').aligned,true)
+})
 // 原词界和校正键不变，显示层只取得完整吻合来源的证据；特殊读法继续由来源决定。
 test('来源合并汉字组携带可靠显示词界，失配和重新对齐不复用旧证据',()=>{
  const input=tokens([['森','もり'],[' ','',true],['君','きみ']]),before=JSON.stringify(input)
@@ -161,7 +169,10 @@ test('无法确定对应时不错误分词，整句仍显示歌词自带读音�
   const input=tokens([['君','きみ'],['は','は'],['夢','ゆめ']]),before=JSON.stringify(input)
   const result=prepareLyricReadings(input,'to ra wa re ta',{},'s',0)
   assert.equal(result.aligned,false)
-  assert.equal(result.tokens[0].source_reading,'')
+  assert.equal(result.tokens[0].reading_source,'dictionary')
+  assert.equal(tokenReading(result.tokens[0],{},'s',0),'きみ')
+  assert.equal(tokenReading(result.tokens[0],{'s:0:0':''},'s',0),'')
+  assert.equal(tokenReading(prepareLyricReadings(tokens([['謎','謎']]),'broken').tokens[0]),'')
   assert.equal(lineReading(input,{},'s',0,'hiragana','to ra wa re ta'),'とらわれた')
   assert.equal(JSON.stringify(input),before)
 })
