@@ -1,3 +1,4 @@
+import UnsavedChangesDialog from './UnsavedChangesDialog'
 import { useEffect, useRef, useState } from 'react'
 import { CircleAlert, Image, LoaderCircle, Upload, X } from 'lucide-react'
 import { inferAudioMetadata } from '../lib/audioMetadata'
@@ -10,6 +11,8 @@ import DesktopOnlineLyricsSearch from './DesktopOnlineLyricsSearch'
 import { useDesktopUnsavedDraft } from '../lib/useDesktopUnsavedDraft'
 
 export default function BatchSongImportDialog({ onClose, onSwitchSingle, onImport, onOpenTasks, onReadTask, busy }) {
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const formRef = useRef(null)
   const [audios, setAudios] = useState([])
   const [lyrics, setLyrics] = useState([])
   const [rows, setRows] = useState([])
@@ -24,7 +27,7 @@ export default function BatchSongImportDialog({ onClose, onSwitchSingle, onImpor
   const alive = useRef(true)
   const locked = Boolean(preparing || busy || submitting || artworkProcessing)
   useDesktopUnsavedDraft('batch-import-editor', Boolean(audios.length || lyrics.length))
-  const close = () => { if (!locked && (!audios.length && !lyrics.length || window.confirm('所选歌曲和歌词尚未导入，确定关闭吗？'))) onClose() }
+  const close = () => { if (locked) return; if (audios.length || lyrics.length) setConfirmLeave(true); else onClose() }
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
 
   async function addFiles(kind, files) {
@@ -123,7 +126,7 @@ export default function BatchSongImportDialog({ onClose, onSwitchSingle, onImpor
   const selected = rows.filter(row => row.selected)
   const usedLyrics = new Map(rows.filter(row => row.lyricId).map(row => [row.lyricId, row.audioId]))
   const unpairedLyrics = lyrics.filter(entry => !rows.some(row => row.lyricId === entry.id))
-  return <form className="song-import-dialog batch-import-dialog" role="dialog" aria-modal="true" aria-labelledby="batch-import-title" onSubmit={submit} onClick={event => event.stopPropagation()}>
+  return <form ref={formRef} className="song-import-dialog batch-import-dialog" role="dialog" aria-modal="true" aria-labelledby="batch-import-title" onSubmit={submit} onClick={event => event.stopPropagation()}>
     <header className="batch-import-heading">
       <button className="song-import-close" type="button" disabled={locked} onClick={close} aria-label="关闭导入窗口"><X size={18}/></button>
       <h2 id="batch-import-title">导入歌曲</h2>
@@ -163,5 +166,5 @@ export default function BatchSongImportDialog({ onClose, onSwitchSingle, onImpor
       {error && <p className="song-import-error" role="alert"><CircleAlert size={14}/>{error}</p>}
       <div className="song-import-actions"><span>已勾选 {selected.length} 首</span><button type="button" onClick={onOpenTasks}>查看任务</button><button type="button" disabled={locked} onClick={close}>取消</button><button className="song-import-submit" type="submit" disabled={locked || !selected.length || selected.some(row => batchRowProblem(row, rows, lyrics))}>{busy || submitting ? <LoaderCircle className="spin" size={14}/> : <Upload size={14}/>} {busy || submitting ? `正在导入 ${selected.length} 首…` : `导入选中的 ${selected.length} 首歌曲`}</button></div>
     </footer>
-  </form>
+  {confirmLeave && <UnsavedChangesDialog title="批量歌曲尚未导入" busy={locked} canSave={selected.length > 0 && !selected.some(row => batchRowProblem(row, rows, lyrics))} onContinue={() => setConfirmLeave(false)} onDiscard={onClose} onSave={() => { setConfirmLeave(false); formRef.current.requestSubmit() }}><p>保存会导入已勾选的歌曲；缺少歌词时请先补齐或取消对应勾选。</p></UnsavedChangesDialog>}</form>
 }

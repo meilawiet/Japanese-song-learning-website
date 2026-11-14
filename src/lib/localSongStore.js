@@ -125,13 +125,13 @@ export async function loadLocalSongs() {
   return Array.isArray(records) ? records.sort((left, right) => right.createdAt - left.createdAt) : []
 }
 
-export async function updateLocalSongMetadata(songId, metadata) {
+export async function updateLocalSongMetadata(songId, metadata, { replace = false } = {}) {
   let updatedRecord = null
   await runTransaction('readwrite', (store) => {
     const request = store.get(songId)
     request.onsuccess = () => {
       if (!request.result) return
-      updatedRecord = { ...request.result, ...metadata }
+      updatedRecord = replace ? { ...metadata, id: songId } : { ...request.result, ...metadata }
       store.put(updatedRecord)
     }
     return request

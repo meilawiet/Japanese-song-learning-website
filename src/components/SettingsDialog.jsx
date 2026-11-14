@@ -1,6 +1,8 @@
+import UnsavedChangesDialog from './UnsavedChangesDialog'
+import { useSettingsValidation } from './SettingsValidation'
 import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
-import { Check, Database, Download, Eye, EyeOff, KeyRound, Languages, Palette, Settings, Info, UserRound, LoaderCircle, Save, Search, Upload, X } from 'lucide-react'
+import { Check, CircleHelp, Database, Download, Eye, EyeOff, KeyRound, Languages, Palette, Settings, Info, UserRound, LoaderCircle, Save, Search, Upload, X } from 'lucide-react'
 import { clearAiSettings, DEFAULT_AI_SETTINGS, loadAiSettings, loadAiSettingsFromDevice, saveAiSettings } from '../lib/aiSettings'
 import { getAiStatus, testAiConnection } from '../lib/annotationApi'
 import ProfilePanel from './ProfilePanel'
@@ -14,7 +16,9 @@ import DesktopAboutSettings from './DesktopAboutSettings'
 import DesktopLyricSourcesPanel from './DesktopLyricSourcesPanel'
 import DesktopFontSettings from './DesktopFontSettings'
 import DesktopGeneralSettings from './DesktopGeneralSettings'
+import DesktopHelpSettings from './DesktopHelpSettings'
 import DesktopCrossPlatformPanel from './DesktopCrossPlatformPanel'
+import { useDesktopUnsavedDraft } from '../lib/useDesktopUnsavedDraft'
 import { DEFAULT_DESKTOP_FONT } from '../lib/desktopFonts'
 
 const previewTokens = [
@@ -28,24 +32,55 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
   const isDesktop = Boolean(globalThis.window?.utaDesktop)
   const canUpdateDesktop = isDesktop && window.utaDesktop.packaged
   const [tab, setTab] = useState(() => isDesktop && ['reading', 'fonts'].includes(initialTab) ? 'theme'
-    : isDesktop && initialTab === 'update' ? 'about'
+    : isDesktop && initialTab === 'update' ? 'about' : isDesktop && initialTab === 'cross' ? 'data'
     : Capacitor.isNativePlatform() && initialTab === 'reading' ? 'data' : initialTab)
-  const [sourcesDirty, setSourcesDirty] = useState(false)
-  const [crossBusy, setCrossBusy] = useState(false)
+  const [dataSection, setDataSection] = useState(initialTab === 'cross' ? 'cross' : 'local')
+  const childDraft = useRef(null)
+  const leaveSaving = useRef(false)
+  const [childBusy, setChildBusy] = useState(false)
+  const validation = useSettingsValidation()
   const handledDrop = useRef(null)
-  useEffect(() => {
-    if (crossBusy) return
-    if (!updateDrop || handledDrop.current === updateDrop) return
-    handledDrop.current = updateDrop
-    if (!sourcesDirty || window.confirm('歌词源配置尚未保存，确定放弃修改并打开更新页面吗？')) setTab('about')
-    else onUpdateDropHandled?.()
-  }, [updateDrop, crossBusy])
-  const confirmLeaveSources = () => !crossBusy && (!sourcesDirty || window.confirm('歌词源配置尚未保存，确定放弃修改吗？'))
-  const closeSettings = () => { if (confirmLeaveSources()) onClose() }
-  const changeTab = value => { if (value !== tab && confirmLeaveSources()) setTab(value) }
+  const closeSettings = () => requestNavigation(onClose)
+  const changeTab = value => { if (value !== tab) requestNavigation(() => setTab(value)) }
   const [draft, setDraft] = useState(loadAiSettings)
+  const [savedDraft, setSavedDraft] = useState(loadAiSettings)
+  const [pendingLeave, setPendingLeave] = useState(null)
+  const touched = useRef(false)
+  const aiDirty = JSON.stringify(draft) !== JSON.stringify(savedDraft)
+  useDesktopUnsavedDraft('settings-ai', isDesktop && aiDirty)
+  function requestNavigation(action) {
+    if (busy || childBusy || childDraft.current?.busy || pendingLeave || leaveSaving.current) return false
+    if (isDesktop && (tab === 'ai' ? aiDirty : childDraft.current?.dirty)) {
+      setPendingLeave({ action, title: tab === 'ai' ? 'AI 配置' : tab === 'sources' ? '歌词源配置' : 'WebDAV 连接配置' })
+    } else action()
+    return true
+  }
+
+  function finishSettingsLeave(saveDraft) {
+    const { action } = pendingLeave
+    if (!saveDraft) {
+      if (tab === 'ai') {
+        setDraft(structuredClone(savedDraft)); setMessage(null); setVisible(false); validation.clear()
+      }
+      setPendingLeave(null)
+      action()
+      return
+    }
+    const saveActivePage = tab === 'ai' ? save : childDraft.current?.save
+    leaveSaving.current = true
+    setPendingLeave(null)
+    // Dismiss the native dialog before validation so the failing field can receive focus.
+    window.requestAnimationFrame(async () => {
+      try { if (await saveActivePage?.()) action() }
+      finally { leaveSaving.current = false }
+    })
+  }
   const [visible, setVisible] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState('')
+  useEffect(() => {
+    if (!updateDrop || handledDrop.current === updateDrop) return
+    if (requestNavigation(() => setTab('about'))) handledDrop.current = updateDrop
+  }, [updateDrop, childBusy, busy, pendingLeave])
   const [message, setMessage] = useState(null)
   const [serverStatus, setServerStatus] = useState(null)
   const dialogRef = useRef(null)
@@ -63,8 +98,9 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
     const controller = new AbortController()
     getAiStatus(controller.signal).then(setServerStatus).catch(() => {})
     // 手机从 Android Keystore 异步读取用户选择记住的 AI Key。
-    if (isAndroid || window.utaDesktop) loadAiSettingsFromDevice().then(setDraft).catch(() => setMessage({ kind: 'error', text: '无法读取保存的 AI Key，请重新填写。' }))
+    if (isAndroid || window.utaDesktop) loadAiSettingsFromDevice().then(value => { setSavedDraft(value); if (!touched.current) setDraft(value) }).catch(() => setMessage({ kind: 'error', text: '无法读取保存的 AI Key，请重新填写。' }))
     function onKey(event) {
+      if (document.querySelector('dialog[open]')) return
       if (event.key === 'Escape') { event.preventDefault(); closeRef.current() }
       if (event.key !== 'Tab') return
       const focusable = [...dialogRef.current.querySelectorAll('button, input, select, textarea, a[href], [tabindex="0"]')]
@@ -85,8 +121,10 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
     }
   }, [])
 
-  function update(field, value) { setDraft((current) => ({ ...current, [field]: value })); setMessage(null) }
+  function update(field, value) { validation.clear(); touched.current = true; setDraft((current) => ({ ...current, [field]: value })); setMessage(null) }
   function applyPreset(value) {
+    validation.clear()
+    touched.current = true
     const preset = value === 'deepseek'
       ? { name: 'DeepSeek', protocol: 'deepseek', base_url: 'https://api.deepseek.com', model: 'deepseek-flash' }
       : value === 'local'
@@ -97,24 +135,31 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
   }
 
   async function save(event) {
-    event.preventDefault()
+    event?.preventDefault()
+    const form = dialogRef.current?.querySelector('form')
+    if (busy || (tab === 'ai' && !(isDesktop ? validation.validate(form) : form?.reportValidity()))) return false
+    setBusy('save')
     try {
       await saveAiSettings(draft)
+      setSavedDraft(structuredClone(draft))
       setMessage({ kind: 'success', text: '已保存，后续 AI 请求会使用此配置。已有解析会保留。' })
       setVisible(false)
-    } catch { setMessage({ kind: 'error', text: isDesktop ? '未能保存设置，请检查程序数据文件夹是否可写。' : '浏览器未能保存设置，请检查存储空间或浏览器权限。' }) }
+      return true
+    } catch { setMessage({ kind: 'error', text: isDesktop ? '未能保存设置，请检查程序数据文件夹是否可写。' : '浏览器未能保存设置，请检查存储空间或浏览器权限。' }); return false }
+    finally { setBusy('') }
   }
 
   async function test() {
-    if (!dialogRef.current.querySelector('form').reportValidity()) return
-    setBusy(true); setMessage(null)
+    const form = dialogRef.current?.querySelector('form')
+    if (busy || !(isDesktop ? validation.validate(form) : form?.reportValidity())) return
+    setBusy('test'); setMessage(null)
     controllerRef.current = new AbortController()
     try {
       const result = await testAiConnection(draft, controllerRef.current.signal)
-      setMessage({ kind: 'success', text: `连接成功：${result.provider} / ${result.model}，JSON 输出正常。配置尚未自动保存。` })
+      setMessage({ kind: 'success', text: `连接成功：${result.provider} / ${result.model}，JSON 输出正常。${isDesktop && !aiDirty ? '当前配置已保存。' : '配置尚未自动保存。'}` })
     } catch (error) {
       if (error.name !== 'AbortError') setMessage({ kind: 'error', text: error.message })
-    } finally { setBusy(false) }
+    } finally { setBusy('') }
   }
 
   const readingSettings = <div className="settings-content">
@@ -146,20 +191,25 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
     <section className="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabIndex={-1} ref={dialogRef} onClick={(event) => event.stopPropagation()}>
       <header className="settings-heading"><div><p className="eyebrow">MAKE IT YOURS</p><h2 id="settings-title">设置</h2><p>{isDesktop ? '调整阅读、字体与主题，管理学习数据、歌词源和 AI 服务。' : '管理学习数据，连接你的 AI 服务。'}</p></div><button type="button" className="settings-close" onClick={closeSettings} aria-label="关闭设置"><X size={21} /></button></header>
       {/* Windows 将配色、字体与注音集中到主题设置；网页与安卓保留各自入口。 */}
-      <div className="settings-tabs" aria-label="设置分类">{isDesktop && <button type="button" aria-pressed={tab === 'general'} onClick={() => changeTab('general')}><Settings size={17} /> 常规设置</button>}{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => changeTab('profile')}><UserRound size={17} /> 个人资料</button> : !isDesktop && <button type="button" aria-pressed={tab === 'reading'} onClick={() => changeTab('reading')}><Languages size={17} /> 注音显示</button>}{isDesktop && <button type="button" aria-pressed={tab === 'theme'} onClick={() => changeTab('theme')}><Palette size={17} /> 主题设置</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => changeTab('data')}><Database size={17} /> 数据管理</button>{isDesktop && <button type="button" aria-pressed={tab === 'cross'} onClick={() => changeTab('cross')}><Database size={17}/> 跨端互通</button>}<button type="button" aria-pressed={tab === 'ai'} onClick={() => changeTab('ai')}><KeyRound size={17} /> AI 服务</button>{isDesktop && <button type="button" aria-pressed={tab === 'sources'} onClick={() => changeTab('sources')}><Search size={17}/> 歌词源</button>}{isDesktop && <button type="button" aria-pressed={tab === 'about'} onClick={() => changeTab('about')}><Info size={17}/> 关于</button>}{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>changeTab('about')}>关于</button>}</div>
+      <div className="settings-tabs" aria-label="设置分类">{isDesktop && <button type="button" aria-pressed={tab === 'general'} onClick={() => changeTab('general')}><Settings size={17} /> 常规设置</button>}{isAndroid ? <button className="profile-settings-tab" type="button" aria-pressed={tab === 'profile'} onClick={() => changeTab('profile')}><UserRound size={17} /> 个人资料</button> : !isDesktop && <button type="button" aria-pressed={tab === 'reading'} onClick={() => changeTab('reading')}><Languages size={17} /> 注音显示</button>}{isDesktop && <button type="button" aria-pressed={tab === 'theme'} onClick={() => changeTab('theme')}><Palette size={17} /> 主题设置</button>}<button type="button" aria-pressed={tab === 'data'} onClick={() => changeTab('data')}><Database size={17} /> 数据管理</button><button type="button" aria-pressed={tab === 'ai'} onClick={() => changeTab('ai')}><KeyRound size={17} /> AI 服务</button>{isDesktop && <button type="button" aria-pressed={tab === 'sources'} onClick={() => changeTab('sources')}><Search size={17}/> 歌词源</button>}{isDesktop && <button type="button" aria-pressed={tab === 'help'} onClick={() => changeTab('help')}><CircleHelp size={17}/> 帮助</button>}{isDesktop && <button type="button" aria-pressed={tab === 'about'} onClick={() => changeTab('about')}><Info size={17}/> 关于</button>}{isAndroid && <button className="about-settings-tab" type="button" aria-pressed={tab === 'about'} onClick={()=>changeTab('about')}>关于</button>}</div>
 
-      {tab === 'cross' && isDesktop ? <DesktopCrossPlatformPanel onCollect={onCrossCollect} onRestore={onCrossRestore} onAudioReady={onCrossAudioReady} onBusyChange={setCrossBusy} externalBusy={Boolean(backupBusy)}/> : tab === 'about' && isAndroid ? <AboutPanel updates={updates}/> : tab === 'about' && isDesktop ? <DesktopAboutSettings canUpdate={canUpdateDesktop} updateDrop={updateDrop} onUpdateDropHandled={onUpdateDropHandled}/> : tab === 'sources' && isDesktop ? <DesktopLyricSourcesPanel onDirtyChange={setSourcesDirty}/> : tab === 'profile' && isAndroid ? <div className="settings-content"><ProfilePanel editable /></div> : tab === 'reading' && !isAndroid ? readingSettings : tab === 'general' && isDesktop ? <DesktopGeneralSettings/> : tab === 'theme' && isDesktop ? <div className="settings-content desktop-theme-settings desktop-appearance-settings">
-        <h3>应用主题色</h3><p className="settings-description">选择一套配色，让学习界面更合你的心意。</p>
+      {tab === 'help' && isDesktop ? <DesktopHelpSettings/> : tab === 'about' && isAndroid ? <AboutPanel updates={updates}/> : tab === 'about' && isDesktop ? <DesktopAboutSettings canUpdate={canUpdateDesktop} updateDrop={updateDrop} onUpdateDropHandled={onUpdateDropHandled}/> : tab === 'sources' && isDesktop ? <DesktopLyricSourcesPanel ref={childDraft} onBusyChange={setChildBusy}/> : tab === 'profile' && isAndroid ? <div className="settings-content"><ProfilePanel editable /></div> : tab === 'reading' && !isAndroid ? readingSettings : tab === 'general' && isDesktop ? <DesktopGeneralSettings/> : tab === 'theme' && isDesktop ? <div className="settings-content desktop-theme-settings desktop-appearance-settings">
+        <h3>应用主题色 <small className="editor-draft-state">即时生效</small></h3><p className="settings-description">选择一套配色，让学习界面更合你的心意。</p>
         <div className="desktop-theme-grid" aria-label="应用主题色">{DESKTOP_THEMES.map(theme => <button key={theme.id} type="button" className="desktop-theme-card" data-theme-card={theme.id} aria-pressed={desktopTheme === theme.id} onClick={() => onDesktopThemeChange(theme.id)} style={{ '--swatch-bg': theme.colors.surface, '--swatch-accent': theme.colors.accent, '--swatch-soft': theme.colors.soft }}>
           <span className="desktop-theme-swatches" aria-hidden="true"><i/><i/><i/></span><b>{theme.name}</b><small>{theme.description}</small>{desktopTheme === theme.id && <Check className="desktop-theme-check" size={16} aria-hidden="true"/>}
         </button>)}</div>
-        <div className="desktop-theme-sample" aria-label="主题阅读预览"><span>READING PREVIEW</span><p lang="ja"><ruby>風<rt>かぜ</rt></ruby>を<ruby>待<rt>ま</rt></ruby>っている</p><small>等候一阵风，也等候下一句。</small><div><span>已掌握 3 / 12 句</span><button type="button" onClick={onClose}>继续学习</button></div></div>
+        <div className="desktop-theme-sample" aria-label="主题阅读预览"><span>READING PREVIEW</span><p lang="ja"><ruby>風<rt>かぜ</rt></ruby>を<ruby>待<rt>ま</rt></ruby>っている</p><small>等候一阵风，也等候下一句。</small><div><span>已掌握 3 / 12 句</span><button type="button" onClick={closeSettings}>继续学习</button></div></div>
         <p className="settings-note">切换后立即生效，自动保存。主题不改变歌词内容、读音修正或学习进度。</p>
         <section className="desktop-settings-section" aria-label="字体设置"><DesktopFontSettings value={desktopFont} onChange={onDesktopFontChange}/></section>
         <section className="desktop-settings-section" aria-label="注音显示">{readingSettings}</section>
-      </div> : tab === 'data' ? <div className="settings-content">
+      </div> : tab === 'data' ? <div className="settings-content" key={isDesktop ? dataSection : undefined}>
+        {isDesktop && <div className="desktop-data-sections" role="group" aria-label="数据管理分类">
+          <button type="button" aria-pressed={dataSection === 'local'} onClick={() => { if (dataSection !== 'local') requestNavigation(() => setDataSection('local')) }}>本地备份</button>
+          <button type="button" aria-pressed={dataSection === 'cross'} onClick={() => { if (dataSection !== 'cross') requestNavigation(() => setDataSection('cross')) }}>跨端互通</button>
+        </div>}
+        {isDesktop && dataSection === 'cross' && <DesktopCrossPlatformPanel ref={childDraft} onCollect={onCrossCollect} onRestore={onCrossRestore} onAudioReady={onCrossAudioReady} onBusyChange={setChildBusy} externalBusy={Boolean(backupBusy)}/>}
         {/* 安卓端按用户要求暂时移除网站导入导出入口；网页端保留原数据管理。 */}
-        {!isAndroid && <>
+        {!isAndroid && (!isDesktop || dataSection === 'local') && <>
         <h3>让学习记录随你同行</h3><p className="settings-description">备份导入的歌曲、音频、学习进度、读音修正、复习记录与 AI 解析。</p>
         <div className="settings-data-card"><div><h4>导出学习数据</h4><p>保存一个 .uta-backup 文件，备份或迁移学习记录。</p></div><button type="button" onClick={onExport} disabled={Boolean(backupBusy)}>{backupBusy === 'export' ? <LoaderCircle size={16} className="spin" /> : <Download size={16} />} 导出备份</button></div>
         <div className="settings-data-card"><div><h4>恢复学习数据</h4><p>先预览备份内容，确认后恢复学习数据。</p></div><button type="button" onClick={() => fileRef.current?.click()} disabled={Boolean(backupBusy)}>{backupBusy === 'inspect' ? <LoaderCircle size={16} className="spin" /> : <Upload size={16} />} 导入备份</button><input ref={fileRef} type="file" accept=".uta-backup,application/octet-stream" hidden onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onRestore(file) }} /></div>
@@ -169,16 +219,17 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
         </>}
         {/* 安卓数据管理只保留完整的本机云备份。 */}
         {isAndroid && <WebDavPanel onCreateBackup={onCloudExport} onRestore={onRestore}/>}
-      </div> : <form className={`settings-content ${isDesktop ? 'desktop-ai-form' : ''}`} onSubmit={save}>
+      </div> : <form className={`settings-content ${isDesktop ? 'desktop-ai-form' : ''}`} onSubmit={save} noValidate={isDesktop}>
         <div className="settings-ai-fields">
+        {isDesktop && validation.summary}
         <fieldset disabled={busy} className="settings-fields">
           {!isAndroid && <label className="settings-checkbox"><input type="checkbox" checked={draft.useServerDefault} onChange={(event) => update('useServerDefault', event.target.checked)} /> 使用服务端默认配置</label>}
           {!isAndroid && draft.useServerDefault ? <div className="settings-server-note"><b>{serverStatus?.configured ? `${serverStatus.provider} · ${serverStatus.model}` : '服务端默认配置'}</b><p>{serverStatus === null ? '无法确认服务状态，可点击测试连接。' : serverStatus.configured ? '已检测到服务端密钥，可以直接测试和使用。密钥不会返回浏览器。' : '服务端尚未配置密钥，请取消上方勾选并填写自己的服务。'}</p></div> : <>
             <div className="settings-presets"><span>快速填写</span><button type="button" onClick={() => applyPreset('deepseek')}>DeepSeek</button><button type="button" onClick={() => applyPreset('custom')}>其他兼容服务</button>{!isAndroid && <button type="button" onClick={() => applyPreset('local')}>本地服务</button>}</div>
-            <div className="settings-grid"><label>供应商名称<input required maxLength={80} value={draft.name} onChange={(event) => update('name', event.target.value)} placeholder="例如：我的 AI 服务" /></label><label>接口类型<select value={draft.protocol} onChange={(event) => update('protocol', event.target.value)}><option value="openai-compatible">OpenAI 兼容</option><option value="deepseek">DeepSeek</option></select></label></div>
-            <label className="settings-field">API 地址<input required type="url" maxLength={2048} value={draft.base_url} onChange={(event) => { update('base_url', event.target.value); if (!webSearchAvailable(event.target.value)) update('web_search_enabled',false); if (draft.api_key) update('api_key', '') }} placeholder="https://api.example.com/v1" /></label><p className="settings-hint">填写基础地址或完整的 /chat/completions 地址。支持 HTTPS，以及局域网 IP 的 HTTP 地址。手机不能使用电脑的 localhost；更换地址会清空密钥。</p>
+            <div className="settings-grid"><label>供应商名称<input {...validation.field('ai-name', '供应商名称')} required maxLength={80} value={draft.name} onChange={(event) => update('name', event.target.value)} placeholder="例如：我的 AI 服务" />{isDesktop && validation.message('ai-name')}</label><label>接口类型<select value={draft.protocol} onChange={(event) => update('protocol', event.target.value)}><option value="openai-compatible">OpenAI 兼容</option><option value="deepseek">DeepSeek</option></select></label></div>
+            <label className="settings-field">API 地址<input {...validation.field('ai-url', 'API 地址')} required type="url" maxLength={2048} value={draft.base_url} onChange={(event) => { update('base_url', event.target.value); if (!webSearchAvailable(event.target.value)) update('web_search_enabled',false); if (draft.api_key) update('api_key', '') }} placeholder="https://api.example.com/v1" />{isDesktop && validation.message('ai-url')}</label><p className="settings-hint">填写基础地址或完整的 /chat/completions 地址。支持 HTTPS，以及局域网 IP 的 HTTP 地址。手机不能使用电脑的 localhost；更换地址会清空密钥。</p>
             <label className="settings-field">API Key<span className="settings-secret"><input type={visible ? 'text' : 'password'} autoComplete="off" spellCheck={false} maxLength={4096} value={draft.api_key} onChange={(event) => update('api_key', event.target.value)} placeholder="无需鉴权的服务可留空" /><button type="button" aria-label={visible ? '隐藏 API Key' : '显示 API Key'} onClick={() => setVisible(!visible)}>{visible ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label>
-            <label className="settings-field">模型名称<input required maxLength={160} value={draft.model} onChange={(event) => update('model', event.target.value)} placeholder="填写供应商提供的模型 ID" /></label>
+            <label className="settings-field">模型名称<input {...validation.field('ai-model', '模型名称')} required maxLength={160} value={draft.model} onChange={(event) => update('model', event.target.value)} placeholder="填写供应商提供的模型 ID" />{isDesktop && validation.message('ai-model')}</label>
             <label className="settings-checkbox"><input type="checkbox" checked={draft.json_mode} onChange={(event) => update('json_mode', event.target.checked)} /> 启用 JSON 输出模式</label><p className="settings-hint">若兼容服务不支持此参数，可关闭；模型仍需能返回 JSON。</p>
             {/* 只对已适配的官方服务开放，明确标注费用和问 AI 的使用范围。 */}
             {isAndroid && <><label className="settings-checkbox"><input type="checkbox" name="web-search" checked={Boolean(draft.web_search_enabled)} disabled={!webSearchAvailable(draft.base_url)} onChange={event=>update('web_search_enabled',event.target.checked)}/>启用联网查询</label><p className="settings-hint">联网查询可能产生更多费用，包括额外模型调用与搜索费用。用于“问 AI”，由模型判断是否搜索；目前支持 DeepSeek 官方接口。</p></>}
@@ -188,10 +239,15 @@ export default function SettingsDialog({ onClose, onExport, onRestore, onCloudEx
         <p className="settings-note">{isAndroid ? '手机直接连接你配置的 AI 服务，不需要电脑开机。测试连接会发送一条短测试文本；词句解析会发送对应歌词文字，可能产生费用。' : '测试连接会发送一条短测试文本，可能产生少量费用。使用 AI 功能时，歌词经网站后端发送到你配置的服务。当前支持 Chat Completions 兼容接口。'}</p>
         </div>
         <div className="settings-ai-footer">
+        {isDesktop && <p className="settings-save-state">{busy === 'save' ? '保存中…' : aiDirty ? '未保存 · 测试连接与保存分开' : '已保存' }</p>}
         {message && <p className={`settings-message ${message.kind}`} role="status">{message.text}</p>}
-        <div className="settings-form-actions"><button type="button" disabled={busy} onClick={async () => { try { await clearAiSettings(); setDraft({ ...DEFAULT_AI_SETTINGS }); setVisible(false); setMessage({ kind: 'success', text: isAndroid ? '已清除手机中的 AI 配置与密钥。' : '已清除浏览器中的 AI 配置与密钥，恢复服务端默认配置。' }) } catch { setMessage({ kind: 'error', text: '无法清除 AI 配置。' }) } }}>清除配置</button><span /><button type="button" disabled={busy} onClick={test}>{busy && <LoaderCircle size={15} className="spin" />}{busy ? '测试中…' : '测试连接'}</button><button type="submit" disabled={busy} className="settings-primary"><Save size={15} /> 保存设置</button></div>
+        <div className="settings-form-actions"><button type="button" disabled={busy} onClick={async () => { try { await clearAiSettings(); setDraft({ ...DEFAULT_AI_SETTINGS }); setSavedDraft({ ...DEFAULT_AI_SETTINGS }); touched.current = true; setVisible(false); setMessage({ kind: 'success', text: isAndroid ? '已清除手机中的 AI 配置与密钥。' : '已清除浏览器中的 AI 配置与密钥，恢复服务端默认配置。' }) } catch { setMessage({ kind: 'error', text: '无法清除 AI 配置。' }) } }}>清除配置</button><span /><button type="button" disabled={busy} onClick={test}>{busy === 'test' && <LoaderCircle size={15} className="spin" />}{busy === 'test' ? '测试中…' : '测试连接'}</button><button type="submit" disabled={busy} className="settings-primary"><Save size={15} /> {busy === 'save' ? '保存中…' : '保存设置'}</button></div>
         </div>
       </form>}
+      {pendingLeave && <UnsavedChangesDialog title={pendingLeave.title + '尚未保存'}
+        onContinue={() => setPendingLeave(null)}
+        onDiscard={() => finishSettingsLeave(false)}
+        onSave={() => finishSettingsLeave(true)}/>}
     </section>
   </div>
 }

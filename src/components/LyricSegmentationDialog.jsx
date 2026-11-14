@@ -1,8 +1,19 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { fixedLyricBoundaries, lyricGraphemes, segmentSurfaces, suggestedTokenBoundaries } from '../lib/lyricSegmentation'
 
-export default function LyricSegmentationDialog({ text, tokens, suggestion, busy, error, onConfirm, onCancel }) {
+export default function LyricSegmentationDialog({ text, tokens, suggestion, busy, error, onConfirm, onCancel, modal = false }) {
   const [boundaries, setBoundaries] = useState(() => suggestedTokenBoundaries(text, tokens, suggestion))
+  const dialogRef = useRef(null)
+  useLayoutEffect(() => {
+    if (!modal) return undefined
+    const dialog = dialogRef.current
+    const trigger = document.activeElement
+    dialog.showModal()
+    return () => {
+      dialog.close()
+      if (trigger?.isConnected) trigger.focus({ preventScroll: true })
+    }
+  }, [modal])
   const graphemes = lyricGraphemes(text)
   const fixed = fixedLyricBoundaries(text)
 
@@ -16,7 +27,11 @@ export default function LyricSegmentationDialog({ text, tokens, suggestion, busy
     })
   }
 
-  return <div className="segmentation-backdrop" onClick={busy ? undefined : onCancel}>
+  const Frame = modal ? 'dialog' : 'div'
+  return <Frame ref={dialogRef} className={'segmentation-backdrop' + (modal ? ' song-draft-split' : '')}
+    aria-labelledby={modal ? 'segmentation-title' : undefined}
+    onCancel={event => { event.preventDefault(); if (!busy) onCancel() }}
+    onClick={busy ? undefined : onCancel}>
     <div className="segmentation-dialog" role="dialog" aria-modal="true" aria-labelledby="segmentation-title" onClick={event => event.stopPropagation()}>
       <h3 id="segmentation-title">自定义分词</h3>
       {suggestion && <div className="segmentation-ai-proposal"><strong>AI 分词建议 · {Math.round(suggestion.confidence * 100)}%</strong><span>现有：{suggestion.original_segments.join('｜')}</span><span>建议：{suggestion.suggested_segments.join('｜')}</span><small>{suggestion.reason}</small></div>}
@@ -32,5 +47,5 @@ export default function LyricSegmentationDialog({ text, tokens, suggestion, busy
       {error && <p className="segmentation-error" role="alert">{error}</p>}
       <footer><button type="button" disabled={busy} onClick={onCancel}>取消</button><button type="button" disabled={busy} onClick={() => onConfirm(segmentSurfaces(text, boundaries))}>{busy ? '生成读音中…' : '确认分词'}</button></footer>
     </div>
-  </div>
+  </Frame>
 }

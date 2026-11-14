@@ -23,3 +23,13 @@ export function validLyricEnd(line) {
   return line.end == null || Number.isFinite(line.start) && line.start >= 0
     && Number.isFinite(line.end) && line.end > line.start
 }
+
+
+export function reorderEditedLyricTimes(before, after) {
+  const previousTimes = new Map(before.map(line => [line.id, line.start]))
+  if (!after.some(line => Number.isFinite(line.start) && previousTimes.get(line.id) !== line.start)) return after
+  // Keep untimed lyrics in their authored slots. Equal timestamps retain their relative order.
+  const timed = after.filter(line => Number.isFinite(line.start)).sort((a, b) => a.start - b.start)
+  let index = 0
+  return after.map(line => Number.isFinite(line.start) ? timed[index++] : line)
+}

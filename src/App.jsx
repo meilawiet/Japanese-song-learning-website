@@ -1,3 +1,8 @@
+import UnsavedChangesDialog from './components/UnsavedChangesDialog'
+import DesktopPane from './components/DesktopPane'
+import DesktopAiReviewPanel from './components/DesktopAiReviewPanel'
+import DesktopBatchAiDialog from './components/DesktopBatchAiDialog'
+import { mergeDesktopTask } from './lib/desktopTasks'
 import DesktopLyricRangeControls from './components/DesktopLyricRangeControls'
 import DesktopTaskPanel from './components/DesktopTaskPanel'
 import DesktopResizeHandle from './components/DesktopResizeHandle'
@@ -6,6 +11,8 @@ import { lyricRangeBounds } from './lib/lyricRange'
 import { normalizeRangePracticeSettings, rangePracticeTotal, nextRangePracticeStep, PracticeGapTimer } from './lib/rangePractice'
 import { normalizePlaybackRate } from './lib/playbackRate'
 import { normalizeSingleLineRepeatCount, singleLinePlaybackBounds } from './lib/singleLinePlayback'
+import { captureScrollPosition, restoreScrollPosition, keepRowInView, restoredLyricLine } from './lib/desktopEditPosition'
+import { reorderEditedLyricTimes } from './lib/lyricTiming'
 import { applySongDetailsEdit, restoreSongEditLearning } from './lib/songDetailsEditing'
 import { createAiReviewRequest, createSentenceRequest, lyricContextKey } from './lib/aiLyricContext'
 import { saveRestoreSnapshot } from './lib/restoreSnapshot'
@@ -13,7 +20,7 @@ import { pendingReviewSuggestions, pendingSegmentationSuggestions, skipReviewSug
 import BatchSongImportDialog from './components/BatchSongImportDialog'
 import LrcReviewEditor from './components/LrcReviewEditor'
 import { DesktopChrome, DesktopSongHeader, DesktopLibrary, DesktopReview, DesktopPlayer, DesktopStatusBar } from './components/DesktopWorkspace'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
 import { BookOpenCheck, Bot, Check, ChevronDown, ChevronRight, Circle, CircleAlert, Download, Heart, LoaderCircle, MousePointer2, Pause, Pencil, Play, Plus, Save, Search, Settings, Sparkles, Trash2, Upload, Volume2, WandSparkles, X } from 'lucide-react'
@@ -32,7 +39,7 @@ import { applySourceKana } from './lib/sourceKana'
 import SongDetailsEditor from './components/SongDetailsEditor'
 import LyricLineEditor from './components/LyricLineEditor'
 import LyricChat from './components/LyricChat'
-import { applyLyricEdits, commitEditedLine } from './lib/lyricEditing'
+import { applyLineReadingDrafts, applyLyricEdits, commitEditedLine } from './lib/lyricEditing'
 import SettingsDialog from './components/SettingsDialog'
 import { importedSongs } from './data/songs.generated'
 import { demoSongs } from './data/demoSongs'
@@ -182,11 +189,24 @@ export default function App() {
     const stored = loadLocal(DESKTOP_LAYOUT_KEY, {})
     return { sidebar: Math.max(176, Math.min(320, Number(stored.sidebar) || 204)), word: Math.max(240, Math.min(540, Number(stored.word) || 294)), sidebarCollapsed: stored.sidebarCollapsed === true }
   })
-  const desktopSidebarWidth = desktopLayout.sidebarCollapsed ? 0 : desktopLayout.sidebar
+  const [desktopViewportWidth, setDesktopViewportWidth] = useState(() => IS_DESKTOP_APP ? window.innerWidth : 0)
+  const [desktopNavigationDrawer, setDesktopNavigationDrawer] = useState(false)
+  const desktopNavigationTemporary = desktopViewportWidth < 760
+  const desktopNavigationCompact = desktopViewportWidth >= 760 && desktopViewportWidth < 1120
+  const desktopSidebarWidth = desktopLayout.sidebarCollapsed || desktopNavigationTemporary
+    ? 0 : desktopNavigationCompact ? 60 : desktopLayout.sidebar
+  const desktopWordCanDock = desktopViewportWidth >= 1360 || (desktopViewportWidth >= 1120 && !desktopSidebarWidth)
+  const desktopWordMaxWidth = Math.min(540, Math.max(240, desktopViewportWidth - desktopSidebarWidth - 728 - 8))
+  const desktopWordWidth = Math.min(desktopLayout.word, desktopWordMaxWidth)
+  const desktopWordTriggerRef = useRef(null)
+  const desktopWordOpenTimerRef = useRef(null)
   const [desktopWordPanelMode, setDesktopWordPanelMode] = useState('closed')
   const [desktopWordSelection, setDesktopWordSelection] = useState(null)
+  const [singleImportLeave, setSingleImportLeave] = useState(false)
+  const [desktopImportStep, setDesktopImportStep] = useState(1)
   const [taskPanelOpen, setTaskPanelOpen] = useState(false)
   const [desktopTasks, setDesktopTasks] = useState([])
+  const [desktopAiSelectionOpen, setDesktopAiSelectionOpen] = useState(false)
   const [activePage, setActivePage] = useState(IS_ANDROID_APP ? 'mobile-learn' : 'lesson')
   const [mobileTab, setMobileTab] = useState('learn')
   // 安卓页面原先只切换组件状态，系统返回键因此直接退出；现在记录实际访问顺序。
@@ -353,6 +373,10 @@ export default function App() {
   const dragSelectionRef = useRef(null)
   const suppressNextTokenClick = useRef(false)
   const audioRef = useRef(null)
+  const desktopLibraryViewRef = useRef({})
+  const desktopLyricListRef = useRef(null)
+  const desktopLessonPositionRef = useRef(null)
+  const [desktopLessonRestore, setDesktopLessonRestore] = useState(null)
   const desktopSelectionAnchorRef = useRef(null)
   const desktopDoubleClickTargetRef = useRef(null)
   const selectedRangePlaybackRef = useRef(null)
@@ -373,21 +397,29 @@ export default function App() {
   const sentenceExplanationJobRef = useRef(null)
   const desktopTaskControllersRef = useRef(new Map())
   const desktopTaskRetriesRef = useRef(new Map())
+  const desktopTaskNonCancellableRef = useRef(new Set())
   const annotationSuppressedRef = useRef(new Set())
   const [annotationRetryRevision, setAnnotationRetryRevision] = useState(0)
   const attemptedBackgroundAiRef = useRef(new Set())
   const cancelledAiSongsRef = useRef(new Set())
 
   useEffect(() => { if (IS_DESKTOP_APP) localStorage.setItem(DESKTOP_LAYOUT_KEY, JSON.stringify(desktopLayout)) }, [desktopLayout])
+  useEffect(() => {
+    if (!IS_DESKTOP_APP) return undefined
+    const updateWidth = () => setDesktopViewportWidth(window.innerWidth)
+    window.addEventListener('resize', updateWidth)
+    return () => window.removeEventListener('resize', updateWidth)
+  }, [])
+  useEffect(() => { if (!desktopNavigationTemporary) setDesktopNavigationDrawer(false) }, [desktopNavigationTemporary])
+  useEffect(() => {
+    setDesktopNavigationDrawer(false)
+    return () => window.clearTimeout(desktopWordOpenTimerRef.current)
+  }, [activePage, activeSongId])
   useDesktopUnsavedDraft('import-editor', IS_DESKTOP_APP && importOpen && importSource !== 'batch' && Boolean(importLrcFile || importAudioFile))
 
   function updateDesktopTask(id, patch) {
     if (!IS_DESKTOP_APP) return
-    setDesktopTasks(previous => {
-      const existing = previous.find(task => task.id === id)
-      return existing ? previous.map(task => task.id === id ? { ...task, ...patch } : task)
-        : [{ id, state: 'queued', done: 0, total: 0, ...patch }, ...previous].slice(0, 20)
-    })
+    setDesktopTasks(previous => mergeDesktopTask(previous, id, patch))
   }
 
   function beginDesktopTask(id, kind, title, total, retry, detail = '') {
@@ -397,18 +429,20 @@ export default function App() {
     const controller = new AbortController()
     desktopTaskControllersRef.current.set(id, controller)
     desktopTaskRetriesRef.current.set(id, retry)
-    updateDesktopTask(id, { kind, title, total, done: 0, detail, error: '', state: 'running' })
+    updateDesktopTask(id, { kind, title, total, done: 0, detail, error: '', state: 'running', cancellable: true })
     return controller
   }
 
   function finishDesktopTask(id, controller, state, details = {}) {
     if (!IS_DESKTOP_APP || desktopTaskControllersRef.current.get(id) !== controller) return
     desktopTaskControllersRef.current.delete(id)
+    desktopTaskNonCancellableRef.current.delete(id)
     updateDesktopTask(id, { state, ...details })
   }
 
   function cancelDesktopTask(id) {
-    desktopTaskControllersRef.current.get(id)?.abort()
+    if (desktopTaskNonCancellableRef.current.has(id)) return
+    const controller = desktopTaskControllersRef.current.get(id)
     const songId = id.startsWith('ai:') ? id.slice(3) : null
     if (songId) {
       const pending = loadLocal(PENDING_AI_IMPORT_KEY, [])
@@ -416,16 +450,49 @@ export default function App() {
       setPendingAiRevision(value => value + 1)
     }
     if (id.startsWith('annotation:')) annotationSuppressedRef.current.add(id.slice('annotation:'.length))
-    updateDesktopTask(id, { state: 'cancelled', detail: '已取消，可按重试继续。', error: '' })
+    if (controller) {
+      const detail = id.startsWith('review:') ? '正在结束本机等待。' : '正在结束当前工作，已完成内容会保留。'
+      updateDesktopTask(id, { state: 'cancelling', detail, error: '' })
+      controller.abort()
+    } else updateDesktopTask(id, { state: 'cancelled', detail: '已取消，可按重试继续。', error: '' })
   }
 
-  function retryDesktopTask(id) { desktopTaskRetriesRef.current.get(id)?.() }
+  function retryDesktopTask(id) {
+    if (desktopTaskControllersRef.current.has(id)) return
+    if (id.startsWith('ai:')) {
+      const song = currentAiSourceRef.current.songs.find(song => song.id === id.slice(3))
+      if (song) retryQueuedAiTask(song)
+    } else if (id.startsWith('review:')) {
+      void runDesktopAiReview(id.slice('review:'.length))
+    } else desktopTaskRetriesRef.current.get(id)?.()
+  }
+  function hasDesktopAiReview() {
+    return [...desktopTaskControllersRef.current.keys()].some(id => id.startsWith('review:'))
+  }
   function retryQueuedAiTask(song) {
     const pending = loadLocal(PENDING_AI_IMPORT_KEY, [])
     localStorage.setItem(PENDING_AI_IMPORT_KEY, JSON.stringify([...new Set([...(Array.isArray(pending) ? pending : []), song.id])]))
     attemptedBackgroundAiRef.current.delete(song.id)
-    updateDesktopTask(`ai:${song.id}`, { state: 'queued', done: 0, total: song.lines.length, error: '', detail: '等待继续生成。' })
+    updateDesktopTask(`ai:${song.id}`, { state: 'queued', done: countDesktopAiReady(song), total: song.lines.length, error: '', detail: '等待继续生成。' })
     setPendingAiRevision(value => value + 1)
+  }
+  function countDesktopAiReady(song) {
+    const cache = sentenceExplanationsBySong[song.id] || {}
+    return song.lines.filter(line => hasCachedSentenceExplanation(cache, line)).length
+  }
+  function queueDesktopAiSongs(ids) {
+    const chosen = [...new Set(ids)].map(id => localSongs.find(song => song.id === id))
+      .filter(song => song && song.lines.length > countDesktopAiReady(song) && !desktopTaskControllersRef.current.has(`ai:${song.id}`))
+    if (!chosen.length) throw new Error('没有可加入队列的歌曲，请检查已有任务。')
+    const pending = loadLocal(PENDING_AI_IMPORT_KEY, [])
+    localStorage.setItem(PENDING_AI_IMPORT_KEY, JSON.stringify([...new Set([...(Array.isArray(pending) ? pending : []), ...chosen.map(song => song.id)])]))
+    for (const song of chosen) {
+      attemptedBackgroundAiRef.current.delete(song.id)
+      desktopTaskRetriesRef.current.set(`ai:${song.id}`, () => retryQueuedAiTask(song))
+      updateDesktopTask(`ai:${song.id}`, { kind: 'AI 解析', title: `《${song.title}》整句解析`, songId: song.id, state: 'queued', done: countDesktopAiReady(song), total: song.lines.length, detail: '已明确勾选，等待继续未完成的解析。', error: '', cancellable: true })
+    }
+    setPendingAiRevision(value => value + 1)
+    setTaskPanelOpen(true)
   }
   function beginBatchFileReadTask(kind, files, retry) {
     const taskId = `import:read:${kind}`
@@ -612,6 +679,16 @@ export default function App() {
   const activeLine = activeSong.lines.find((line) => line.id === activeLineId) || activeSong.lines[0]
   const annotations = useMemo(() => annotationsBySong[activeSong.id]?.filter((annotation) =>
     activeSong.lines.some((line) => annotationMatchesLine(annotation, line))), [annotationsBySong, activeSong])
+  useLayoutEffect(() => {
+    const container = desktopLyricListRef.current
+    if (!desktopLessonRestore || activePage !== 'lesson' || !container || desktopLessonRestore.songId !== activeSong.id) return
+    const row = document.getElementById('lyric-row-' + activeSong.id + '-' + desktopLessonRestore.lineId)
+    restoreScrollPosition(container, desktopLessonRestore.rowVisible ? row : null, desktopLessonRestore)
+    if (!desktopLessonRestore.rowVisible) keepRowInView(container, row)
+    if (desktopLessonRestore.focus) container.focus({ preventScroll: true })
+    setDesktopLessonRestore(null)
+  }, [activePage, activeSong.id, desktopLessonRestore])
+
   const activeAnnotation = annotations?.find((line) => line.id === activeLine.id)
   const desktopLyricRange = useMemo(() => desktopLyricSelection?.songId === activeSong.id
     ? lyricRangeBounds(activeSong.lines, desktopLyricSelection.anchorId, desktopLyricSelection.focusId, desktopAudio.duration) : null,
@@ -683,7 +760,7 @@ export default function App() {
     if (crossRestoreInterrupted.current || !localSongsReady || sentenceExplanationJobRef.current || backupBusy) return
     const stored = loadLocal(PENDING_AI_IMPORT_KEY, [])
     const pending = Array.isArray(stored) ? stored : []
-    const song = localSongs.find((item) => pending.includes(item.id) && !attemptedBackgroundAiRef.current.has(item.id))
+    const song = currentAiSourceRef.current.songs.find((item) => pending.includes(item.id) && !attemptedBackgroundAiRef.current.has(item.id))
     if (!song) return
     attemptedBackgroundAiRef.current.add(song.id)
     // AI 请求在页面可继续使用时逐批处理；中断的任务保留，下次打开应用续做。
@@ -692,8 +769,8 @@ export default function App() {
       if (result.complete) {
         const latest = loadLocal(PENDING_AI_IMPORT_KEY, [])
         localStorage.setItem(PENDING_AI_IMPORT_KEY, JSON.stringify((Array.isArray(latest) ? latest : []).filter((id) => id !== song.id)))
-        setToast(`《${song.title}》的 AI 解析已生成完成。`)
-      } else setToast(`《${song.title}》已导入，AI 解析完成 ${result.ready} / ${song.lines.length} 句；稍后可继续。`)
+        if (!IS_DESKTOP_APP) setToast(`《${song.title}》的 AI 解析已生成完成。`)
+      } else setToast(`《${song.title}》AI 解析完成 ${result.ready} / ${song.lines.length} 句；稍后可继续。`)
     }).catch((error) => setSentenceExplanationError({ songId: song.id, message: error instanceof Error ? error.message : 'AI 解析暂时不可用。' }))
       .finally(() => setPendingAiRevision((value) => value + 1))
   }, [localSongsReady, localSongs, pendingAiRevision, backupBusy])
@@ -707,7 +784,7 @@ export default function App() {
       const known = new Set(previous.map(task => task.id))
       const queued = localSongs.filter(song => pending.includes(song.id) && !known.has(`ai:${song.id}`))
         .map(song => ({ id: `ai:${song.id}`, kind: 'AI 解析', title: `《${song.title}》整句解析`, state: 'queued', done: 0, total: song.lines.length, detail: '已明确勾选，等待当前任务完成。', error: '' }))
-      return queued.length ? [...queued, ...previous].slice(0, 20) : previous
+      return queued.reduce((tasks, task) => mergeDesktopTask(tasks, task.id, task), previous)
     })
   }, [localSongsReady, localSongs, pendingAiRevision])
   useEffect(() => () => {
@@ -875,6 +952,11 @@ export default function App() {
   useEffect(() => { setDraftReading(focusReading); setDraftReadingTouched(false) }, [focusKey, focusReading])
   useEffect(() => { setDraftMeaning(wordMeaning) }, [meaningKey, wordMeaning])
 
+  function changeDesktopVolume(value) {
+    setDesktopVolume(value)
+    if (audioRef.current) audioRef.current.volume = value
+  }
+
   function stopLinePlayback() {
     clearSelectedRangePlayback()
     clearSingleLinePlayback()
@@ -889,8 +971,55 @@ export default function App() {
     setSingAlongLineId(null)
   }
 
+  function captureDesktopLesson(lineId = activeLine.id) {
+    const container = desktopLyricListRef.current
+    if (!container) return null
+    const row = document.getElementById('lyric-row-' + activeSong.id + '-' + lineId)
+    const position = captureScrollPosition(container, row)
+    return { ...position, songId: activeSong.id, lineId,
+      rowVisible: Boolean(row && position.offset < container.clientHeight && position.offset + row.offsetHeight > 0) }
+  }
+
+  function rememberDesktopLesson() {
+    if (!IS_DESKTOP_APP || activePage !== 'lesson') return
+    const position = captureDesktopLesson()
+    if (position) desktopLessonPositionRef.current = position
+  }
+
+  function restoreDesktopLesson(position, focus = false) {
+    desktopLessonPositionRef.current = position
+    desktopSelectionAnchorRef.current = position.lineId
+    setDesktopLyricSelection(null)
+    setActiveLineId(position.lineId)
+    setDesktopLessonRestore({ ...position, focus })
+  }
+
+  function keepDesktopLessonAfterEdit(before, after, replaced = false) {
+    if (!IS_DESKTOP_APP || before.id !== activeSong.id) return
+    const saved = desktopLessonPositionRef.current
+    const position = captureDesktopLesson() || (saved?.songId === before.id ? saved : null)
+    const line = restoredLyricLine(before.lines, after, position?.lineId ?? activeLine.id, replaced)
+    if (!line) return
+    const next = { ...(position || { top: 0, offset: null }), songId: before.id, lineId: line.id }
+    if (activePage === 'lesson') restoreDesktopLesson(next)
+    else {
+      desktopLessonPositionRef.current = next
+      setActiveLineId(line.id)
+    }
+  }
+
+  function openDesktopLyricEditor(lineId, segmentationSuggestion) {
+    const position = captureDesktopLesson(lineId)
+    stopLinePlayback()
+    setEditingLyric({ songId: activeSong.id, lineId, position, segmentationSuggestion })
+  }
+
   function chooseSong(songId) {
-    if (IS_DESKTOP_APP) clearDesktopWordSelection()
+    if (IS_DESKTOP_APP) {
+      clearDesktopWordSelection()
+      desktopLessonPositionRef.current = null
+      setDesktopLessonRestore(null)
+    }
     stopLinePlayback()
     setActiveSongId(songId)
     setActiveLineId(0)
@@ -1001,12 +1130,14 @@ export default function App() {
     const song = allSongs.find((item) => item.id === target?.songId)
     if (!song) throw new Error('找不到当前歌曲。')
     if (sentenceExplanationJobRef.current === song.id) throw new Error('这首歌正在生成解析，请稍后再编辑。')
-    const editedLines = song.lines.map((line) => {
+    const reorderTimes = IS_DESKTOP_APP && song.isLocal
+    let editedLines = song.lines.map((line) => {
       if (line.id !== target.lineId) return line
       const updated = { ...line, text: annotation?.text ?? line.text, translation, start, end, romaji: annotation?.text && annotation.text !== line.text ? '' : line.romaji }
       if (updated.text !== line.text) delete updated.sourceReadings
       return updated
     })
+    if (reorderTimes) editedLines = reorderEditedLyricTimes(song.lines, editedLines)
     setLyricEditSaving(true)
     try {
       if (song.isLocal) {
@@ -1024,11 +1155,18 @@ export default function App() {
           localStorage.setItem(PENDING_AI_IMPORT_KEY, JSON.stringify((Array.isArray(pendingValue) ? pendingValue : []).filter((id) => id !== song.id)))
         }
       }
-      setLearningState((previous) => commitEditedLine(allSongs, previous, song.id, target.lineId, annotation, readings, { translation, start, end, hidden }).state)
+      setLearningState((previous) => commitEditedLine(allSongs, previous, song.id, target.lineId, annotation, readings, { translation, start, end, hidden, reorderTimes }).state)
       setEditingLyric(null)
       setSentenceExplanationOpen(null)
       setSelectedTokenIndex(0)
-      if (IS_DESKTOP_APP) clearDesktopWordSelection()
+      if (IS_DESKTOP_APP) {
+        stopLinePlayback()
+        clearDesktopWordSelection()
+        if (activeSong.id === song.id) {
+          const position = target.position || captureDesktopLesson(target.lineId)
+          if (position) restoreDesktopLesson(position, true)
+        }
+      }
       setToast('这一句的歌词、译文、时间与读音已保存。')
     } finally { setLyricEditSaving(false) }
   }
@@ -1042,6 +1180,7 @@ export default function App() {
     // 原逻辑：onClick={() => chooseLine(line.id)}，现保留给电脑端。
     if (event.target.closest('button, a, input, select, textarea, .sentence-inline-analysis')) return
     chooseLine(lineId)
+    if (IS_DESKTOP_APP) event.currentTarget.closest('.lyrics-list')?.focus({ preventScroll: true })
     if (isMobileLyricPlayback()) playLine(lineId)
   }
 
@@ -1138,6 +1277,11 @@ export default function App() {
 
   function chooseSongFromLibrary(songId) {
     rememberDesktopSong(songId)
+    if (IS_DESKTOP_APP && songId === activeSong.id) {
+      rememberDesktopLesson()
+      showLessonPage()
+      return
+    }
     chooseSong(songId)
     // 从歌曲库进入歌曲详情后，返回键要回到歌曲库。
     if (IS_ANDROID_APP) navigateAndroid('lesson', 'learn')
@@ -1162,6 +1306,7 @@ export default function App() {
   }
 
   function showDesktopSingAlong(songId = activeSong.id, lineId = null) {
+    rememberDesktopLesson()
     rememberDesktopSong(songId)
     if (songId !== activeSong.id) chooseSong(songId)
     setPracticeActive(false)
@@ -1180,13 +1325,22 @@ export default function App() {
     rememberDesktopSong(activeSong.id)
     // All desktop learning entries end the previous playback session, including
     // a sing-along still waiting for metadata, before showing the lyric editor.
-    if (IS_DESKTOP_APP) stopLinePlayback()
+    if (IS_DESKTOP_APP) {
+      stopLinePlayback()
+      const position = desktopLessonPositionRef.current
+      if (activePage !== 'lesson' && position?.songId === activeSong.id) restoreDesktopLesson(position)
+    }
     setActivePage('lesson')
     window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
   }
 
   function showReviewQueue() {
-    if (IS_DESKTOP_APP) { setActivePage('review-list'); return }
+    if (IS_DESKTOP_APP) {
+      rememberDesktopLesson()
+      stopLinePlayback()
+      setActivePage('review-list')
+      return
+    }
     if (IS_ANDROID_APP) {
       navigateAndroid('review-list', 'review')
       window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }))
@@ -1197,6 +1351,10 @@ export default function App() {
   }
 
   function showLibraryPage({ focusSearch = false } = {}) {
+    if (IS_DESKTOP_APP) {
+      rememberDesktopLesson()
+      stopLinePlayback()
+    }
     if (IS_ANDROID_APP) navigateAndroid('library', 'mine')
     else setActivePage('library')
     window.requestAnimationFrame(() => {
@@ -1215,7 +1373,11 @@ export default function App() {
 
   function closeImportDialog() {
     if (importBusy) return
-    if (IS_DESKTOP_APP && (importLrcFile || importAudioFile) && !window.confirm('已选择的歌曲和歌词尚未导入，确定关闭吗？')) return
+    if (IS_DESKTOP_APP && importSource !== 'batch' && (importLrcFile || importAudioFile)) { setSingleImportLeave(true); return }
+    discardImportDialog()
+  }
+  function discardImportDialog() {
+    if (importBusy) return
     importPreviewRequestRef.current += 1
     importAudioRequestRef.current += 1
     importArtworkRequestRef.current += 1
@@ -1251,6 +1413,8 @@ export default function App() {
     setImportArtworkStatus(artwork ? 'found' : 'none')
   }
 
+  useEffect(() => { if (IS_DESKTOP_APP && importOpen) setDesktopImportStep(1) }, [importOpen])
+  useEffect(() => { if (IS_DESKTOP_APP && importAudioFile && importDraft) setDesktopImportStep(2) }, [importAudioFile, Boolean(importDraft)])
   async function prepareLrcPreview(file, onlineRecord = null) {
     const requestId = ++importPreviewRequestRef.current
     importArtworkRequestRef.current += 1
@@ -1363,6 +1527,7 @@ export default function App() {
     sentenceExplanationJobRef.current = song.id
     setSentenceExplanationError(null)
     setSentenceExplanationJob({ songId: song.id, ready: countReady(), total: song.lines.length })
+    updateDesktopTask(taskId, { done: countReady() })
     onProgress?.(countReady(), song.lines.length)
     let failure = ''
     let outcome = 'failed'
@@ -1485,7 +1650,7 @@ export default function App() {
   function checkCrossPlatformReady() {
     if (crossRestoreInterrupted.current) throw new Error('上次恢复未完成，请先在数据管理中导入恢复点。')
     if (backupBusy || importBusy || editingDetailsBusy || editingLyric || editingDetailsSong || undoSongBusy
-      || sentenceExplanationJobRef.current || aiBusy || draftReadingTouched) throw new Error('请先保存当前编辑，并等待导入、AI 或备份任务完成后再操作跨端数据。')
+      || sentenceExplanationJobRef.current || aiBusy || hasDesktopAiReview() || draftReadingTouched) throw new Error('请先保存当前编辑，并等待导入、AI 或备份任务完成后再操作跨端数据。')
   }
   async function collectCrossPlatformData(includeKey = false) {
     checkCrossPlatformReady()
@@ -1539,13 +1704,16 @@ export default function App() {
     setImportArtworkStatus(artwork.artworkChoice === 'default' ? 'default' : 'found')
   }
 
-  function openArtworkEditor(song) {
-    const current = Object.hasOwn(artworkOverrides, song.id) ? artworkOverrides[song.id]
+  function editableSongArtwork(song) {
+    return Object.hasOwn(artworkOverrides, song.id) ? artworkOverrides[song.id]
       : song.artworkChoice === 'default' ? { artworkUrl: '', artworkProvider: '默认封面', artworkChoice: 'default' }
         : song.artworkUrl ? { artworkUrl: song.artworkUrl, artworkSourceUrl: song.artworkSourceUrl || '', artworkProvider: song.artworkProvider || '已有封面' }
           : songArtworkBySource[song.sourceFile] || null
+  }
+
+  function openArtworkEditor(song) {
     setEditingArtworkSong(song)
-    setEditingArtworkChoice(current)
+    setEditingArtworkChoice(editableSongArtwork(song))
     setArtworkEditError('')
   }
 
@@ -1642,7 +1810,7 @@ export default function App() {
 
   async function restoreLearningData() {
     if (!backupPreview || backupBusy) return
-    if (sentenceExplanationJobRef.current || aiBusy || undoSongBusy || editingDetailsBusy) {
+    if (sentenceExplanationJobRef.current || aiBusy || hasDesktopAiReview() || undoSongBusy || editingDetailsBusy) {
       setBackupError('请等待当前 AI 解析或歌曲保存完成后再恢复备份。')
       return
     }
@@ -1713,6 +1881,8 @@ export default function App() {
         preparedItems.push({ ...item, metadata: { ...storedArtwork, artworkChoice: storedArtwork?.artworkChoice || (storedArtwork?.artworkUrl ? 'selected' : 'default'), artworkProvider: storedArtwork?.artworkProvider || '默认封面' } })
         updateDesktopTask(taskId, { done: index + 1, detail: `已准备 ${index + 1} / ${items.length} 首封面，即将保存歌曲。` })
       }
+      desktopTaskNonCancellableRef.current.add(taskId)
+      updateDesktopTask(taskId, { cancellable: false, detail: '正在保存到本机数据库，暂不可取消。' })
       const records = await createAndStoreLocalSongs(preparedItems, controller?.signal)
       updateDesktopTask(taskId, { done: items.length, detail: '歌曲已保存，正在更新歌曲库。' })
       const urls = {}, songs = []
@@ -1797,6 +1967,8 @@ export default function App() {
       const storedArtwork = await cacheArtworkSelection(artwork)
       if (controller?.signal.aborted) throw new DOMException('导入已取消', 'AbortError')
       updateDesktopTask(taskId, { done: 1, detail: '封面已准备，正在保存歌曲。' })
+      desktopTaskNonCancellableRef.current.add(taskId)
+      updateDesktopTask(taskId, { cancellable: false, detail: '正在保存到本机数据库，暂不可取消。' })
       const record = await createAndStoreLocalSong(parsed, importAudioFile, storedArtwork || {}, controller?.signal)
       const { audioBlob, ...song } = record
       const audioObjectUrl = URL.createObjectURL(audioBlob)
@@ -1835,10 +2007,12 @@ export default function App() {
     }
   }
 
-  async function saveSongDetails({ title, artist, lines, audioFile, sourceFile, lyricsReplaced = false }) {
+  async function saveSongDetails({ title, artist, lines, audioFile, sourceFile, lyricsReplaced = false, artworkDraft, lineReadingDrafts = [] }) {
     const song = editingDetailsSong
     if (!song?.isLocal) throw new Error('只有本机导入的歌曲可以修改详细信息。')
     if (sentenceExplanationJobRef.current === song.id || aiBusy) throw new Error('当前 AI 解析尚未完成，请完成后再保存歌曲。')
+    const validReadings = lineReadingDrafts.filter(draft => lines.some(line => annotationMatchesLine(draft.annotation, line)))
+    if (IS_DESKTOP_APP && !lyricsReplaced) lines = reorderEditedLyricTimes(song.lines, lines)
     const originalChanged = song.lines.length !== lines.length || song.lines.some(line => !lines.some(next => next.id === line.id && next.text === line.text))
     const oldLines = new Map(song.lines.map(line => [line.id, line]))
     const safeLines = lines.map(line => {
@@ -1852,13 +2026,22 @@ export default function App() {
     try {
       const originalRecord = await loadLocalSong(song.id)
       if (!originalRecord) throw new Error('找不到要编辑的本地歌曲。')
+      if (artworkDraft) {
+        try {
+          const cover = await cacheArtworkSelection(artworkDraft)
+          Object.assign(metadata, { artworkUrl: cover.artworkUrl || '', artworkSourceUrl: cover.artworkSourceUrl || '',
+            artworkProvider: cover.artworkProvider || '默认封面', artworkChoice: cover.artworkChoice || 'selected' })
+        } catch (error) {
+          throw new Error('封面保存失败：' + (error instanceof Error ? error.message : '请检查图片或改用本地图片。'))
+        }
+      }
       const beforeLearning = learning
       const pendingBeforeValue = loadLocal(PENDING_AI_IMPORT_KEY, [])
       const pendingBefore = Array.isArray(pendingBeforeValue) && pendingBeforeValue.includes(song.id)
       const updated = await updateLocalSongMetadata(song.id, metadata)
       if (!updated) throw new Error('找不到要编辑的本地歌曲。')
+      if (IS_DESKTOP_APP || audioFile) stopLinePlayback()
       if (audioFile) {
-        stopLinePlayback()
         const oldUrl = localAudioUrlRef.current[song.id]
         const newUrl = URL.createObjectURL(audioFile)
         localAudioUrlRef.current = { ...localAudioUrlRef.current, [song.id]: newUrl }
@@ -1867,27 +2050,47 @@ export default function App() {
       }
       const { audioBlob, ...visibleSong } = updated
       setLocalSongs((previous) => previous.map((item) => item.id === song.id ? visibleSong : item))
-      setLearningState(previous => applySongDetailsEdit(song, visibleSong, previous))
-      if (IS_DESKTOP_APP) setLastSongEdit({ record: originalRecord, learning: beforeLearning, pendingBefore, title })
+      setLearningState(previous => applyLineReadingDrafts(
+        applySongDetailsEdit(song, visibleSong, previous), song.id, validReadings, previous.annotations?.[song.id],
+      ))
+      let artworkOverrideBefore
+      if (artworkDraft) {
+        const overrides = loadLocal(ARTWORK_OVERRIDES_KEY, {})
+        if (Object.hasOwn(overrides, song.id)) {
+          artworkOverrideBefore = { value: overrides[song.id] }
+          const { [song.id]: previousOverride, ...next } = overrides
+          localStorage.setItem(ARTWORK_OVERRIDES_KEY, JSON.stringify(next))
+          setArtworkOverrides(next)
+        }
+      }
+      if (IS_DESKTOP_APP) setLastSongEdit({ record: originalRecord, learning: beforeLearning, pendingBefore, title, artworkOverrideBefore, lyricsReplaced })
       if (originalChanged) {
         const pending = loadLocal(PENDING_AI_IMPORT_KEY, [])
         localStorage.setItem(PENDING_AI_IMPORT_KEY, JSON.stringify((Array.isArray(pending) ? pending : []).filter((id) => id !== song.id)))
-        if (activeSong.id === song.id) setActiveLineId(lines[0]?.id ?? 0)
+        if (!IS_DESKTOP_APP && activeSong.id === song.id) setActiveLineId(lines[0]?.id ?? 0)
       }
       setEditingDetailsSong(null)
-      if (IS_DESKTOP_APP) clearDesktopWordSelection()
+      if (IS_DESKTOP_APP) {
+        clearDesktopWordSelection()
+        keepDesktopLessonAfterEdit(song, lines, lyricsReplaced)
+      }
       setToast(`《${title}》的歌曲信息已保存。`)
     } finally { setEditingDetailsBusy(false) }
   }
 
   async function undoLastSongEdit() {
     if (!lastSongEdit || undoSongBusy || backupBusy || editingDetailsBusy) return
-    const { record, learning: checkpoint, pendingBefore } = lastSongEdit
-    if (sentenceExplanationJobRef.current === record.id || aiBusy) { setToast('请等待当前 AI 解析完成后再撤销。'); return }
+    const { record, learning: checkpoint, pendingBefore, artworkOverrideBefore, lyricsReplaced } = lastSongEdit
+    if (sentenceExplanationJobRef.current === record.id || aiBusy || desktopTaskControllersRef.current.has('review:' + record.id)) { setToast('请等待当前 AI 解析完成后再撤销。'); return }
     setUndoSongBusy(true)
     try {
-      if (!await loadLocalSong(record.id)) throw new Error('这首歌已删除，无法撤销编辑。')
-      const restored = await updateLocalSongMetadata(record.id, record)
+      const restored = await updateLocalSongMetadata(record.id, record, { replace: true })
+      if (!restored) throw new Error('这首歌已删除，无法撤销编辑。')
+      if (artworkOverrideBefore) {
+        const next = { ...loadLocal(ARTWORK_OVERRIDES_KEY, {}), [record.id]: artworkOverrideBefore.value }
+        localStorage.setItem(ARTWORK_OVERRIDES_KEY, JSON.stringify(next))
+        setArtworkOverrides(next)
+      }
       stopLinePlayback()
       const oldUrl = localAudioUrlRef.current[record.id]
       const nextUrl = restored.audioBlob instanceof Blob ? URL.createObjectURL(restored.audioBlob) : ''
@@ -1901,7 +2104,10 @@ export default function App() {
       const pending = loadLocal(PENDING_AI_IMPORT_KEY, [])
       const remaining = (Array.isArray(pending) ? pending : []).filter(id => id !== record.id)
       localStorage.setItem(PENDING_AI_IMPORT_KEY, JSON.stringify(pendingBefore ? [...remaining, record.id] : remaining))
-      if (activeSong.id === record.id) setActiveLineId(record.lines[0]?.id ?? 0)
+      if (activeSong.id === record.id) {
+        if (IS_DESKTOP_APP) keepDesktopLessonAfterEdit(activeSong, record.lines, lyricsReplaced)
+        else setActiveLineId(record.lines[0]?.id ?? 0)
+      }
       setLastSongEdit(null)
       setToast(`已恢复《${record.title}》本次编辑前的歌曲与学习记录。`)
     } catch (error) { setToast(error instanceof Error ? error.message : '撤销失败，请重试。') }
@@ -2421,6 +2627,51 @@ export default function App() {
     setDetailView('word')
   }
 
+  async function runDesktopAiReview(songId) {
+    const taskId = 'review:' + songId
+    if (backupBusy || crossRestoreInterrupted.current || desktopTaskControllersRef.current.has(taskId)) return
+    const source = currentAiSourceRef.current
+    const song = source.songs.find(item => item.id === songId)
+    if (!song) return
+    const controller = beginDesktopTask(taskId, 'AI 复核', '《' + song.title + '》读音与分词复核', 0,
+      null, '正在等待 AI 服务返回读音与分词建议。')
+    updateDesktopTask(taskId, { songId })
+    const { signal } = controller
+    try {
+      const result = await reviewSongWithAi(song, source.annotations[songId] || [], source.corrections, signal)
+      signal.throwIfAborted()
+      const current = currentAiSourceRef.current
+      const currentSong = current.songs.find(item => item.id === songId)
+      if (!currentSong) throw new Error('这首歌已移除。')
+      const context = createAiReviewRequest(currentSong, current.annotations[songId] || [], current.corrections)
+      if (context.inputKey !== result.inputKey || context.sourceContext !== result.sourceContext) {
+        throw new Error('歌词、顺序或读音已修改。这次结果未采用，可按当前歌词重试。')
+      }
+      const { inputKey, ...review } = result
+      setLearningState(previous => ({
+        ...previous,
+        aiReviews: { ...previous.aiReviews, [songId]: mergeReviewDecisions({ ...review, reviewedAt: Date.now() }, previous.aiReviews[songId]) },
+      }))
+      finishDesktopTask(taskId, controller, 'done', { detail: '' })
+    } catch (error) {
+      if (signal.aborted) {
+        finishDesktopTask(taskId, controller, 'cancelled', { detail: '复核已取消，已有建议仍可查看。' })
+      } else {
+        finishDesktopTask(taskId, controller, 'failed', {
+          detail: '复核未完成，可重试。',
+          error: error instanceof Error ? error.message : 'AI 复核暂时不可用。',
+        })
+      }
+    }
+  }
+
+  function desktopReviewCount(songId) {
+    const song = allSongs.find(item => item.id === songId)
+    if (!song) return 0
+    return pendingReviewSuggestions(aiReviews[songId], song, corrections).length
+      + pendingSegmentationSuggestions(aiReviews[songId], song, annotationsBySong).length
+  }
+
   async function runAiReview() {
     setAiBusy('review')
     setAiError('')
@@ -2446,11 +2697,14 @@ export default function App() {
     }
   }
 
-  function applyAiSuggestion() {
-    if (!focusSuggestion) return
-    setDraftReading(focusSuggestion.suggested_reading)
-    setCorrections((previous) => ({ ...previous, [focusKey]: focusSuggestion.suggested_reading }))
-    setToast(`已采用建议读音「${focusSuggestion.suggested_reading}」，仍可继续修改。`)
+  function applyAiSuggestion(candidate) {
+    const suggestion = candidate?.suggested_reading ? candidate : focusSuggestion
+    if (!suggestion) return
+    const key = `${activeSong.id}:${suggestion.line_id}:${suggestion.token_index}`
+    if (candidate?.suggested_reading) jumpToAiSuggestion(suggestion)
+    setDraftReading(suggestion.suggested_reading)
+    setCorrections((previous) => ({ ...previous, [key]: suggestion.suggested_reading }))
+    setToast(`已采用建议读音「${suggestion.suggested_reading}」，仍可继续修改。`)
   }
 
   function skipAiSuggestion(suggestion) {
@@ -2509,6 +2763,7 @@ export default function App() {
   }
 
   function clearDesktopWordSelection() {
+    window.clearTimeout(desktopWordOpenTimerRef.current)
     setDesktopWordSelection(null)
     dragSelectionRef.current = null
     setDragSelection(null)
@@ -2517,9 +2772,74 @@ export default function App() {
     setDesktopWordPanelMode(previous => previous === 'manual' ? 'manual' : 'closed')
   }
 
-  function selectDesktopWord(lineId, tokenIndex) {
+  function closeDesktopWordPanel() {
+    window.clearTimeout(desktopWordOpenTimerRef.current)
+    setDesktopWordPanelMode('closed')
+    window.requestAnimationFrame(() => {
+      const trigger = desktopWordTriggerRef.current
+      const fallback = document.querySelector('[data-desktop-pane-toggle="right"]')
+      if (!document.querySelector('dialog[open], [aria-modal="true"]')) {
+        const reviewLink = document.getElementById('desktop-review-link')
+        const focusTarget = trigger?.getClientRects().length ? trigger : reviewLink || fallback
+        focusTarget?.focus({ preventScroll: true })
+      }
+    })
+  }
+
+  function openDesktopWordPanel(event) {
+    window.clearTimeout(desktopWordOpenTimerRef.current)
+    desktopWordTriggerRef.current = event.currentTarget
+    setDesktopWordPanelMode('manual')
+  }
+
+  function freeDesktopLyricSpace() {
+    setDesktopLayout(previous => ({ ...previous, sidebarCollapsed: true }))
+    document.querySelector('[aria-controls="desktop-navigation"]')?.focus({ preventScroll: true })
+  }
+
+  function narrowDesktopWordPane() {
+    setDesktopLayout(previous => ({ ...previous, word: Math.max(240, desktopWordWidth - 44) }))
+    document.querySelector('.desktop-resize-handle.resize-right')?.focus({ preventScroll: true })
+  }
+
+  function toggleDesktopWordPanel(event) {
+    if (desktopWordPanelMode !== 'closed') closeDesktopWordPanel()
+    else openDesktopWordPanel(event)
+  }
+
+  function showDesktopReviewSuggestions(event) {
+    openDesktopWordPanel(event)
+    focusDesktopReviewSuggestions()
+  }
+
+  function openDesktopTaskReview(songId) {
+    if (!desktopReviewCount(songId)) return
+    setTaskPanelOpen(false)
+    if (activeSong.id !== songId) chooseSongFromLibrary(songId)
+    else if (activePage !== 'lesson') showLessonPage()
+    if (practiceActive) exitPractice()
+    window.clearTimeout(desktopWordOpenTimerRef.current)
+    desktopWordTriggerRef.current = null
+    setDesktopWordPanelMode('manual')
+    focusDesktopReviewSuggestions()
+  }
+
+  function focusDesktopReviewSuggestions() {
+    window.requestAnimationFrame(() => {
+      const review = document.getElementById('desktop-ai-review')
+      review?.scrollIntoView({ block: 'nearest' })
+      review?.focus({ preventScroll: true })
+    })
+  }
+
+  function selectDesktopWord(lineId, tokenIndex, event) {
     setDesktopWordSelection({ songId: activeSong.id, lineId, tokenIndex })
-    setDesktopWordPanelMode(previous => previous === 'manual' ? 'manual' : 'auto')
+    const show = () => setDesktopWordPanelMode(previous => previous === 'manual' ? 'manual' : 'auto')
+    if (event) desktopWordTriggerRef.current = event.currentTarget
+    // Leave the lyric clickable until the double-click window has elapsed.
+    if (!desktopWordCanDock && event?.detail === 1 && desktopWordPanelMode === 'closed') {
+      desktopWordOpenTimerRef.current = window.setTimeout(show, 500)
+    } else show()
   }
 
   function handleTokenClick(lineId, tokenIndex, event) {
@@ -2530,7 +2850,7 @@ export default function App() {
     }
     chooseLine(lineId)
     setSelectedTokenIndex(tokenIndex)
-    if (IS_DESKTOP_APP) selectDesktopWord(lineId, tokenIndex)
+    if (IS_DESKTOP_APP) selectDesktopWord(lineId, tokenIndex, event)
     setSelectedText(null)
     setSelectedPhraseRange(null)
     // 词语按钮会阻止冒泡；手机上点歌词文字也应算点到了整句播放热区。
@@ -2639,9 +2959,9 @@ export default function App() {
   useEffect(() => {
     if (!IS_DESKTOP_APP) return undefined
     const onKeyDown = event => {
+      if (document.querySelector('dialog[open], [aria-modal="true"]')) return
       if (event.key === 'Escape' && desktopContextMenu) { event.preventDefault(); setDesktopContextMenu(null); return }
       if (event.key === 'Escape' && taskPanelOpen) { event.preventDefault(); setTaskPanelOpen(false); return }
-      if (document.querySelector('[aria-modal="true"]')) return
       if (event.target.closest('input, textarea, select, button, [contenteditable="true"], [role="separator"]')) return
       if (event.altKey || event.metaKey) return
       if (activePage === 'sing-along') {
@@ -2668,7 +2988,7 @@ export default function App() {
         return
       }
       if (event.key === 'Enter' && !event.ctrlKey && !event.shiftKey) { event.preventDefault(); playLine(activeLine.id); return }
-      if (event.key.toLowerCase() === 'e' && event.ctrlKey && !event.shiftKey) { event.preventDefault(); setEditingLyric({ songId: activeSong.id, lineId: activeLine.id }) }
+      if (event.key.toLowerCase() === 'e' && event.ctrlKey && !event.shiftKey) { event.preventDefault(); openDesktopLyricEditor(activeLine.id) }
       if (event.key === 'Escape' && desktopLyricSelection) { event.preventDefault(); clearDesktopLyricSelection() }
       else if (event.key === 'Escape' && (singleLinePlaybackRef.current || pendingClipRef.current?.kind === 'single-line')) { event.preventDefault(); stopLinePlayback() }
     }
@@ -2676,9 +2996,23 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown)
   })
 
-  return <div className={IS_DESKTOP_APP ? `desktop-shell${activePage === 'sing-along' ? ' desktop-shell-singalong' : ''}${activePage === 'lesson' ? ' desktop-shell-lesson' : ''}${desktopLayout.sidebarCollapsed ? ' desktop-sidebar-collapsed' : ''}` : undefined} style={IS_DESKTOP_APP ? { '--desktop-sidebar-width': `${desktopLayout.sidebar}px`, '--desktop-word-width': `${desktopLayout.word}px` } : undefined}>
-    {IS_DESKTOP_APP && <DesktopChrome sidebarOpen={!desktopLayout.sidebarCollapsed} wordPanelOpen={desktopWordPanelMode !== 'closed'} canToggleWordPanel={activePage === 'lesson' && !practiceActive} onToggleSidebar={() => setDesktopLayout(previous => ({ ...previous, sidebarCollapsed: !previous.sidebarCollapsed }))} onToggleWordPanel={() => setDesktopWordPanelMode(previous => previous === 'closed' ? 'manual' : 'closed')} page={activePage} song={activeSong} songs={desktopRecentSongs} artworkFor={artworkForSong} reviewCount={reviewQueue.length} onLesson={showLessonPage} onSingAlong={() => showDesktopSingAlong()} onLibrary={() => showLibraryPage()} onReview={showReviewQueue} onSettings={() => setSettingsOpen(true)} onSong={activePage === 'sing-along' ? songId => showDesktopSingAlong(songId) : chooseSongFromLibrary} onTasks={() => setTaskPanelOpen(value => !value)} taskCount={desktopTasks.filter(task => task.state === 'running' || task.state === 'queued' || task.state === 'failed').length} sidebarWidth={desktopLayout.sidebar} onSidebarWidth={sidebar => setDesktopLayout(previous => ({ ...previous, sidebar, word: Math.min(previous.word, Math.max(240, window.innerWidth - sidebar - 400)) }))} editUndo={lastSongEdit ? { title: lastSongEdit.title, onUndo: undoLastSongEdit, onDismiss: () => setLastSongEdit(null), busy: undoSongBusy || Boolean(backupBusy) || editingDetailsBusy } : null}/>}
-    {IS_DESKTOP_APP && <DesktopTaskPanel open={taskPanelOpen} tasks={desktopTasks} currentSongTitle={activeSong.title} remainingAi={activeSong.lines.length - readySentenceCount} aiBusy={Boolean(sentenceExplanationJob)} onGenerateAi={generateCurrentSongExplanations} onClose={() => setTaskPanelOpen(false)} onRetry={retryDesktopTask} onCancel={cancelDesktopTask}/>}
+  const desktopWordOpen = desktopWordPanelMode !== 'closed'
+  const desktopPaneSpaceLimited = IS_DESKTOP_APP && !practiceActive && desktopWordOpen && desktopWordCanDock
+    && desktopWordMaxWidth < 540 && desktopWordWidth === desktopWordMaxWidth
+  const desktopWordDrawer = desktopWordOpen && !desktopWordCanDock
+  const desktopWordDrawerSuspended = desktopWordDrawer && Boolean(
+    detailOpen || editingLyric || settingsOpen || importOpen || backupPreview || editingDetailsSong || editingArtworkSong
+  )
+  const DesktopWordPane = IS_DESKTOP_APP ? DesktopPane : Fragment
+
+  return <div className={IS_DESKTOP_APP ? `desktop-shell${activePage === 'sing-along' ? ' desktop-shell-singalong' : ''}${activePage === 'lesson' ? ' desktop-shell-lesson' : ''}${activePage === 'library' ? ' desktop-shell-library' : ''}${!desktopSidebarWidth ? ' desktop-sidebar-collapsed' : desktopNavigationCompact ? ' desktop-sidebar-compact' : ''}` : undefined} style={IS_DESKTOP_APP ? { '--desktop-sidebar-width': `${desktopSidebarWidth}px`, '--desktop-word-width': `${desktopWordWidth}px` } : undefined}>
+    {IS_DESKTOP_APP && singleImportLeave && <UnsavedChangesDialog title="歌曲尚未导入" busy={importBusy} canSave={Boolean(importAudioFile && importDraft && !importDraft.issues?.length)} onContinue={() => setSingleImportLeave(false)} onDiscard={() => { setSingleImportLeave(false); discardImportDialog() }} onSave={() => { setSingleImportLeave(false); setDesktopImportStep(3); void importLocalSong() }}><p>保存会导入当前歌曲，并沿用已选的 AI 处理方式。</p></UnsavedChangesDialog>}
+    {IS_DESKTOP_APP && <DesktopChrome sidebarOpen={desktopNavigationTemporary ? desktopNavigationDrawer : !desktopLayout.sidebarCollapsed} sidebarDrawer={desktopNavigationTemporary} sidebarCompact={desktopNavigationCompact} onCloseSidebar={() => setDesktopNavigationDrawer(false)} wordPanelOpen={desktopWordOpen} canToggleWordPanel={activePage === 'lesson' && !practiceActive} onToggleSidebar={() => desktopNavigationTemporary ? setDesktopNavigationDrawer(open => !open) : setDesktopLayout(previous => ({ ...previous, sidebarCollapsed: !previous.sidebarCollapsed }))} onToggleWordPanel={toggleDesktopWordPanel} page={activePage} song={activeSong} songs={desktopRecentSongs} artworkFor={artworkForSong} reviewCount={reviewQueue.length} onLesson={showLessonPage} onSingAlong={() => showDesktopSingAlong()} onLibrary={() => showLibraryPage()} onReview={showReviewQueue} onSettings={() => setSettingsOpen(true)} onSong={activePage === 'sing-along' ? songId => showDesktopSingAlong(songId) : chooseSongFromLibrary} onTasks={() => setTaskPanelOpen(value => !value)} taskCount={desktopTasks.filter(task => task.state === 'running' || task.state === 'queued' || task.state === 'cancelling' || task.state === 'failed').length} sidebarWidth={desktopLayout.sidebar} onSidebarWidth={sidebar => setDesktopLayout(previous => ({ ...previous, sidebar }))} editUndo={lastSongEdit ? { title: lastSongEdit.title, onUndo: undoLastSongEdit, onDismiss: () => setLastSongEdit(null), busy: undoSongBusy || Boolean(backupBusy) || editingDetailsBusy } : null}/>}
+    {IS_DESKTOP_APP && <DesktopTaskPanel open={taskPanelOpen} tasks={desktopTasks} currentSongTitle={activeSong.title} remainingAi={activeSong.lines.length - readySentenceCount} aiBusy={Boolean(sentenceExplanationJob)}
+      reviewBusy={desktopTaskControllersRef.current.has('review:' + activeSong.id)} reviewDisabled={Boolean(backupBusy || crossRestoreInterrupted.current)}
+      onReview={() => runDesktopAiReview(activeSong.id)} onReviewResult={openDesktopTaskReview} reviewCountFor={desktopReviewCount}
+      songExists={songId => allSongs.some(song => song.id === songId)} onGenerateAi={generateCurrentSongExplanations} onChooseAi={() => setDesktopAiSelectionOpen(true)} onLocate={songId => { setTaskPanelOpen(false); chooseSongFromLibrary(songId) }} onClose={() => setTaskPanelOpen(false)} onRetry={retryDesktopTask} onCancel={cancelDesktopTask}/>}
+    {IS_DESKTOP_APP && desktopAiSelectionOpen && <DesktopBatchAiDialog songs={localSongs.map(song => ({ ...song, remaining: song.lines.length - countDesktopAiReady(song) }))} busyIds={desktopTasks.filter(task => ['running', 'queued', 'cancelling'].includes(task.state) && task.id.startsWith('ai:')).map(task => task.id.slice(3))} onClose={() => setDesktopAiSelectionOpen(false)} onQueue={queueDesktopAiSongs}/>}
     {IS_ANDROID_APP && songPickerOpen && <div className="study-song-picker" role="dialog" aria-modal="true" aria-label="选择歌曲"><button className="study-picker-close" type="button" onClick={() => setSongPickerOpen(false)} aria-label="返回当前练习">‹ 返回</button><AndroidSongLibrary selectionMode songs={allSongs.filter((song) => !song.isDemo && normalizeSongSearch(`${song.title}${song.artist}`).includes(normalizeSongSearch(songPickerSearch)))} total={androidLibraryTotal} search={songPickerSearch} onSearch={setSongPickerSearch} artworkFor={artworkForSong} learnedBySong={learnedBySong} activeSongId={activeSong.id} onOpen={(id) => { chooseSong(id); setSongPickerOpen(false); window.scrollTo({ top: 0, behavior: 'instant' }) }} /></div>}
     {/* 长按后只露出编辑入口；完整编辑窗口按需打开。 */}
     {/* 长按抬手会产生一次兼容点击；短暂忽略背景点击，避免刚弹出的菜单自动关闭。 */}
@@ -2688,7 +3022,7 @@ export default function App() {
       <button type="button" role="menuitem" onClick={() => { playLine(desktopContextMenu.lineId); setDesktopContextMenu(null) }}>播放这一句 <kbd>Enter</kbd></button>
       <button type="button" role="menuitem" onClick={() => { chooseLine(desktopContextMenu.lineId); setDesktopContextMenu(null) }}>选中这一句 <kbd>↑ / ↓</kbd></button>
       <button type="button" role="menuitem" onClick={() => { selectDesktopLyricRange(desktopContextMenu.lineId); setDesktopContextMenu(null) }}>从当前句选到这里 <kbd>Shift+↑↓</kbd></button>
-      <button type="button" role="menuitem" onClick={() => { setEditingLyric({ songId: activeSong.id, lineId: desktopContextMenu.lineId }); setDesktopContextMenu(null) }}>编辑歌词、译文和时间 <kbd>Ctrl+E</kbd></button>
+      <button type="button" role="menuitem" onClick={() => { openDesktopLyricEditor(desktopContextMenu.lineId); setDesktopContextMenu(null) }}>编辑歌词、译文和时间 <kbd>Ctrl+E</kbd></button>
       <button type="button" role="menuitem" onClick={() => { const line = activeSong.lines.find(item => item.id === desktopContextMenu.lineId); if (line) void showSentenceExplanation(line); setDesktopContextMenu(null) }}>生成或查看整句解析</button>
       <button type="button" role="menuitem" onClick={() => { toggleLearnedLine(desktopContextMenu.lineId); setDesktopContextMenu(null) }}>{learnedLines.has(desktopContextMenu.lineId) ? '改为未掌握' : '标记为已掌握'}</button>
     </div></div>}
@@ -2721,7 +3055,7 @@ export default function App() {
       {/* 问 AI 固定在倍速上方，每首歌曲独立会话，提问实时带入歌词和校正读音。 */}
       {IS_ANDROID_APP && <LyricChat key={activeSong.id} song={activeSong} lineId={activeLine.id} annotations={annotations} corrections={corrections} />}
       {/* 已按用户要求移除逐句页顶部返回按钮；系统返回手势和底部导航继续可用。 */}
-      {IS_DESKTOP_APP && <DesktopSongHeader song={activeSong} artwork={artworkForSong(activeSong)} learned={learnedLines.size} progress={progress} favorite={isFavorite} busy={aiBusy === 'review'} onFavorite={toggleFavorite} onReview={runAiReview} onSingAlong={() => showDesktopSingAlong()}/>}
+      {IS_DESKTOP_APP && <DesktopSongHeader song={activeSong} artwork={artworkForSong(activeSong)} learned={learnedLines.size} progress={progress} favorite={isFavorite} onFavorite={toggleFavorite} onSingAlong={() => showDesktopSingAlong()}/>}
       {!IS_DESKTOP_APP && <section className="hero anime-hero" aria-labelledby="song-title" style={{ '--hero-art': `url(${twilightStation})` }}>
         <div className="hero-art" aria-hidden="true" />
         <div className="hero-wash" aria-hidden="true" />
@@ -2753,7 +3087,7 @@ export default function App() {
         </div>
       </section>}
 
-      <section className={`practice-layout ${practiceActive ? 'guided-practice-layout' : ''} ${IS_DESKTOP_APP && desktopWordPanelMode === 'closed' ? 'desktop-word-collapsed' : ''}`} id="lesson" aria-label="歌词发音学习工作区">
+      <section className={`practice-layout ${practiceActive ? 'guided-practice-layout' : ''} ${IS_DESKTOP_APP && (!desktopWordOpen || desktopWordDrawer) ? 'desktop-word-collapsed' : ''}`} id="lesson" aria-label="歌词发音学习工作区">
         <aside className="lesson-rail">
           <div className="rail-heading"><span>已导入歌曲</span><span>{allSongs.length} 首</span></div>
           <ol className="song-import-list">{allSongs.map((song, index) => <li className={song.id === activeSong.id ? 'current' : ''} key={song.id}><button onClick={() => chooseSong(song.id)} type="button"><em>{String(index + 1).padStart(2, '0')}</em><span><b>{song.title}</b><small>{song.artist} · {song.lines.length} 句</small></span></button></li>)}</ol>
@@ -2761,7 +3095,8 @@ export default function App() {
         </aside>
 
         <section className="lyrics-panel" aria-labelledby="lyrics-heading">
-          {IS_DESKTOP_APP && !practiceActive ? <DesktopLessonToolbar annotating={annotating} annotationError={annotationError} displayMode={lessonDisplayMode} onDisplayMode={chooseLessonDisplayMode} rate={playbackRate} onRate={choosePlaybackRate} audioAvailable={Boolean(audioUrl)} repeatCount={singleLineRepeatCount} onRepeatCount={changeSingleLineRepeatCount} playback={singleLinePlayback}/> : <div className="panel-head">
+          {IS_DESKTOP_APP && !practiceActive ? <DesktopLessonToolbar annotating={annotating} annotationError={annotationError} displayMode={lessonDisplayMode} onDisplayMode={chooseLessonDisplayMode} rate={playbackRate} onRate={choosePlaybackRate} audioAvailable={Boolean(audioUrl)} repeatCount={singleLineRepeatCount} onRepeatCount={changeSingleLineRepeatCount} playback={singleLinePlayback} volume={desktopVolume} onVolume={changeDesktopVolume}
+            taskPanelOpen={taskPanelOpen} onOpenTasks={() => setTaskPanelOpen(value => !value)}/> : <div className="panel-head">
             <div><p className="eyebrow">{practiceActive ? 'LISTEN, RECALL, REVEAL' : 'AUTO ANNOTATE, THEN VERIFY'}</p><h2 id="lyrics-heading">{practiceActive ? '逐句练习' : '逐句读音'}</h2></div>
             {!practiceActive && <div className="view-toggle" role="group" aria-label="读音显示方式">{[['original', '原文'], ['reading', readingLabel], ['practice', '遮住练习']].map(([value, label]) => <button className={mode === value ? 'selected' : ''} onClick={() => setMode(value)} type="button" key={value}>{label}</button>)}</div>}
           </div>}
@@ -2788,9 +3123,14 @@ export default function App() {
           <div className="mobile-word-dock"><div><b>{focusToken.surface} <span lang={readingLang}>{focusDisplayReading}</span></b><small>{wordMeaning || '常用意思待补充'}</small></div><button type="button" onClick={openWordDetails}>查看详情</button></div>
           {reviewNeeded > 0 && <p className="annotation-tip warn"><CircleAlert size={13} /> 有 {reviewNeeded} 个词典未能确定读音，请优先人工校对。</p>}
           {aiError && <p className="annotation-tip ai-error"><CircleAlert size={13} /> {aiError}</p>}
-          {aiReview && (!IS_DESKTOP_APP || pendingAiSuggestions.length > 0 || pendingSegmentation.length > 0) && <p className="ai-review-summary"><Sparkles size={13} /> {IS_DESKTOP_APP ? 'AI 待复核：' : `AI 已复核 ${aiReview.reviewed_token_count} 个词素：`}{pendingAiSuggestions.length || pendingSegmentation.length ? <>还有 {pendingAiSuggestions.length} 处读音、{pendingSegmentation.length} 处分词建议，<button type="button" onClick={() => document.getElementById(pendingSegmentation.length ? 'ai-segmentation-queue' : 'ai-review-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>查看建议</button></> : aiReview.suggestions?.length || aiReview.segmentation_suggestions?.length ? '所有建议均已处理。' : '未发现明显异常；仍建议以原唱为准。'}{!IS_DESKTOP_APP && skippedAiCount > 0 && <span>已跳过 {skippedAiCount} 条。<button type="button" onClick={restoreSkippedAiSuggestions}>恢复已跳过建议</button></span>}</p>}
+          {aiReview && (!IS_DESKTOP_APP || pendingAiSuggestions.length > 0 || pendingSegmentation.length > 0) && <p className="ai-review-summary"><Sparkles size={13} /> {IS_DESKTOP_APP ? 'AI 待复核：' : `AI 已复核 ${aiReview.reviewed_token_count} 个词素：`}{pendingAiSuggestions.length || pendingSegmentation.length ? <>还有 {pendingAiSuggestions.length} 处读音、{pendingSegmentation.length} 处分词建议，<button type="button" id={IS_DESKTOP_APP ? 'desktop-review-link' : undefined} onClick={IS_DESKTOP_APP ? showDesktopReviewSuggestions : () => document.getElementById(pendingSegmentation.length ? 'ai-segmentation-queue' : 'ai-review-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>查看建议</button></> : aiReview.suggestions?.length || aiReview.segmentation_suggestions?.length ? '所有建议均已处理。' : '未发现明显异常；仍建议以原唱为准。'}{!IS_DESKTOP_APP && skippedAiCount > 0 && <span>已跳过 {skippedAiCount} 条。<button type="button" onClick={restoreSkippedAiSuggestions}>恢复已跳过建议</button></span>}</p>}
           {IS_DESKTOP_APP && <DesktopLyricRangeControls range={desktopLyricRange} available={Boolean(audioUrl)} playing={selectedRangePlaying} paused={Boolean(selectedRangePlaybackRef.current) && !selectedRangePlaying} settings={rangePracticeSettings} practice={rangePractice} onSettings={changeRangePracticeSettings} onStop={stopLinePlayback} rate={playbackRate} onRate={choosePlaybackRate} onToggle={toggleSelectedLyricRange} onReplay={playSelectedLyricRange} onClear={clearDesktopLyricSelection}/>}
-          <div className="lyrics-list">
+          {desktopPaneSpaceLimited && <div className="desktop-pane-limit">
+            <span id="desktop-pane-limit-message" role="status">分栏已达到当前窗口的宽度上限。</span>
+            {desktopSidebarWidth > 0 && <button type="button" onClick={freeDesktopLyricSpace}>收起左栏</button>}
+            <button type="button" onClick={narrowDesktopWordPane}>缩窄右栏</button>
+          </div>}
+          <div className="lyrics-list" ref={IS_DESKTOP_APP ? desktopLyricListRef : undefined} tabIndex={IS_DESKTOP_APP ? 0 : undefined} aria-label={IS_DESKTOP_APP ? '歌词列表，使用上下方向键选句' : undefined}>
             {activeSong.lines.map((line) => {
               const annotation = annotations?.find((item) => item.id === line.id)
               const lineTokens = annotation?.tokens
@@ -2817,30 +3157,32 @@ export default function App() {
               </article>
             })}
           </div>
-          <div className="lyrics-footer"><span>{IS_DESKTOP_APP ? '双击播放单句 · ↑↓ 选句 · Shift+↑↓ 连选 · Enter 播放单句 · Space 播放/暂停 · Ctrl+Space 播放选段' : '点击任一词即可在右侧校对；选中短语可请求 AI 解释'}</span><span>{IS_DESKTOP_APP ? '右键更多操作' : '每句右侧可切换掌握状态'}</span></div>
+          <div className="lyrics-footer"><span>{IS_DESKTOP_APP ? '双击播放单句 · ↑↓ 选句' : '点击任一词即可在右侧校对；选中短语可请求 AI 解释'}</span><span>{IS_DESKTOP_APP ? '右键更多操作' : '每句右侧可切换掌握状态'}</span></div>
           </>}
         </section>
 
-        {IS_DESKTOP_APP && !practiceActive && desktopWordPanelMode !== 'closed' && <DesktopResizeHandle label="调整校对面板宽度" value={desktopLayout.word} min={240} max={Math.min(540, Math.max(240, window.innerWidth - desktopSidebarWidth - 400))} direction="right" onChange={word => setDesktopLayout(previous => ({ ...previous, word }))} onReset={() => setDesktopLayout(previous => ({ ...previous, word: 294 }))}/>}
-        {!practiceActive && <aside id="desktop-word-panel" className="word-panel" aria-labelledby="word-heading" hidden={IS_DESKTOP_APP && desktopWordPanelMode === 'closed'}>
+        {IS_DESKTOP_APP && !practiceActive && desktopWordOpen && desktopWordCanDock && <DesktopResizeHandle label="调整校对面板宽度" value={desktopWordWidth} min={240} max={desktopWordMaxWidth} direction="right" limitDescription={desktopPaneSpaceLimited ? "desktop-pane-limit-message" : undefined} onChange={word => setDesktopLayout(previous => ({ ...previous, word }))} onReset={() => setDesktopLayout(previous => ({ ...previous, word: 294 }))}/>}
+        {!practiceActive && <DesktopWordPane {...(IS_DESKTOP_APP ? { side: 'right', modal: desktopWordDrawer && !desktopWordDrawerSuspended, label: '词语校对', onDismiss: closeDesktopWordPanel } : {})}>
+        <aside id="desktop-word-panel" className="word-panel" aria-labelledby="word-heading" hidden={IS_DESKTOP_APP && (!desktopWordOpen || desktopWordDrawerSuspended)}>
+          {IS_DESKTOP_APP && <div className="desktop-word-panel-bar"><b>词语校对</b><button type="button" aria-label="关闭词语校对" onClick={closeDesktopWordPanel}><X size={17}/></button></div>}
           <div className="panel-head compact"><div><p className="eyebrow">EDIT THE READING</p><h2 id="word-heading">校对读音</h2></div>{(!IS_DESKTOP_APP || desktopHasWordSelection) && <span className={`annotation-state ${corrections[focusKey] ? 'corrected' : ''}`}>{corrections[focusKey] ? '已修正' : '自动初稿'}</span>}</div>
           {IS_DESKTOP_APP && !desktopHasWordSelection && <p className="desktop-word-empty">点击歌词中的具体词语，查看词义和校对读音。</p>}
           {(!IS_DESKTOP_APP || desktopHasWordSelection) && <div className="word-card correction-card">
             <div className="word-topline"><span className="word-level">{focusToken.part_of_speech || '词素'}</span><button type="button" aria-label="选中词"><Pencil size={15} /></button></div>
             <div className="word-main"><h3>{focusToken.surface}</h3><p className="word-kana" lang={readingLang}>{focusDisplayReading || '暂无词典读音'}</p><p className="word-meaning">{wordMeaning || '常用意思暂未收录，可在详情中补充'}</p><button className="detail-link" type="button" onClick={openWordDetails}>查看详情 <ChevronRight size={14} /></button></div>
-            {focusSuggestion && <div className="ai-suggestion"><span><Sparkles size={12} /> AI 复核建议 · {(focusSuggestion.confidence * 100).toFixed(0)}%</span><p>建议读作「{displayReading(focusSuggestion.suggested_reading, readingStyle)}」：{focusSuggestion.reason}</p><div className="ai-suggestion-actions"><button type="button" onClick={applyAiSuggestion}>采用建议</button><button type="button" onClick={() => skipAiSuggestion(focusSuggestion)}>跳过，保留原注音</button></div></div>}
+            {!IS_DESKTOP_APP && focusSuggestion && <div className="ai-suggestion"><span><Sparkles size={12} /> AI 复核建议 · {(focusSuggestion.confidence * 100).toFixed(0)}%</span><p>建议读作「{displayReading(focusSuggestion.suggested_reading, readingStyle)}」：{focusSuggestion.reason}</p><div className="ai-suggestion-actions"><button type="button" onClick={applyAiSuggestion}>采用建议</button><button type="button" onClick={() => skipAiSuggestion(focusSuggestion)}>跳过，保留原注音</button></div></div>}
             <label className="reading-editor"><span>{readingStyle === 'romaji' ? '假名输入（用于校对）' : '假名读音'}</span><input value={draftReading} onChange={(event) => { setDraftReading(event.target.value); setDraftReadingTouched(true) }} placeholder="输入平假名或片假名" lang="ja" /><small>{readingStyle === 'romaji' ? `罗马音预览：${displayReading(draftReading, 'romaji') || '请先输入假名'}` : '如：わすれた / もの / かえる'}</small></label>
             <div className="editor-actions"><button className="save-reading" onClick={saveCorrection} type="button"><Save size={13} /> 保存修正</button>{corrections[focusKey] && <button className="reset-reading" onClick={resetCorrection} type="button">恢复初稿</button>}{IS_DESKTOP_APP && activeAnnotation && hasKanji(focusToken.surface) && <button className="reset-reading" type="button" aria-pressed={Boolean(hiddenReadings[focusKey])} onClick={() => updateLearningMap('hiddenReadings', previous => { const next = { ...previous }; if (next[focusKey]) delete next[focusKey]; else next[focusKey] = true; return next }, true)}>{hiddenReadings[focusKey] ? '显示这个词的注音' : '隐藏这个词的注音'}</button>}</div>
           </div>}
-          {IS_DESKTOP_APP && skippedAiCount > 0 && <div className="desktop-review-restore"><button type="button" onClick={restoreSkippedAiSuggestions}>恢复已跳过建议</button><small>{skippedAiCount} 条</small></div>}
-          {pendingAiSuggestions.length > 0 && <section className="ai-review-queue" id="ai-review-queue" aria-labelledby="ai-review-queue-title">
+          {IS_DESKTOP_APP && <DesktopAiReviewPanel song={activeSong} reading={pendingAiSuggestions} segmentation={pendingSegmentation} skipped={[...(aiReview?.suggestions || []), ...(aiReview?.segmentation_suggestions || [])].filter(item => item.skipped)} onSkip={skipAiSuggestion} onRestore={restoreSkippedAiSuggestions} onReading={applyAiSuggestion} onSegmentation={suggestion => { chooseLine(suggestion.line_id); openDesktopLyricEditor(suggestion.line_id, suggestion) }}/>}
+          {!IS_DESKTOP_APP && pendingAiSuggestions.length > 0 && <section className="ai-review-queue" id="ai-review-queue" aria-labelledby="ai-review-queue-title">
             <div><span className="eyebrow">AI REVIEW QUEUE</span><h3 id="ai-review-queue-title">复核建议 <b>{pendingAiSuggestions.length}</b></h3></div>
             <ol>{pendingAiSuggestions.map((suggestion) => <li className={suggestion.line_id === activeLine.id && suggestion.token_index === focusToken.index ? 'current' : ''} key={`${suggestion.line_id}-${suggestion.token_index}`}><button className="ai-review-select" type="button" onClick={() => jumpToAiSuggestion(suggestion)}><span>第 {activeSong.lines.find((line) => line.id === suggestion.line_id)?.displayNumber} 句 · {suggestion.surface}</span><small>{displayReading(suggestion.original_reading, readingStyle)} <ChevronRight size={11} /> {displayReading(suggestion.suggested_reading, readingStyle)}</small></button><button className="ai-review-skip" type="button" title="保留原注音并跳过这条建议" aria-label={`跳过第 ${activeSong.lines.find(line => line.id === suggestion.line_id)?.displayNumber} 句「${suggestion.surface}」的复核建议`} onClick={() => skipAiSuggestion(suggestion)}>跳过</button></li>)}</ol>
           </section>}
-          {pendingSegmentation.length > 0 && <section className="ai-review-queue ai-segmentation-queue" id="ai-segmentation-queue" aria-labelledby="ai-segmentation-queue-title">
+          {!IS_DESKTOP_APP && pendingSegmentation.length > 0 && <section className="ai-review-queue ai-segmentation-queue" id="ai-segmentation-queue" aria-labelledby="ai-segmentation-queue-title">
             <div><span className="eyebrow">AI WORD BOUNDARIES</span><h3 id="ai-segmentation-queue-title">分词建议 <b>{pendingSegmentation.length}</b></h3></div>
             <ol>{pendingSegmentation.map(suggestion => <li key={`${suggestion.line_id}-${suggestion.start_token_index}-${suggestion.end_token_index}`}>
-              <button className="ai-review-select" type="button" onClick={() => { chooseLine(suggestion.line_id); setEditingLyric({ songId: activeSong.id, lineId: suggestion.line_id, segmentationSuggestion: suggestion }) }}>
+              <button className="ai-review-select" type="button" onClick={() => { chooseLine(suggestion.line_id); openDesktopLyricEditor(suggestion.line_id, suggestion) }}>
                 <span>第 {activeSong.lines.find(line => line.id === suggestion.line_id)?.displayNumber} 句 · {suggestion.original_segments.join('｜')}</span>
                 <small>建议 {suggestion.suggested_segments.join('｜')} · 查看并编辑</small>
               </button>
@@ -2850,7 +3192,7 @@ export default function App() {
           {(!IS_DESKTOP_APP || desktopHasWordSelection) && <><div className="word-context"><span>所在句子</span><p>{activeLine.text}</p><small>点击歌词中的其他词，可继续逐词校对。</small></div>
           <div className="practice-checklist"><span>校对建议</span><p>① 先确认自动读音是否合理<br />② 歌词特殊读法按原唱实际修正<br />③ 将有疑问的整句加入复习</p></div>
           <button className={`review-button ${hasReview ? 'added' : ''}`} onClick={toggleReview} type="button">{hasReview ? <><Check size={13} /> 已加入今日复习</> : <><Plus size={13} /> 加入今日复习</>}</button></>}
-        </aside>}
+        </aside></DesktopWordPane>}
       </section>
 
       {/* 旧网页复习区仍保留在学习页；安卓从“复习模式”入口打开独立清单。 */}
@@ -2875,7 +3217,7 @@ export default function App() {
       {activePage === 'library' && <section className="library-section library-page" id="library" aria-labelledby="library-title">
         {IS_ANDROID_APP && <AndroidSongLibrary songs={androidLibrarySongs} total={androidLibraryTotal} search={librarySearch} onSearch={setLibrarySearch} onImport={openImportDialog} artworkFor={artworkForSong} learnedBySong={learnedBySong} onOpen={chooseSongFromLibrary} onDelete={removeImportedSong} onArtwork={openArtworkEditor} onEdit={setEditingDetailsSong} deletingSongId={deletingSongId} activeSongId={activeSong.id} />}
         {/* 原网页歌曲库保留作对照；安卓使用上方独立的简洁布局。 */}
-        {IS_DESKTOP_APP && <DesktopLibrary songs={visibleLibrarySongs} search={librarySearch} onSearch={setLibrarySearch} favoriteIds={favoriteSongIds} learnedBySong={learnedBySong} activeId={activeSong.id} artworkFor={artworkForSong} onOpen={chooseSongFromLibrary} onImport={openImportDialog} onEdit={setEditingDetailsSong} onArtwork={openArtworkEditor} onDelete={removeImportedSong} deletingId={deletingSongId}/>}
+        {IS_DESKTOP_APP && <DesktopLibrary songs={visibleLibrarySongs} allSongs={allSongs} view={desktopLibraryViewRef} editing={Boolean(editingDetailsSong || editingArtworkSong)} search={librarySearch} onSearch={setLibrarySearch} favoriteIds={favoriteSongIds} learnedBySong={learnedBySong} activeId={activeSong.id} artworkFor={artworkForSong} onOpen={chooseSongFromLibrary} onBatchAi={() => setDesktopAiSelectionOpen(true)} onSingAlong={songId => showDesktopSingAlong(songId)} onImport={openImportDialog} onEdit={setEditingDetailsSong} onArtwork={openArtworkEditor} onDelete={removeImportedSong} deletingId={deletingSongId}/>}
         {!IS_ANDROID_APP && !IS_DESKTOP_APP && <>
         <div className="library-top"><div><p className="eyebrow">YOUR IMPORTED SONGS</p><h2 id="library-title">歌曲库</h2><p>从已导入的歌词中选一首，继续练习发音与词汇。</p></div><div className="library-top-actions"><label className="library-search"><Search size={14} /><input id="library-search" type="search" value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} placeholder="搜索歌名或歌手" aria-label="搜索歌名或歌手" />{librarySearch && <button type="button" onClick={() => setLibrarySearch('')} aria-label="清除搜索"><X size={13} /></button>}</label><span className="library-count">{librarySearch ? `找到 ${visibleLibrarySongs.length} / ${allSongs.length} 首` : `已导入 ${allSongs.length} 首`}</span><button className="library-import-trigger" type="button" onClick={openImportDialog}><Upload size={14} /> 导入歌曲</button>{!IS_ANDROID_APP && !IS_DESKTOP_APP && <button className="library-import-trigger" type="button" onClick={shareComputerSongs}><Upload size={14} /> 共享到手机</button>}</div></div>
         <div className="library-backup-bar"><div><b>保存你的学习记录</b><span>在设置中统一管理数据备份与 AI 服务。</span></div><div className="library-backup-actions"><button type="button" onClick={() => setSettingsOpen(true)}><Settings size={14} /> 数据管理</button></div></div>
@@ -2915,11 +3257,12 @@ export default function App() {
         </>}
       </section>}
     </main>
-    {IS_DESKTOP_APP && activePage !== 'lesson' && <DesktopPlayer song={activeSong} artwork={artworkForSong(activeSong)} available={Boolean(audioUrl)} playing={desktopAudio.playing || rangePractice.phase === 'gap' && !rangePractice.paused} currentTime={desktopAudio.time} duration={desktopAudio.duration} rate={playbackRate} onToggle={toggleSingAlong} onSeek={seekDesktopAudio} onRate={choosePlaybackRate} onPrevious={() => playDesktopAdjacent(-1)} onNext={() => playDesktopAdjacent(1)} volume={desktopVolume} onVolume={value => { setDesktopVolume(value); if (audioRef.current) audioRef.current.volume = value }}/>}
+    {IS_DESKTOP_APP && activePage !== 'lesson' && activePage !== 'library' && <DesktopPlayer song={activeSong} artwork={artworkForSong(activeSong)} available={Boolean(audioUrl)} playing={desktopAudio.playing || rangePractice.phase === 'gap' && !rangePractice.paused} currentTime={desktopAudio.time} duration={desktopAudio.duration} rate={playbackRate} onToggle={toggleSingAlong} onSeek={seekDesktopAudio} onRate={choosePlaybackRate} onPrevious={() => playDesktopAdjacent(-1)} onNext={() => playDesktopAdjacent(1)} volume={desktopVolume} onVolume={changeDesktopVolume}/>}
     {IS_DESKTOP_APP && <DesktopStatusBar error={audioError || annotationError}/>}
     {IS_ANDROID_APP && <AndroidBottomNav activeTab={mobileTab} onSelect={showMobileTab} />}
 
-    {editingDetailsSong && <SongDetailsEditor key={editingDetailsSong.id} song={editingDetailsSong} onClose={() => { if (!editingDetailsBusy) setEditingDetailsSong(null) }} onSave={saveSongDetails} busy={editingDetailsBusy} />}
+    {editingDetailsSong && <SongDetailsEditor key={editingDetailsSong.id} song={editingDetailsSong} annotations={annotationsBySong[editingDetailsSong.id]} corrections={corrections}
+      hiddenReadings={hiddenReadings} initialArtwork={editableSongArtwork(editingDetailsSong)} onClose={() => { if (!editingDetailsBusy) setEditingDetailsSong(null) }} onSave={saveSongDetails} busy={editingDetailsBusy} />}
 
     {editingArtworkSong && <div className="settings-backdrop" onClick={() => { if (!artworkEditSaving) setEditingArtworkSong(null) }}><section className="artwork-edit-dialog" role="dialog" aria-modal="true" aria-label={`更换《${editingArtworkSong.title}》的封面`} onClick={(event) => event.stopPropagation()}>
       <button className="song-import-close" type="button" disabled={artworkEditSaving} onClick={() => setEditingArtworkSong(null)} aria-label="关闭封面选择"><X size={18} /></button>
@@ -2952,20 +3295,22 @@ export default function App() {
         <p className="eyebrow">CHOOSE A SOURCE</p><h2 id="import-source-title">从哪里导入歌曲？</h2>
         <p className="song-import-intro">你可以选手机上的歌词和音频文件，也可以连接电脑网页，选择它已经保存的歌曲。</p>
         <div className="import-source-options"><button type="button" onClick={() => setImportSource('phone')}><strong>从手机文件导入</strong><span>选择手机里的 LRC 歌词和音频文件。</span></button><button type="button" onClick={() => setImportSource('computer')}><strong>从电脑网页导入</strong><span>连接电脑后查看已有歌曲，可全部或部分导入。</span></button></div>
-      </section> : importSource === 'computer' ? <ComputerImportDialog onClose={closeImportDialog} onImport={importSelectedComputerSongs} existingSongIds={localSongs.map((song) => song.id)} /> : IS_DESKTOP_APP && importSource === 'batch' ? <BatchSongImportDialog onClose={closeImportDialog} onSwitchSingle={() => setImportSource('phone')} onImport={importLocalSongBatch} onOpenTasks={() => setTaskPanelOpen(true)} onReadTask={beginBatchFileReadTask} busy={importBusy} /> : <form className="song-import-dialog" onSubmit={(event) => { event.preventDefault(); importLocalSong() }} onClick={(event) => event.stopPropagation()}>
+      </section> : importSource === 'computer' ? <ComputerImportDialog onClose={closeImportDialog} onImport={importSelectedComputerSongs} existingSongIds={localSongs.map((song) => song.id)} /> : IS_DESKTOP_APP && importSource === 'batch' ? <BatchSongImportDialog onClose={closeImportDialog} onSwitchSingle={() => setImportSource('phone')} onImport={importLocalSongBatch} onOpenTasks={() => setTaskPanelOpen(true)} onReadTask={beginBatchFileReadTask} busy={importBusy} /> : <form className="song-import-dialog" onSubmit={(event) => { event.preventDefault(); if (IS_DESKTOP_APP && desktopImportStep < 3) setDesktopImportStep(value => value + 1); else importLocalSong() }} onClick={(event) => event.stopPropagation()}>
       <button className="song-import-close" type="button" onClick={closeImportDialog} aria-label="关闭导入窗口"><X size={18} /></button>
       <p className="eyebrow">ADD A LOCAL SONG</p><h2>导入歌曲开始学习</h2>
       {IS_DESKTOP_APP && <nav className="desktop-import-modes" aria-label="歌曲导入方式"><button type="button" aria-pressed="true">单首导入</button><button type="button" disabled={importBusy || importPreparing} onClick={() => setImportSource('batch')}>批量导入</button></nav>}
+      {IS_DESKTOP_APP && <nav className="desktop-import-steps" aria-label="单首导入步骤">{[[1,'选择文件'],[2,'核对歌词'],[3,'导入方式']].map(([id,label]) => <button key={id} type="button" aria-pressed={desktopImportStep === id} onClick={() => setDesktopImportStep(id)}>{id}　{label}</button>)}</nav>}
+      <div className="single-import-scroll"><section hidden={IS_DESKTOP_APP && desktopImportStep !== 1}>
       <p className="song-import-intro">选择音频和 LRC，或先选音频再联网查找歌词。检查歌词、时间与封面后即可保存。</p>
       {/* 旧版先选 LRC 再选音频；现在让音频在前，选中后即可自动搜索歌词。 */}
-      <label className={`song-file-field ${importAudioFile ? 'selected' : ''}`}><span>01 · 原声音频</span><strong>{importAudioFile?.name || '选择 MP3、M4A、WAV、OGG 等音频'}</strong><small>{importAudioGuess?.title ? `识别：${importAudioGuess.title}${importAudioGuess.artist ? ` · ${importAudioGuess.artist}` : ''}，正在自动查找歌词` : '选择后会按音频标签或文件名自动查找歌词'}</small><input key={importAudioFile?.name || 'empty-audio'} type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.webm" onChange={(event) => chooseImportAudioFile(event.target.files?.[0] || null)} /></label>
+      <label className={`song-file-field ${importAudioFile ? 'selected' : ''}`}><span>01 · 原声音频</span><strong>{importAudioFile?.name || '选择 MP3、M4A、WAV、OGG 等音频'}</strong><small>{importAudioGuess?.title ? `识别：${importAudioGuess.title}${importAudioGuess.artist ? ` · ${importAudioGuess.artist}` : ''}` : '根据音频标签或文件名填写信息，本地歌词优先'}</small><input key={importAudioFile?.name || 'empty-audio'} type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.webm" onChange={(event) => chooseImportAudioFile(event.target.files?.[0] || null)} /></label>
       <label className={`song-file-field ${importLrcFile ? 'selected' : ''}`}><span>02 · 歌词文件</span><strong>{importLrcFile?.name || '选择 .lrc 文件，或从搜索结果选用'}</strong><small>本地歌词优先；歌词自带的假名注音优先于自动词典。</small><input key={importLrcFile?.name || 'empty-lrc'} type="file" accept=".lrc,.uta-lyrics.json,text/plain,application/json" onChange={(event) => prepareLrcPreview(event.target.files?.[0] || null)} /></label>
       {/* 音频可先选；在线命中同步歌词后直接生成同等的 LRC 文件进入原预览流程。 */}
       {(!importLrcFile || importLyricsOrigin === 'online') && (IS_DESKTOP_APP
         ? <DesktopOnlineLyricsSearch autoQuery={importAutoQuery} onChooseLyrics={prepareLrcPreview} disabled={importBusy}/>
         : <OnlineSongSearch onChooseLyrics={prepareLrcPreview} autoQuery={importAutoQuery} />)}
       {importPreparing && <p className="import-preview-loading"><LoaderCircle className="spin" size={14} /> 正在解析歌词与译文…</p>}
-      {importDraft && <section className="import-preview" aria-labelledby="import-preview-title">
+      </section><section hidden={IS_DESKTOP_APP && desktopImportStep !== 2}>{!importDraft && <p className="settings-description">请先选择音频和歌词文件。</p>}{importDraft && <section className="import-preview" aria-labelledby="import-preview-title">
         <div className="import-preview-heading"><div><p className="eyebrow">REVIEW BEFORE SAVING</p><h3 id="import-preview-title">导入预览</h3></div><span>{importDraft.lines.length} 句 · 歌名与歌手资料行已排除</span></div>
         <div className="import-meta-fields"><label>歌曲名<input value={importDraft.title} onChange={(event) => updateImportMetadata('title', event.target.value)} maxLength={160} /></label><label>歌手<input value={importDraft.artist} onChange={(event) => updateImportMetadata('artist', event.target.value)} maxLength={160} /></label></div>
         {/* 旧单来源封面预览保留作对照，实际使用下方多来源选择器。 */}{false && <div className="import-cover-preview"><div className="import-cover-thumb"><span>{importDraft.title.slice(0, 2) || 'UTA'}</span>{/^https?:\/\//i.test(importArtworkUrl) && <img key={importArtworkUrl} src={importArtworkUrl} alt="候选歌曲封面" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true }} />}</div><div className="import-cover-controls"><b>封面预览</b><p>{importArtworkStatus === 'loading' ? '正在按歌名与歌手查找封面…' : importArtworkStatus === 'found' ? '已找到候选封面，请核对是否正确。' : importArtworkStatus === 'none' ? '未找到可靠封面，可填写链接或使用默认封面。' : importArtworkStatus === 'manual' ? '使用你填写的封面链接。' : importArtworkStatus === 'default' ? '将使用默认封面。' : '请查找封面，或选择默认封面。'}</p><div><button type="button" disabled={importArtworkStatus === 'loading'} onClick={() => searchImportArtwork(importDraft.title, importDraft.artist)}>重新查找</button><button type="button" onClick={useDefaultImportArtwork}>使用默认封面</button></div><label>也可以填写封面图片链接<input type="url" value={importArtworkUrl} onChange={(event) => changeImportArtworkUrl(event.target.value)} placeholder="https://example.com/cover.jpg" /></label>{importArtworkStatus === 'found' && importArtwork?.artworkSourceUrl && <a href={importArtwork.artworkSourceUrl} target="_blank" rel="noreferrer">查看封面来源 · {importArtwork.artworkProvider || 'Apple Music'}</a>}</div></div>}
@@ -2973,12 +3318,14 @@ export default function App() {
         <div className="import-lines-heading"><div><b>歌词与时间轴</b><span>{importDraft.untimed ? '这份歌词没有时间轴，请逐句填写时间戳后导入；自带假名会优先保留。' : IS_DESKTOP_APP ? '按轨道分列检查；可纠正归类、修改时间并在任意位置插句。' : '可修改时间、日文、中文译文；保存时会按时间排序。'}</span></div>{!IS_DESKTOP_APP && <button type="button" onClick={addImportLine}><Plus size={13} /> 添加一句</button>}</div>
         {IS_DESKTOP_APP ? <LrcReviewEditor cues={importDraft.cues} onChange={updateImportCues} disabled={importBusy} label="单首歌词" /> : <ol className="import-preview-lines">{importDraft.lines.map((line, index) => <li key={line.draftId}><span>{String(index + 1).padStart(2, '0')}</span><div><label>时间戳<input value={line.timeText} onChange={(event) => updateImportLine(line.draftId, 'timeText', event.target.value)} placeholder="00:12.345" aria-label={`第 ${index + 1} 句时间戳`} /></label><label>日文歌词<input value={line.text} onChange={(event) => updateImportLine(line.draftId, 'text', event.target.value)} maxLength={500} lang="ja" aria-label={`第 ${index + 1} 句日文歌词`} /></label><label>中文译文<input value={line.translation} onChange={(event) => updateImportLine(line.draftId, 'translation', event.target.value)} maxLength={500} aria-label={`第 ${index + 1} 句中文译文`} placeholder="没有译文可留空" /></label></div><button className="import-remove-line" type="button" onClick={() => removeImportLine(line.draftId)} aria-label={`删除第 ${index + 1} 句`} title="删除这一句"><Trash2 size={14} /></button></li>)}</ol>}
       </section>}
+      </section><section hidden={IS_DESKTOP_APP && desktopImportStep !== 3}>
       {/* 原来强制导入时等待全曲解析；现在让用户明确选择，保存成功即关闭导入窗口。 */}
       <fieldset className="import-ai-choice"><legend>AI 解析</legend><label><input type="radio" name="import-ai-mode" checked={importAiMode === 'later'} onChange={() => setImportAiMode('later')} /><span><strong>直接导入</strong><small>立即开始学习，需要时在学习页生成整句解析。</small></span></label><label><input type="radio" name="import-ai-mode" checked={importAiMode === 'background'} onChange={() => setImportAiMode('background')} /><span><strong>导入并在后台生成</strong><small>保存后即可继续使用；解析会逐句完成，可能产生 AI 调用费用。</small></span></label></fieldset>
       {importAiMode === 'background' && <p className="import-ai-disclosure"><Sparkles size={14} /> AI 生成期间可以继续在应用内学习。若应用被系统关闭，未完成的句子会在下次打开时续做；需要先在设置中配置 AI 服务。</p>}
       {/* 旧导入等待提示保留供对照：{importAiProgress && <p className="import-ai-progress">正在生成整句解析</p>} */}
+      </section></div>
       {importError && <p className="song-import-error"><CircleAlert size={14} /> {importError}</p>}
-      <div className="song-import-actions">{IS_DESKTOP_APP && <button type="button" onClick={() => setTaskPanelOpen(true)}>查看任务</button>}<button type="button" onClick={closeImportDialog} disabled={importBusy}>取消</button><button className="song-import-submit" type="submit" disabled={importBusy || importPreparing || importArtworkStatus === 'loading'}>{importBusy ? <LoaderCircle className="spin" size={14} /> : <Upload size={14} />}{importBusy ? '正在保存…' : importAiMode === 'background' ? '导入并后台生成' : '直接导入歌曲'}</button></div>
+      <div className="song-import-actions">{IS_DESKTOP_APP && <button type="button" onClick={() => setTaskPanelOpen(true)}>查看任务</button>}<button type="button" onClick={closeImportDialog} disabled={importBusy}>取消</button><button className="song-import-submit" type="submit" disabled={importBusy || importPreparing || importArtworkStatus === 'loading'}>{importBusy ? <LoaderCircle className="spin" size={14} /> : <Upload size={14} />}{importBusy ? '正在保存…' : IS_DESKTOP_APP && desktopImportStep < 3 ? desktopImportStep === 1 ? '下一步：核对歌词' : '下一步：导入方式' : importAiMode === 'background' ? '导入并后台生成' : '直接导入歌曲'}</button></div>
     </form>}</div>}
 
     {detailOpen && <div className="detail-backdrop" role="presentation" onClick={closeDetail}><section className={`word-detail ${detailView === 'ai' ? 'ai-only-detail' : ''}`} role="dialog" aria-modal="true" aria-labelledby="detail-title" onClick={(event) => event.stopPropagation()}>

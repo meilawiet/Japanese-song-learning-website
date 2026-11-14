@@ -43,9 +43,9 @@
 .uta-desktop .desktop-sing-list[data-reading-mode="kana"] .token-reading { grid-template-rows:17px minmax(33px,auto) 0; }
 .uta-desktop .desktop-sing-list[data-reading-mode="romaji"] .token-reading { grid-template-rows:0 minmax(33px,auto) 17px; }
 .uta-desktop .desktop-sing-list[data-reading-mode="lyrics"] .token-reading { grid-template-rows:0 minmax(33px,auto) 0; }
-.desktop-sing-fallback { color:inherit; font-size:clamp(19px,calc(var(--lyric-font-size,21px) * 1.1),32px); line-height:1.4; }
+.desktop-sing-fallback { font-family:var(--desktop-font-family,var(--sans)); color:inherit; font-size:clamp(19px,calc(var(--lyric-font-size,21px) * 1.1),32px); line-height:1.4; }
 .desktop-sing-list li.current .desktop-sing-fallback { font-size:clamp(25px,calc(var(--lyric-font-size,21px) * 1.55),43px); }
-.desktop-sing-translation { display:block; margin-top:5px; color:inherit; opacity:.8; font-size:var(--translation-font-size,12px); line-height:1.4; text-align:center; }
+.desktop-sing-translation { font-family:var(--desktop-font-family,var(--sans)); display:block; margin-top:5px; color:inherit; opacity:.8; font-size:var(--translation-font-size,12px); line-height:1.4; text-align:center; }
 .desktop-sing-line-state { display:inline-flex; justify-content:flex-end; color:#bdeccb; font-size:10px; white-space:nowrap; }
 .desktop-sing-footer { display:flex; justify-content:space-between; flex:none; padding:8px 30px 13px; color:#bed8c5; font-size:10px; }
 .desktop-sing-appearance { position:absolute; z-index:4; top:81px; right:30px; width:min(335px,calc(100% - 36px)); max-height:calc(100% - 96px); overflow:auto; padding:19px; border:1px solid #d7e5db; border-radius:11px; background:#fafdfa; box-shadow:0 18px 54px #031510a8; color:#254b37; }
@@ -114,3 +114,20 @@
 .desktop-shell-singalong .desktop-player-options select { color:#f6fff8; background:#ffffff24; }
 .desktop-shell-singalong .desktop-player-options select option { color:#183b32; background:#f6fff8; }
 .desktop-shell-singalong .desktop-player input { accent-color:#aee5c4; }
+
+
+.uta-desktop .desktop-sing-heading .desktop-full-song-title {
+  background:#21342b;
+  color:#f7fcf9;
+  border-color:#a1b3a6;
+}
+.uta-desktop .desktop-sing-heading .desktop-full-song-title:hover { background:#30483e; }
+.uta-desktop .desktop-shell-singalong :is(.desktop-sing-line,.desktop-sing-actions button,.desktop-sing-display-label select,.desktop-full-song-title,.desktop-player button):focus-visible {
+  outline-color:#fff;
+  outline-offset:-3px;
+}
+.desktop-sing-background-choices { flex-wrap:wrap; }
+@media (max-width:850px) {
+  .uta-desktop .desktop-sing-actions { flex-wrap:wrap; }
+  .uta-desktop .desktop-sing-guide { flex-wrap:wrap; padding-block:7px; }
+}

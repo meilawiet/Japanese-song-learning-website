@@ -15,8 +15,8 @@
 .song-editor-history small { color:var(--desktop-subtle,#7c8da1); font-size:10px; }
 .uta-desktop .page-grain,.uta-desktop .topbar,.uta-desktop main#top > footer,.uta-desktop .lesson-rail,.uta-desktop .method-section { display:none; }
 .desktop-shell { height:100dvh; display:grid; grid-template-columns:204px minmax(0,1fr); grid-template-rows:42px minmax(0,1fr) 90px 24px; background:var(--desktop-bg,#f4f6f9); }
-.desktop-shell-lesson { grid-template-rows:42px minmax(0,1fr) 24px; }
-.desktop-shell-lesson .desktop-statusbar { grid-row:3; }
+.desktop-shell-lesson,.desktop-shell-library { grid-template-rows:42px minmax(0,1fr) 24px; }
+.desktop-shell-lesson .desktop-statusbar,.desktop-shell-library .desktop-statusbar { grid-row:3; }
 .desktop-titlebar { grid-column:1/-1; display:flex; align-items:center; gap:9px; padding:0 150px 0 15px; background:var(--desktop-chrome,#edf1f7); border-bottom:1px solid var(--desktop-border,#dce2eb); -webkit-app-region:drag; user-select:none; }
 .desktop-app-icon { width:22px; height:22px; border-radius:6px; background:var(--desktop-accent,#2867d7); color:var(--desktop-surface,#fff); display:grid; place-items:center; font-size:16px; }
 .desktop-titlebar>b { font-size:13px; }.desktop-window-caption { color:var(--desktop-muted,#697589); font-size:11px; }
@@ -313,10 +313,10 @@
 .desktop-shell-singalong .desktop-pane-toggles button { color:#f0fff5; }
 .desktop-shell-singalong .desktop-pane-toggles button:hover:not(:disabled) { background:#ffffff29; }
 .desktop-sidebar { position:relative; }
-.uta-desktop .practice-layout:not(.guided-practice-layout) { grid-template-columns:minmax(0,1fr) 8px minmax(240px,min(var(--desktop-word-width,294px),38%)); }
+.uta-desktop .practice-layout:not(.guided-practice-layout) { grid-template-columns:minmax(0,1fr) 8px var(--desktop-word-width,294px); }
 .uta-desktop .practice-layout.desktop-word-collapsed:not(.guided-practice-layout) { grid-template-columns:minmax(0,1fr); }
 .uta-desktop .desktop-word-empty { margin:22px 0; padding:16px; border:1px dashed var(--desktop-border); border-radius:7px; color:var(--desktop-subtle); font-size:13px; line-height:1.8; }
-.uta-desktop .practice-layout:not(.guided-practice-layout) > .word-panel { grid-column:3; }
+.uta-desktop .practice-layout:not(.guided-practice-layout) > .desktop-pane > .word-panel { grid-column:3; }
 .desktop-resize-handle { width:8px; cursor:col-resize; touch-action:none; z-index:4; background:transparent; position:relative; }
 .desktop-resize-handle:after { content:""; position:absolute; left:3px; width:2px; top:37%; bottom:37%; border-radius:2px; background:var(--desktop-border,#cbd6e3); }
 .desktop-resize-handle:hover,.desktop-resize-handle:focus-visible { background:var(--desktop-soft,#e5eee9); outline:2px solid var(--desktop-accent,#266a51); }
@@ -504,13 +504,13 @@
 .desktop-lesson-controls { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin-left:auto; }
 .uta-desktop .desktop-lesson-toolbar .desktop-lesson-display-label { margin:0; gap:6px; }
 .uta-desktop .desktop-lesson-toolbar .desktop-lesson-display-label select { width:126px; min-height:28px; padding:3px 7px; }
-.uta-desktop .desktop-lesson-toolbar .speed-control { display:flex; align-items:center; gap:6px; margin:0; color:var(--desktop-muted); font-size:11px; }
-.uta-desktop .desktop-lesson-toolbar .speed-control select { width:66px; min-height:28px; padding:3px 5px; border:1px solid var(--desktop-border); border-radius:5px; color:var(--desktop-ink); background:var(--desktop-surface); font-size:11px; }
+.uta-desktop .desktop-lesson-toolbar .speed-control { display:flex; align-items:center; gap:6px; margin:0; color:var(--desktop-muted); font:11px var(--sans); }
+.uta-desktop .desktop-lesson-toolbar .speed-control select { width:66px; min-height:28px; padding:3px 5px; border:1px solid var(--desktop-border); border-radius:5px; color:var(--desktop-ink); background:var(--desktop-surface); font:13px var(--sans); }
 .desktop-lesson-help { display:flex; flex-wrap:wrap; gap:3px 12px; flex-shrink:0; margin:0 0 5px; color:var(--desktop-subtle); font-size:11px; line-height:1.45; }
 .desktop-single-line-repeat, .desktop-single-line-custom { display:flex; align-items:center; gap:5px; }
 .uta-desktop .desktop-single-line-repeat select { width:76px; }
 .desktop-single-line-custom { margin:0; font-size:11px; color:var(--desktop-muted); }
-.uta-desktop .desktop-single-line-custom input { width:48px; min-height:28px; padding:3px 4px; border:1px solid var(--desktop-border); border-radius:5px; background:var(--desktop-surface); color:var(--desktop-ink); font:inherit; }
+.uta-desktop .desktop-single-line-custom input { width:48px; min-height:28px; padding:3px 4px; border:1px solid var(--desktop-border); border-radius:5px; background:var(--desktop-surface); color:var(--desktop-ink); font:13px var(--sans); }
 .desktop-single-line-status { color:var(--desktop-accent); }
 .desktop-lesson-help kbd { font:inherit; padding:0 3px; border:1px solid var(--desktop-border); border-radius:3px; }
 .uta-desktop .lyrics-panel > .ai-review-summary { margin:0 0 4px; font-size:11px; line-height:1.45; }

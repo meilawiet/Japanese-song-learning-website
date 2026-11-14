@@ -122,7 +122,8 @@ async function seed() {
 }
 async function openPanel() {
   if (!await page.getByRole('dialog', { name: '设置', exact: true }).count()) await page.getByRole('button', { name: '设置', exact: true }).click()
-  await page.getByRole('button', { name: '跨端互通', exact: true }).click()
+  await page.getByRole('button', { name: '数据管理', exact: true }).click()
+  await page.getByRole('group', { name: '数据管理分类' }).getByRole('button', { name: '跨端互通', exact: true }).click()
   await page.getByRole('button', { name: '保存配置', exact: true }).waitFor()
   await page.waitForFunction(() => !document.querySelector('.cross-platform-config')?.disabled)
 }
@@ -279,6 +280,7 @@ try {
   await page.getByText('上次恢复可能中断', { exact: true }).waitFor()
   assert.equal(await page.locator('[name="cross-webdav-url"]').inputValue(), config.url)
   await page.getByRole('button', { name: '数据管理', exact: true }).click()
+  await page.getByRole('group', { name: '数据管理分类' }).getByRole('button', { name: '本地备份', exact: true }).click()
   await page.locator('.settings-data-card input[type="file"]').setInputFiles(path.join(snapshotFolder, recoveryName))
   await page.getByRole('dialog', { name: '确认恢复备份', exact: true }).waitFor()
   page.once('dialog', dialog => dialog.accept())

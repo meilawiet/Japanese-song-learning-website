@@ -52,9 +52,9 @@ async function postAi(path, payload, settings, signal) {
   return body
 }
 
-export async function reviewSongWithAi(song, annotations = [], corrections = {}) {
+export async function reviewSongWithAi(song, annotations = [], corrections = {}, signal) {
   const request = createAiReviewRequest(song, annotations, corrections)
-  return resolveAiReviewResult(await postAi('/api/ai/review-song', request.payload), request)
+  return resolveAiReviewResult(await postAi('/api/ai/review-song', request.payload, undefined, signal), request)
 }
 
 export function explainSelectionWithAi(payload) {

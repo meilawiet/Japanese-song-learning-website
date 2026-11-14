@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { Volume2, VolumeX } from 'lucide-react'
 import { SINGLE_LINE_REPEAT_PRESETS, MAX_SINGLE_LINE_REPEATS } from '../lib/singleLinePlayback'
 
-export default function DesktopLessonToolbar({ annotating, annotationError, displayMode, onDisplayMode, rate, onRate, audioAvailable, repeatCount = 1, onRepeatCount, playback }) {
+export default function DesktopLessonToolbar({ annotating, annotationError, displayMode, onDisplayMode, rate, onRate, audioAvailable, repeatCount = 1, onRepeatCount, playback, taskPanelOpen, onOpenTasks, volume, onVolume }) {
   const [custom, setCustom] = useState(false)
+  const shortcuts = useRef(null)
+  const volumeSlider = useRef(null)
   const customVisible = repeatCount !== 'infinite' && (custom || !SINGLE_LINE_REPEAT_PRESETS.includes(repeatCount))
   const repeatStatus = !playback || playback.total === 1 ? '' : playback.phase === 'complete'
     ? `已完成 ${playback.completed} 次`
@@ -27,8 +30,33 @@ export default function DesktopLessonToolbar({ annotating, annotationError, disp
             if (Number.isInteger(value) && value >= 1 && value <= MAX_SINGLE_LINE_REPEATS) onRepeatCount(value)
           }}/><span>次</span></label>}
         </div>
+        <button className="desktop-shortcuts-trigger" type="button" aria-expanded={taskPanelOpen}
+          aria-controls="desktop-task-panel" onClick={onOpenTasks}>任务面板</button>
+        <button className="desktop-shortcuts-trigger" type="button" onClick={() => shortcuts.current.showModal()}>键盘操作</button>
+        <button className="desktop-shortcuts-trigger desktop-lesson-volume" type="button" popoverTarget="desktop-lesson-volume-panel"
+          aria-label="调节音量" title="调节音量">{volume === 0 ? <VolumeX size={16}/> : <Volume2 size={16}/>}</button>
+        <div id="desktop-lesson-volume-panel" className="desktop-lesson-volume-panel" popover="auto"
+          onToggle={event => { if (event.newState === 'open') volumeSlider.current?.focus({ preventScroll: true }) }}>
+          <label htmlFor="desktop-lesson-volume">音量 <output>{Math.round(volume * 100)}%</output></label>
+          <input id="desktop-lesson-volume" ref={volumeSlider} aria-label="音量" type="range" min="0" max="1" step="0.01" value={volume}
+            onChange={event => onVolume(event.target.valueAsNumber)}/>
+        </div>
+
       </div>
     </div>
+    <dialog className="workspace-unsaved-dialog desktop-shortcuts" ref={shortcuts} aria-labelledby="desktop-shortcuts-title">
+      <header><h3 id="desktop-shortcuts-title">键盘操作</h3><button type="button" aria-label="关闭键盘操作" onClick={() => shortcuts.current.close()}>关闭</button></header>
+      <dl>
+        <dt><kbd>↑</kbd> / <kbd>↓</kbd></dt><dd>焦点在歌词区时切换句子</dd>
+        <dt><kbd>Shift</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd></dt><dd>扩展选段</dd>
+        <dt><kbd>Enter</kbd></dt><dd>播放选中的一句歌词</dd>
+        <dt><kbd>Space</kbd></dt><dd>播放或暂停</dd>
+        <dt><kbd>Ctrl</kbd> + <kbd>Space</kbd></dt><dd>播放选中的歌词段落</dd>
+        <dt><kbd>Tab</kbd> + <kbd>Enter</kbd></dt><dd>选中词语并打开校对</dd>
+        <dt><kbd>←</kbd> / <kbd>→</kbd></dt><dd>焦点在分栏边界时调整宽度</dd>
+        <dt><kbd>Esc</kbd></dt><dd>关闭抽屉并返回触发位置</dd>
+      </dl>
+    </dialog>
     <div className="desktop-lesson-help"><span>{audioAvailable ? <>双击播放／暂停 · <kbd>Ctrl</kbd> 点首末句选段</> : '未找到同名音频，可继续练习读音与词义。'}</span>{repeatStatus && <span className="desktop-single-line-status" role="status" data-phase={playback.phase} data-completed={playback.completed}>{repeatStatus}</span>}</div>
   </>
 }

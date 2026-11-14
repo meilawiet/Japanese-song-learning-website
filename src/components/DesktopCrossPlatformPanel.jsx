@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { useSettingsValidation } from './SettingsValidation'
 import { Cloud, Download, Eye, EyeOff, FolderOpen, LoaderCircle, RefreshCw, Save, Upload, X } from 'lucide-react'
 import { listCrossPlatformSnapshots, uploadCrossPlatformSnapshot, previewCrossPlatformSnapshot, downloadPendingAudio, normalizedWebDav } from '../lib/desktopCrossPlatform.js'
 import { loadLocalSongs } from '../lib/localSongStore.js'
@@ -18,8 +19,11 @@ function dateLabel(value, fallback) {
   return Number.isFinite(timestamp) ? new Date(timestamp).toLocaleString('zh-CN') : fallback
 }
 
-export default function DesktopCrossPlatformPanel({ onCollect, onRestore, onAudioReady, onBusyChange, externalBusy = false }) {
+export default function DesktopCrossPlatformPanel({ ref, onCollect, onRestore, onAudioReady, onBusyChange, externalBusy = false }) {
   const [config, setConfig] = useState(emptyConfig)
+  const [savedConfig, setSavedConfig] = useState(emptyConfig)
+  const configFields = useRef(null)
+  const validation = useSettingsValidation()
   const [loading, setLoading] = useState(true)
   const [visible, setVisible] = useState(false)
   const [includeKey, setIncludeKey] = useState(false)
@@ -38,7 +42,10 @@ export default function DesktopCrossPlatformPanel({ onCollect, onRestore, onAudi
   const committing = useRef(false)
   busyChange.current = onBusyChange
   const disabled = loading || Boolean(busy) || externalBusy
+  const configDirty = !loading && JSON.stringify(config) !== JSON.stringify(savedConfig)
   useDesktopUnsavedDraft('cross-platform-transfer', Boolean(busy))
+  useDesktopUnsavedDraft('cross-platform-config', configDirty)
+  useImperativeHandle(ref, () => ({ dirty: configDirty, busy: Boolean(busy), save: saveConfig }))
 
   async function refreshPending() {
     const songs = await loadLocalSongs()
@@ -51,7 +58,7 @@ export default function DesktopCrossPlatformPanel({ onCollect, onRestore, onAudi
       const saved = await desktop.webDav('load')
       const interrupted = await desktop.webDav('recoveryStatus')
       await refreshPending()
-      if (alive.current) { setConfig({ ...emptyConfig, ...saved }); setRecovery(interrupted) }
+      if (alive.current) { const value = { ...emptyConfig, ...saved }; setConfig(value); setSavedConfig(value); setRecovery(interrupted) }
     })()
       .catch(failure => { if (alive.current) setError(failure.message || '无法读取跨端互通配置，请重新填写。') })
       .finally(() => { if (alive.current) setLoading(false) })
@@ -69,6 +76,7 @@ export default function DesktopCrossPlatformPanel({ onCollect, onRestore, onAudi
   useEffect(() => { if (preview) document.querySelector('.cross-platform-preview')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) }, [preview])
 
   function update(field, value) {
+    validation.clear()
     setConfig(previous => ({ ...previous, [field]: value }))
     setFiles(null); setPreview(null); setError(''); setMessage('')
   }
@@ -78,7 +86,7 @@ export default function DesktopCrossPlatformPanel({ onCollect, onRestore, onAudi
   }
   async function run(label, work) {
     // A synchronous guard closes the double-click gap before React paints busy.
-    if (operation.current || loading || externalBusy) return
+    if (operation.current || loading || externalBusy) return false
     const controller = new AbortController()
     operation.current = controller
     committing.current = false
@@ -86,17 +94,45 @@ export default function DesktopCrossPlatformPanel({ onCollect, onRestore, onAudi
     busyChange.current?.(true)
     try {
       await work({ signal: controller.signal, report })
+      return alive.current && !controller.signal.aborted
     } catch (failure) {
       if (alive.current) {
         if (controller.signal.aborted || failure.name === 'AbortError') setMessage('操作已取消。已上传的音频会保留，重试时可复用。')
         else setError(failure.message || '操作失败，请检查连接后重试。')
       }
+      return false
     } finally {
       operation.current = null
       committing.current = false
       busyChange.current?.(false)
       if (alive.current) { setBusy(''); setStatus(null) }
     }
+  }
+  function validateConfig() {
+    return validation.validate(configFields.current, input => {
+      if (input.name !== 'cross-webdav-url') return undefined
+      const url = URL.canParse(input.value) ? new URL(input.value) : null
+      if (!url || url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) {
+        return '请输入 HTTPS 目录地址，地址中不要包含凭据、查询参数或片段。'
+      }
+    })
+  }
+  function saveConfig() {
+    if (disabled || !validateConfig()) return false
+    return run('保存连接配置', async () => {
+      committing.current = true
+      const saved = await window.utaDesktop.webDav('save', config)
+      if (alive.current) {
+        const value = { ...config, ...saved }
+        setConfig(value); setSavedConfig(value); setVisible(false); setMessage('连接配置已保存。')
+      }
+    })
+  }
+  function testConfig() {
+    if (disabled || !validateConfig()) return
+    void run('测试连接', options => readFiles(options, configDirty
+      ? '连接成功，已读取云目录。当前修改尚未保存。'
+      : '连接成功，已读取云目录。当前配置已保存。'))
   }
   function cancel() {
     if (committing.current) return
@@ -147,22 +183,24 @@ export default function DesktopCrossPlatformPanel({ onCollect, onRestore, onAudi
 
     {recovery && <div className="cross-platform-recovery" role="alert"><b>上次恢复可能中断</b><p>请先核对本机数据。恢复前的资料保存在 {recovery.name}，需要时可从“数据管理”导入此恢复点。</p><button type="button" disabled={disabled} onClick={() => window.utaDesktop.openRestoreSnapshots().catch(failure => setError(failure.message))}><FolderOpen size={15}/> 打开恢复点文件夹</button></div>}
 
-    <fieldset className="cross-platform-config" disabled={disabled}>
+    <fieldset ref={configFields} className="cross-platform-config" disabled={disabled}>
       <legend>连接自己的 WebDAV</legend>
-      <label>服务器目录<input name="cross-webdav-url" type="url" autoComplete="off" spellCheck={false} placeholder="https://example.com/dav/UTA/" value={config.url} onChange={event => update('url', event.target.value)}/></label>
-      <label>账号<input name="cross-webdav-username" type="text" autoComplete="off" spellCheck={false} value={config.username} onChange={event => update('username', event.target.value)}/></label>
-      <label className="cross-platform-password">应用密码<span><input name="cross-webdav-password" type={visible ? 'text' : 'password'} autoComplete="new-password" spellCheck={false} value={config.password} onChange={event => update('password', event.target.value)}/><button type="button" aria-label={visible ? '隐藏 WebDAV 密码' : '显示 WebDAV 密码'} onClick={() => setVisible(value => !value)}>{visible ? <EyeOff size={17}/> : <Eye size={17}/>}</button></span></label>
+      <p className="settings-save-state" role="status">{loading ? '读取中…' : busy === '保存连接配置' ? '保存中…' : configDirty ? '未保存 · 可先测试连接' : savedConfig.url ? '已保存' : '尚未配置'}</p>
+      {validation.summary}
+      <label>服务器目录<input {...validation.field('dav-url', '服务器目录')} required name="cross-webdav-url" type="url" autoComplete="off" spellCheck={false} placeholder="https://example.com/dav/UTA/" value={config.url} onChange={event => update('url', event.target.value)}/>{validation.message('dav-url')}</label>
+      <label>账号<input {...validation.field('dav-user', '账号')} required maxLength={1024} name="cross-webdav-username" type="text" autoComplete="off" spellCheck={false} value={config.username} onChange={event => update('username', event.target.value)}/>{validation.message('dav-user')}</label>
+      <label className="cross-platform-password">应用密码<span><input {...validation.field('dav-password', '应用密码')} required maxLength={4096} name="cross-webdav-password" type={visible ? 'text' : 'password'} autoComplete="new-password" spellCheck={false} value={config.password} onChange={event => update('password', event.target.value)}/><button type="button" aria-label={visible ? '隐藏 WebDAV 密码' : '显示 WebDAV 密码'} onClick={() => setVisible(value => !value)}>{visible ? <EyeOff size={17}/> : <Eye size={17}/>}</button></span>{validation.message('dav-password')}</label>
       <p className="settings-note">请使用 HTTPS，并让两端填写同一目录。应用密码保存在本机 Windows 加密存储中，不会写入云快照。</p>
       <div className="cross-platform-actions">
-        <button type="button" onClick={() => run('保存连接配置', async () => { await window.utaDesktop.webDav('save', config); if (alive.current) { setVisible(false); setMessage('连接配置已保存。') } })}><Save size={15}/> 保存配置</button>
-        <button type="button" onClick={() => run('测试连接', options => readFiles(options, '连接成功，已读取云目录。配置请另行保存。'))}><Cloud size={15}/> 测试连接</button>
-        <button type="button" onClick={() => { if (window.confirm('仅清除本机保存的 WebDAV 地址、账号与密码。云文件和本机学习资料会保留。确定清除吗？')) void run('清除连接配置', async () => { await window.utaDesktop.webDav('clear'); if (alive.current) { setConfig(emptyConfig); setFiles(null); setPreview(null); setMessage('已清除本机连接配置。') } }) }}>清除配置</button>
+        <button type="button" onClick={saveConfig}><Save size={15}/> 保存配置</button>
+        <button type="button" onClick={testConfig}><Cloud size={15}/> 测试连接</button>
+        <button type="button" onClick={() => { if (window.confirm('仅清除本机保存的 WebDAV 地址、账号与密码。云文件和本机学习资料会保留。确定清除吗？')) void run('清除连接配置', async () => { await window.utaDesktop.webDav('clear'); if (alive.current) { setConfig(emptyConfig); setSavedConfig(emptyConfig); validation.clear(); setFiles(null); setPreview(null); setMessage('已清除本机连接配置。') } }) }}>清除配置</button>
       </div>
     </fieldset>
 
     <section className="cross-platform-upload" aria-label="上传本机快照"><div><h4>上传本机资料</h4><p>包含歌词、封面、注音、学习进度、个人资料、对话及 AI 配置。主题、字体和窗口设置留在本机。</p></div><label className="cross-platform-checkbox"><input type="checkbox" checked={includeKey} disabled={disabled} onChange={event => setIncludeKey(event.target.checked)}/> 本次同时上传 AI API Key</label>{includeKey && <p className="cross-platform-warning">云快照未加密，上传前会再次确认密钥范围。通常两端分别配置密钥即可。</p>}<button className="cross-platform-primary" type="button" disabled={disabled || Boolean(recovery)} onClick={upload}><Upload size={16}/> 上传本机快照</button>{recovery && <small>请先完成上次恢复的数据核对，再上传，避免把未完整恢复的资料写入云端。</small>}</section>
 
-    {busy && <div className="cross-platform-progress" role="status"><div><LoaderCircle className="spin" size={17}/><b>{status?.phase || busy}</b>{percentage !== null && <span>{percentage}%</span>}{!committing.current && <button type="button" onClick={cancel}><X size={14}/> 取消</button>}</div>{status?.title && <small>{status.title}</small>}{status?.total > 0 && <><progress max="100" value={percentage}/><small>{status.total === 100 && status.phase === '保存恢复前快照' ? `${percentage}%` : `${readableBytes(status.done)} / ${readableBytes(status.total)}`}</small></>}{committing.current && <small>正在写入资料，请等待完成。</small>}</div>}
+    {busy && <div className="cross-platform-progress" role="status"><div><LoaderCircle className="spin" size={17}/><b>{status?.phase || busy}</b>{percentage !== null && <span>{percentage}%</span>}{!committing.current && <button type="button" onClick={cancel}><X size={14}/> 取消</button>}</div>{status?.title && <small>{status.title}</small>}{status?.total > 0 && <><progress max="100" value={percentage}/><small>{status.total === 100 && status.phase === '保存恢复前快照' ? `${percentage}%` : `${readableBytes(status.done)} / ${readableBytes(status.total)}`}</small></>}{committing.current && <small>{busy === '保存连接配置' ? '正在保存本机配置，请等待完成。' : '正在写入资料，请等待完成。'}</small>}</div>}
     {error && <p className="settings-message error" role="alert">{error}</p>}
     {message && <p className="settings-message success" role="status">{message}</p>}
 

@@ -21,7 +21,7 @@ export default function DesktopFontSettings({ value = DEFAULT_DESKTOP_FONT, onCh
     return () => { live = false }
   }, [selected.id, selected.family])
   return <div className="settings-content desktop-font-settings">
-    <h3>应用字体</h3><p className="settings-description">界面、歌词、注音和翻译即时切换，字号继续分别调节。</p>
+    <h3>应用字体</h3><p className="settings-description">歌词、注音和翻译即时切换，字号继续分别调节；界面控件使用系统字体。</p>
     <div className="desktop-font-controls">
       <label>选择字体<select aria-label="应用字体" value={group.id} onChange={event => onChange(DESKTOP_FONT_GROUPS.find(item => item.id === event.target.value).fonts[0].id)}>{DESKTOP_FONT_GROUPS.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       {group.fonts.length > 1 && <label>字体字重<select aria-label="字体字重" value={selected.id} onChange={event => onChange(event.target.value)}>{group.fonts.map(font => <option key={font.id} value={font.id}>{font.name}</option>)}</select></label>}

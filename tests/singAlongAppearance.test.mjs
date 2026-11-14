@@ -10,6 +10,7 @@ test('跟唱背景设置保留有效图片并限制损坏的旧数据', () => {
   })
   assert.equal(normalizeSingAlongAppearance({ mode: 'image', imageBlob: new Blob(['x'], { type: 'text/plain' }) }).mode, 'default')
   assert.equal(normalizeSingAlongAppearance({ mode: 'color', color: '#A1b2C3' }).color, '#A1b2C3')
+  assert.deepEqual(normalizeSingAlongAppearance({ lyricsBackdrop: false }), DEFAULT_SING_ALONG_APPEARANCE)
 })
 
 test('只接受大小受限的常见本地图片', () => {

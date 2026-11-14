@@ -87,14 +87,14 @@ export function compileLrcCues(cues, { mode = 'import' } = {}) {
       const text = cueText(cue)
       const matches = start == null ? [] : lines.filter(line => line.start != null && Math.abs(line.start - start) <= 0.05)
       if (saved && cue.targetCueId && !byCue.has(cue.targetCueId)) {
-        issues.push({ cueId: cue.id, kind: 'error', message: '对应原文已被删除或改为其他轨道，请重新选择对应原文。' }); continue
+        issues.push({ cueId: cue.id, kind: 'error', category: 'unpaired', message: '对应原文已被删除或改为其他轨道，请重新选择对应原文。' }); continue
       }
       if (saved && !cue.targetCueId && !cue.attachToPrevious && matches.length > 1) {
-        issues.push({ cueId: cue.id, kind: 'error', message: '同一时间有多句原文，请选择这一行对应的原文。' }); continue
+        issues.push({ cueId: cue.id, kind: 'error', category: 'conflict', message: '同一时间有多句原文，请选择这一行对应的原文。' }); continue
       }
       const target = cue.attachToPrevious ? current : byCue.get(cue.targetCueId) || (matches.length === 1 ? matches[0] : current)
-      if (!target) issues.push({ cueId: cue.id, kind: 'error', message: '这行没有对应原文，请改为原文、移动位置或忽略。' })
-      else if (target[cue.track] && target[cue.track] !== text) issues.push({ cueId: cue.id, kind: 'error', message: `同一句已有${cue.track === 'romaji' ? '罗马音' : '译文'}，请调整轨道或插入新原文。` })
+      if (!target) issues.push({ cueId: cue.id, kind: 'error', category: 'unpaired', message: '这行没有对应原文，请改为原文、移动位置或忽略。' })
+      else if (target[cue.track] && target[cue.track] !== text) issues.push({ cueId: cue.id, kind: 'error', category: 'conflict', message: `同一句已有${cue.track === 'romaji' ? '罗马音' : '译文'}，请调整轨道或插入新原文。` })
       else target[cue.track] = text
     }
   }

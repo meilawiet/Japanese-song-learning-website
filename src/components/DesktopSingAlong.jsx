@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import DesktopSongTitle from './DesktopSongTitle'
 import { ArrowLeft, Check, ImagePlus, Music2, RotateCcw, X } from 'lucide-react'
 import stationBackground from '../assets/uta-twilight-station.png'
 import WordReading from './WordReading'
@@ -28,6 +29,7 @@ export default function DesktopSingAlong({ song, artwork, annotations, correctio
   const [appearanceOpen, setAppearanceOpen] = useState(false)
   const [appearanceBusy, setAppearanceBusy] = useState(false)
   const [appearanceError, setAppearanceError] = useState('')
+  const appearanceTrigger = useRef(null)
   const imageInput = useRef(null)
   const lyricList = useRef(null)
   const rows = useRef(new Map())
@@ -70,17 +72,25 @@ export default function DesktopSingAlong({ song, artwork, annotations, correctio
     if (followPlayback && list && row) {
       const listBounds = list.getBoundingClientRect()
       const rowBounds = row.getBoundingClientRect()
-      list.scrollTo({ top: list.scrollTop + rowBounds.top - listBounds.top - (listBounds.height - rowBounds.height) / 2, behavior: 'smooth' })
+      list.scrollTo({ top: list.scrollTop + rowBounds.top - listBounds.top - (listBounds.height - rowBounds.height) / 2, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
     }
   }, [currentLineId, selectedLineId, followPlayback, song.id])
 
   useEffect(() => {
     if (!appearanceOpen) return undefined
-    const onKeyDown = event => { if (event.key === 'Escape' && !appearanceBusy) { event.stopPropagation(); setAppearanceOpen(false) } }
+    function onKeyDown(event) {
+      if (event.key !== 'Escape' || appearanceBusy) return
+      event.stopPropagation()
+      closeAppearance()
+    }
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [appearanceOpen, appearanceBusy])
 
+  function closeAppearance() {
+    setAppearanceOpen(false)
+    appearanceTrigger.current?.focus({ preventScroll: true })
+  }
   function openAppearance() {
     setDraft(appearance)
     setAppearanceError('')
@@ -104,7 +114,7 @@ export default function DesktopSingAlong({ song, artwork, annotations, correctio
     try {
       const saved = await saveSingAlongAppearance(draft)
       setAppearance(saved)
-      setAppearanceOpen(false)
+      closeAppearance()
     } catch { setAppearanceError('保存背景失败，请检查本机存储空间后重试。') }
     finally { setAppearanceBusy(false) }
   }
@@ -115,9 +125,9 @@ export default function DesktopSingAlong({ song, artwork, annotations, correctio
     <div className="desktop-sing-content">
       <header className="desktop-sing-player-header">
         <span className="desktop-sing-cover">{artwork?.artworkUrl ? <img src={artwork.artworkUrl} alt="" referrerPolicy="no-referrer" onError={event => { event.currentTarget.hidden = true }} /> : <Music2 size={27} />}</span>
-        <div className="desktop-sing-heading"><span>UTA · 跟唱播放器</span><h1 id="desktop-sing-title">{song.title}</h1><p>{song.artist} · 连续播放 · {song.lines.length} 句歌词</p></div>
+        <div className="desktop-sing-heading"><span>UTA · 跟唱播放器</span><DesktopSongTitle id="desktop-sing-title" title={song.title}/><p>{song.artist} · 连续播放 · {song.lines.length} 句歌词</p></div>
         <div className="desktop-sing-actions">
-          <button type="button" className="desktop-sing-background-button" onClick={openAppearance}><ImagePlus size={16} /> 自定义背景</button>
+          <button type="button" className="desktop-sing-background-button" ref={appearanceTrigger} onClick={openAppearance}><ImagePlus size={16} /> 自定义背景</button>
           <label className="desktop-sing-display-label"><span className="sr-only">跟唱读音显示</span><select aria-label="跟唱读音显示" value={displayMode} onChange={event => { setDisplayMode(event.target.value); onReadingSettingsChange?.({ readingStyle: ({ lyrics: 'none', kana: 'hiragana', both: 'both', romaji: 'romaji' })[event.target.value] }) }}>{displayModes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           <button type="button" className="desktop-sing-start" disabled={!audioReady} onClick={onPlayFromStart}><RotateCcw size={16} /> 从头播放</button>
           <button type="button" className="desktop-sing-back" onClick={onBack}><ArrowLeft size={15} /> 返回学习</button>
@@ -143,15 +153,15 @@ export default function DesktopSingAlong({ song, artwork, annotations, correctio
         })}
       </ol>
       <div className="desktop-sing-footer"><span>{currentIndex < 0 ? '选择一句开始跟唱' : `第 ${currentIndex + 1} / ${song.lines.length} 句`}</span><span>播放、进度、速度和音量由下方播放器控制</span></div>
-      {appearanceOpen && <section className="desktop-sing-appearance" role="dialog" aria-label="跟唱背景"><header><div><h2>跟唱背景</h2><p>仅影响跟唱播放器，图片保存在本机。</p></div><button type="button" aria-label="关闭跟唱背景设置" disabled={appearanceBusy} onClick={() => setAppearanceOpen(false)}><X size={16}/></button></header>
-        <div className="desktop-sing-background-preview" style={{ backgroundImage: backgroundUrl ? `url("${backgroundUrl}")` : 'none', backgroundColor: visible.color }} />
+      {appearanceOpen && <section className="desktop-sing-appearance" role="dialog" aria-label="跟唱背景"><header><div><h2>跟唱背景</h2><p>仅影响跟唱播放器，图片保存在本机。</p></div><button type="button" aria-label="关闭跟唱背景设置" disabled={appearanceBusy} onClick={closeAppearance}><X size={16}/></button></header>
+        <div className="desktop-sing-appearance-fields"><div className="desktop-sing-background-preview" style={{ backgroundImage: backgroundUrl ? `url("${backgroundUrl}")` : 'none', backgroundColor: visible.color }} />
         <p className="desktop-sing-field-label">背景来源</p><div className="desktop-sing-background-choices"><button type="button" aria-pressed={draft.mode === 'default'} onClick={() => setDraft(previous => ({ ...previous, mode: 'default' }))}>默认背景</button><button type="button" aria-pressed={draft.mode === 'image'} onClick={() => imageInput.current?.click()}>选择本地图片</button><button type="button" aria-pressed={draft.mode === 'color'} onClick={() => setDraft(previous => ({ ...previous, mode: 'color' }))}>纯色</button></div>
-        <input className="desktop-sing-file-input" ref={imageInput} type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={chooseImage} aria-label="选择跟唱背景图片" />
+        <input className="desktop-sing-file-input" ref={imageInput} type="file" tabIndex={-1} accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={chooseImage} aria-label="选择跟唱背景图片" />
         {draft.mode === 'color' && <label className="desktop-sing-color-label">背景颜色 <input type="color" value={draft.color} onChange={event => setDraft(previous => ({ ...previous, color: event.target.value }))} /></label>}
-        {draft.mode !== 'color' && <label className="desktop-sing-slider">背景模糊 <output>{draft.blur} px</output><input type="range" min="0" max="18" step="1" value={draft.blur} onChange={event => setDraft(previous => ({ ...previous, blur: Number(event.target.value) }))} /></label>}
-        <label className="desktop-sing-slider">深色遮罩 <output>{draft.dim}%</output><input type="range" min="25" max="85" step="1" value={draft.dim} onChange={event => setDraft(previous => ({ ...previous, dim: Number(event.target.value) }))} /></label>
+        {draft.mode !== 'color' && <label className="desktop-sing-slider">背景模糊 <output>{draft.blur} px</output><input type="range" aria-label="背景模糊" min="0" max="18" step="1" value={draft.blur} onChange={event => setDraft(previous => ({ ...previous, blur: Number(event.target.value) }))} /></label>}
+        <label className="desktop-sing-slider">深色遮罩 <output>{draft.dim}%</output><input type="range" aria-label="深色遮罩" min="25" max="85" step="1" value={draft.dim} onChange={event => setDraft(previous => ({ ...previous, dim: Number(event.target.value) }))} /></label>
         {appearanceError && <p className="desktop-sing-appearance-error" role="alert">{appearanceError}</p>}
-        <footer><button type="button" disabled={appearanceBusy} onClick={() => setDraft(DEFAULT_SING_ALONG_APPEARANCE)}>恢复默认</button><button type="button" className="desktop-sing-apply" disabled={appearanceBusy} onClick={applyAppearance}><Check size={14} /> {appearanceBusy ? '保存中…' : '应用背景'}</button></footer>
+        </div><footer><button type="button" disabled={appearanceBusy} onClick={closeAppearance}>取消</button><button type="button" disabled={appearanceBusy} onClick={() => setDraft(DEFAULT_SING_ALONG_APPEARANCE)}>恢复默认</button><button type="button" className="desktop-sing-apply" disabled={appearanceBusy} onClick={applyAppearance}><Check size={14} /> {appearanceBusy ? '保存中…' : '应用背景'}</button></footer>
       </section>}
     </div>
   </section>

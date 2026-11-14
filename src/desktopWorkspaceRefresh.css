@@ -1,0 +1,340 @@
+/* Windows workspace: compact chrome, readable controls, unchanged lyric typography. */
+.uta-desktop { --sans:"Segoe UI","Microsoft YaHei UI","Yu Gothic UI",Meiryo,sans-serif; font-family:var(--sans); }
+.uta-desktop .token-reading-surface,.uta-desktop .translation { font-family:var(--desktop-font-family); }
+.uta-desktop .desktop-song-header { padding:14px 26px; gap:14px; min-height:84px; }
+.uta-desktop .desktop-song-header>.desktop-cover { width:48px; height:48px; border-radius:8px; }
+.desktop-song-copy>span { display:none; }.desktop-song-copy h1 { font-size:23px; line-height:1.35; }
+.desktop-song-copy p { font-size:12px; margin-top:6px; }.desktop-song-progress { width:115px; }
+.desktop-song-progress strong { font-size:23px; }.desktop-song-actions button { min-height:34px; font-size:13px; }
+.uta-desktop .desktop-lesson-toolbar { min-height:44px; margin:0 0 6px; gap:12px; }
+.uta-desktop .desktop-lesson-controls select { min-height:32px; font-size:13px; }
+.uta-desktop .desktop-lyrics-heading h2 { font-size:16px; }.uta-desktop .desktop-reading-hint,.uta-desktop .desktop-lesson-help { font-size:12px; }
+.uta-desktop .line-mastery,.uta-desktop .sentence-explain-link { font-size:12px; min-height:28px; }
+.uta-desktop .word-panel .panel-head h2 { font-size:16px; }.uta-desktop .word-meaning { font-size:14px; }
+.uta-desktop .annotation-state,.uta-desktop .word-panel label,.uta-desktop .word-panel small { font-size:12px; color:var(--desktop-muted); }
+.uta-desktop .lyric-row.active .line-number,.uta-desktop .token-reading-kana { color:var(--desktop-muted); }
+.uta-desktop button:focus-visible,.uta-desktop input:focus-visible,.uta-desktop select:focus-visible,.uta-desktop textarea:focus-visible { outline:2px solid var(--desktop-accent); outline-offset:2px; }
+.uta-desktop .desktop-task-panel { bottom:24px; }.uta-desktop:has(.desktop-player) .desktop-task-panel { bottom:114px; }
+/* The whole-song editor owns one scroll surface; its toolbar and actions remain visible. */
+.uta-desktop .desktop-editor-workspace { top:42px; padding:0; background:var(--desktop-surface); z-index:80; }
+.uta-desktop .desktop-editor-workspace .song-editor { width:100%; height:100%; max-height:100%; max-width:none; border:0; border-radius:0; padding:20px 28px 0; box-shadow:none; position:relative; }
+.uta-desktop .song-editor-head { flex-shrink:0; margin-bottom:12px; }.uta-desktop .song-editor-head h2 { font-size:22px; }
+.uta-desktop .song-editor-head>div>p { font-size:12px; color:var(--desktop-muted); margin-bottom:5px; }
+.editor-draft-state { display:inline-block; font-size:12px; font-weight:400; padding:4px 8px; border-radius:4px; color:var(--desktop-accent); background:var(--desktop-soft); vertical-align:middle; }
+.song-editor-tabs { display:flex; gap:22px; margin:0 0 20px; border-bottom:1px solid var(--desktop-border); flex-shrink:0; }
+.song-editor-tabs button { padding:12px 0; border:0; border-radius:0; border-bottom:2px solid transparent; color:var(--desktop-muted); background:transparent; cursor:pointer; }
+.song-editor-tabs button[aria-pressed=true] { border-bottom-color:var(--desktop-accent); color:var(--desktop-accent); font-weight:600; }
+.uta-desktop .song-editor-fields { scrollbar-gutter:stable; padding-right:12px; }
+.uta-desktop .song-editor-fields [hidden] { display:none; }.uta-desktop .song-editor-lines { margin:0; }
+.uta-desktop .song-editor-lines>li { padding:18px 0; border-color:var(--desktop-border); }
+.uta-desktop .song-editor-lines>li>div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 18px; }
+.uta-desktop .song-editor-lines label { font-size:12px; min-width:0; color:var(--desktop-muted); }
+.uta-desktop .song-editor input { min-width:0; font-size:14px; padding:8px 10px; }
+.uta-desktop .song-editor-lines>li>div>label { grid-column:auto; grid-row:auto; }
+.uta-desktop .song-editor-lines>li>div>label:nth-child(5) { grid-column:1/-1; }
+.editor-time-nudges { display:flex; gap:6px; margin-top:6px; }.editor-time-nudges button { font-size:12px; min-height:28px; border:1px solid var(--desktop-border); border-radius:5px; padding:4px 8px; background:var(--desktop-surface); color:var(--desktop-accent); cursor:pointer; }
+.uta-desktop .song-editor-note { font-size:12px; margin:8px 0; line-height:1.6; }
+.uta-desktop .song-editor-actions { margin:0 -28px; padding:12px 28px; border-top:1px solid var(--desktop-border); flex-shrink:0; background:var(--desktop-surface); }
+.uta-desktop .song-editor-actions button { min-height:36px; font-size:14px; }
+.uta-desktop .song-editor .lrc-review-scroll,.uta-desktop .song-editor .song-editor-track-result ol { max-height:none; overflow:visible; }
+/* Settings keep the existing categories and actual configuration/backup operations. */
+.uta-desktop .settings-dialog { width:min(1040px,calc(100vw - 48px)); height:min(820px,calc(100dvh - 76px)); grid-template-columns:180px minmax(0,1fr); position:relative; }
+.uta-desktop .settings-heading { padding:20px 26px; }.uta-desktop .settings-heading p { font-size:13px; }
+.uta-desktop .settings-tabs button { font-size:14px; min-height:38px; }.uta-desktop .settings-content { padding:24px 30px; }
+.uta-desktop .settings-content label,.uta-desktop .settings-content input,.uta-desktop .settings-content select { font-size:14px; }
+.uta-desktop .settings-description,.uta-desktop .settings-note,.uta-desktop .settings-hint,.uta-desktop .settings-content small { font-size:12px; line-height:1.65; }
+.uta-desktop .desktop-theme-card { text-align:left; min-height:100px; }.uta-desktop .desktop-theme-card b { font-size:15px; }
+.uta-desktop .settings-content.desktop-ai-form { padding:0; }.uta-desktop .settings-ai-fields { padding:24px 30px; }
+.settings-save-state { font-size:12px; color:var(--desktop-muted); margin:0 0 10px; }
+.uta-desktop .settings-ai-footer .settings-form-actions button { font-size:13px; min-height:36px; }
+.workspace-unsaved-dialog { border:1px solid var(--desktop-border,#dddfee); border-radius:12px; background:var(--desktop-surface,#fff); color:var(--desktop-ink,#30364b); padding:24px; width:min(440px,calc(100vw - 32px)); box-shadow:0 16px 70px #0003; font-family:"Segoe UI","Microsoft YaHei UI",sans-serif; }
+.workspace-unsaved-dialog::backdrop { background:#18212b66; }.workspace-unsaved-dialog h3 { margin:0; font-size:19px; }
+.workspace-unsaved-dialog p { font-size:14px; line-height:1.7; color:var(--desktop-muted); margin:14px 0; }
+.workspace-unsaved-actions { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; margin-top:22px; }
+.uta-desktop .workspace-unsaved-dialog .workspace-unsaved-actions>button { font:inherit; font-size:13px; min-height:34px; border:1px solid var(--desktop-border); border-radius:6px; padding:6px 12px; color:var(--desktop-ink); background:var(--desktop-surface); cursor:pointer; }
+.uta-desktop .workspace-unsaved-dialog .workspace-unsaved-actions>button:last-child { background:var(--desktop-accent); color:white; }
+@media(max-width:1180px) {
+ .desktop-song-progress { display:none; }.desktop-song-copy h1 { font-size:21px; }
+}
+@media(max-width:760px) {
+ .uta-desktop .desktop-song-header { padding:12px 16px; flex-wrap:wrap; }.desktop-song-actions { margin-left:auto; }
+ .uta-desktop .desktop-editor-workspace .song-editor { padding:16px 16px 0; }.uta-desktop .song-editor-actions { margin:0 -16px; padding:10px 16px; }
+ .uta-desktop .settings-dialog { width:calc(100vw - 16px); height:calc(100dvh - 60px); grid-template-columns:130px minmax(0,1fr); }
+ .uta-desktop .settings-content,.uta-desktop .settings-ai-fields { padding:18px; }.uta-desktop .settings-tabs { padding:12px 6px; }
+ .uta-desktop .settings-tabs button { padding:10px 6px; font-size:12px; }.uta-desktop .settings-content .settings-grid { grid-template-columns:1fr; }
+ .uta-desktop .song-editor-lines>li>div { grid-template-columns:minmax(0,1fr); }.uta-desktop .song-editor-lines label:nth-child(3),.uta-desktop .song-editor-lines label:nth-child(4) { grid-row:auto; }
+}
+@media(prefers-reduced-motion:reduce) { .desktop-editor-workspace * { scroll-behavior:auto; transition:none; } }
+
+.uta-desktop .song-editor-history small,.uta-desktop .settings-data-card p { font-size:12px; line-height:1.6; }
+.uta-desktop .settings-data-card h4 { font-size:14px; }
+.uta-desktop .lyric-token.selected .token-reading-kana,.uta-desktop .lyric-token.range-selected .token-reading-kana { color:var(--desktop-ink); }
+
+.uta-desktop .desktop-theme-sample p,.uta-desktop .reading-preview-translation { font-family:var(--desktop-font-family); }
+
+/* Phase two: library operations, actionable background work, themed player controls. */
+.desktop-library-heading-actions { display:flex; align-items:center; gap:10px; }
+.desktop-library-heading-actions button,.desktop-library-toolbar>button { min-height:34px; padding:7px 12px; border:1px solid var(--desktop-border); border-radius:6px; color:var(--desktop-accent); background:var(--desktop-surface); cursor:pointer; }
+.desktop-library-heading-actions .desktop-primary { color:white; background:var(--desktop-accent); }
+.desktop-song-table th:first-child { width:42%; }.desktop-song-table th:nth-child(2) { width:16%; }.desktop-song-table th:nth-child(3) { width:18%; }.desktop-song-table th:last-child { width:24%; }
+.desktop-song-table td:last-child { overflow:visible; }.desktop-song-table td { padding:18px 10px; }
+.desktop-song-select .desktop-cover { width:56px; height:56px; border-radius:8px; }.desktop-song-select b { font-size:15px; }.desktop-song-select small,.desktop-song-table td>small { font-size:12px; }
+.desktop-library-row-actions { display:flex; align-items:center; gap:7px; flex-wrap:wrap; position:relative; }
+.desktop-library-row-actions>button { min-height:32px; border:1px solid var(--desktop-border); padding:5px 8px; border-radius:5px; background:var(--desktop-surface); color:var(--desktop-accent); cursor:pointer; font-size:12px; }
+.desktop-library-row-actions .desktop-library-start { border-color:var(--desktop-accent); }
+.desktop-library-row-menu { position:absolute; z-index:10; top:calc(100% + 5px); right:0; width:186px; display:grid; overflow:auto; padding:6px; border:1px solid var(--desktop-border); border-radius:7px; background:var(--desktop-surface); box-shadow:0 8px 22px var(--desktop-shadow); }
+.desktop-library-row-menu.opens-up { top:auto; bottom:calc(100% + 5px); }
+.desktop-library-row-menu button { text-align:left; display:flex; gap:8px; align-items:center; padding:9px; border:0; border-radius:4px; background:transparent; color:var(--desktop-ink); cursor:pointer; font-size:13px; }
+.desktop-library-row-menu button:hover { background:var(--desktop-soft); }
+.desktop-song-inspector { width:238px; position:relative; padding:22px 18px; border:1px solid var(--desktop-border); border-radius:10px; background:var(--desktop-bg); overflow:auto; }
+.desktop-song-inspector .desktop-inspector-close { position:absolute; top:10px; right:8px; width:auto; min-height:28px; padding:4px; border:0; background:transparent; }
+.desktop-song-inspector .desktop-cover { width:94px; height:94px; border-radius:12px; }.desktop-song-inspector h2 { font-size:19px; overflow-wrap:anywhere; }.desktop-song-inspector button { font-size:13px; min-height:34px; }.desktop-song-inspector p,.desktop-song-inspector dl { font-size:13px; }
+.uta-desktop .desktop-task-panel { width:min(420px,100vw); }.desktop-task-panel>header { padding:20px; }.desktop-task-panel>header p,.desktop-task-panel>footer { font-size:12px; color:var(--desktop-muted); }
+.desktop-task-summary { display:flex; flex-wrap:wrap; gap:8px; padding:14px 20px; border-bottom:1px solid var(--desktop-border); }
+.desktop-task-summary button { min-height:29px; padding:4px 9px; border:1px solid var(--desktop-border); border-radius:5px; color:var(--desktop-accent); background:var(--desktop-surface); cursor:pointer; font-size:12px; }
+.desktop-task-list { padding:0 20px 18px; }.desktop-task-list .desktop-task-current { margin:16px 0; padding:14px; display:flex; flex-direction:column; gap:9px; border-radius:8px; background:var(--desktop-soft); }
+.desktop-task-list .desktop-task-current b { font-size:13px; }.desktop-task-current button { font-size:12px; min-height:32px; }.desktop-task-current span,.desktop-task-current small { font-size:12px; color:var(--desktop-muted); }
+.desktop-task-group-title { font-size:13px; display:flex; align-items:center; gap:8px; margin:20px 0 12px; }.desktop-task-group-title span { background:var(--desktop-soft); color:var(--desktop-accent); border-radius:4px; padding:3px 6px; font-size:11px; }
+.desktop-task-item { border:1px solid var(--desktop-border); border-radius:9px; padding:15px; margin-bottom:12px; background:var(--desktop-surface); }
+.desktop-task-item h3 { font-size:14px; }.desktop-task-item p,.desktop-task-item small,.desktop-task-state,.desktop-task-kind { font-size:12px; line-height:1.6; }.desktop-task-item p,.desktop-task-item small { color:var(--desktop-muted); }
+.desktop-task-item.state-failed { border-color:#dca8b5; }.desktop-task-item .desktop-task-error { color:#8b344a; background:#f8e9ed; padding:10px; border-radius:5px; margin-top:12px; }
+.desktop-task-actions { display:flex; align-items:center; flex-wrap:wrap; gap:7px; }.desktop-task-actions button { font-size:12px; min-height:28px; padding:4px 8px; }.desktop-task-actions small { font-size:11px; }
+.desktop-task-list>details>summary { cursor:pointer; font-size:13px; padding:18px 0; }
+.desktop-batch-ai-dialog { width:min(520px,calc(100vw - 24px)); max-height:calc(100dvh - 70px); padding:22px; border:1px solid var(--desktop-border); border-radius:12px; color:var(--desktop-ink); background:var(--desktop-surface); font-family:"Segoe UI","Microsoft YaHei UI",sans-serif; }
+.desktop-batch-ai-dialog::backdrop { background:#18212b66; }.desktop-batch-ai-dialog header { display:flex; justify-content:space-between; gap:12px; align-items:center; }.desktop-batch-ai-dialog h2 { margin:0; font-size:20px; }
+.desktop-batch-ai-dialog p { font-size:13px; line-height:1.7; color:var(--desktop-muted); }.desktop-batch-ai-dialog button { min-height:34px; padding:6px 12px; border:1px solid var(--desktop-border); border-radius:6px; color:var(--desktop-accent); background:var(--desktop-surface); cursor:pointer; }.desktop-batch-ai-dialog button:disabled { opacity:.5; cursor:default; }.desktop-batch-ai-dialog button.desktop-primary { background:var(--desktop-accent); color:white; }
+.desktop-batch-ai-songs { max-height:38dvh; overflow:auto; display:grid; gap:8px; margin:16px 0; }.desktop-batch-ai-songs label { display:flex; align-items:center; gap:10px; background:var(--desktop-bg); border:1px solid var(--desktop-border); padding:12px; border-radius:6px; }.desktop-batch-ai-songs label>span { flex:1; min-width:0; }.desktop-batch-ai-songs b { display:block; font-size:14px; overflow-wrap:anywhere; }.desktop-batch-ai-songs small { display:block; font-size:12px; color:var(--desktop-muted); margin-top:4px; }.desktop-batch-ai-songs input { width:16px; height:16px; accent-color:var(--desktop-accent); }.desktop-batch-ai-dialog footer { display:flex; justify-content:flex-end; gap:8px; }.desktop-batch-ai-dialog .desktop-batch-ai-error { color:#8b344a; }
+.uta-desktop .desktop-sing-player-header { padding:16px 26px; gap:14px; }.uta-desktop .desktop-sing-actions { gap:8px; }.uta-desktop .desktop-sing-actions button,.uta-desktop .desktop-sing-actions select { min-height:34px; font-size:13px; border-radius:6px; }
+.uta-desktop .desktop-sing-guide { font-size:12px; }.uta-desktop .desktop-sing-footer { font-size:12px; }
+.uta-desktop .desktop-sing-appearance { display:flex; flex-direction:column; padding:0; overflow:hidden; width:min(360px,calc(100% - 24px)); background:var(--desktop-surface); color:var(--desktop-ink); border-color:var(--desktop-border); }
+.uta-desktop .desktop-sing-appearance>header { flex-shrink:0; padding:18px 20px; border-bottom:1px solid var(--desktop-border); }.uta-desktop .desktop-sing-appearance h2 { color:var(--desktop-ink); }.uta-desktop .desktop-sing-appearance p { font-size:12px; color:var(--desktop-muted); }
+.desktop-sing-appearance-fields { flex:1; min-height:0; overflow:auto; padding:18px 20px; }
+.uta-desktop .desktop-sing-appearance button { color:var(--desktop-accent); background:var(--desktop-surface); border-color:var(--desktop-border); border-radius:5px; min-height:32px; font-size:12px; }
+.uta-desktop .desktop-sing-appearance button[aria-pressed=true] { color:var(--desktop-accent); background:var(--desktop-soft); border-color:var(--desktop-accent); }
+.uta-desktop .desktop-sing-appearance label,.uta-desktop .desktop-sing-appearance .desktop-sing-field-label { font-size:12px; color:var(--desktop-muted); }
+.uta-desktop .desktop-sing-appearance>footer { margin:0; flex-shrink:0; padding:14px 18px; border-top:1px solid var(--desktop-border); display:flex; flex-wrap:wrap; gap:7px; }
+.uta-desktop .desktop-sing-appearance>footer .desktop-sing-apply { margin-left:auto; color:white; background:var(--desktop-accent); }
+@media(max-width:1250px) { .desktop-library-body { position:relative; }.desktop-song-inspector { position:absolute; z-index:9; right:0; top:0; bottom:0; width:min(270px,92%); box-shadow:-8px 0 25px var(--desktop-shadow); background:var(--desktop-surface); }.desktop-song-table th:last-child { width:24%; } }
+@media(max-width:900px) { .desktop-song-table th:nth-child(2),.desktop-song-table td:nth-child(2) { display:none; }.desktop-song-table th:first-child { width:48%; }.desktop-song-table th:nth-child(3) { width:23%; }.desktop-song-table th:last-child { width:29%; }.desktop-library-toolbar { flex-wrap:wrap; gap:9px; }.desktop-library-toolbar .desktop-search { margin-left:0; }.desktop-library-toolbar .desktop-search input { width:150px; }.desktop-library-heading-actions { gap:7px; } }
+@media(max-width:620px) { .desktop-song-table th:nth-child(3),.desktop-song-table td:nth-child(3) { display:none; }.desktop-song-table th:first-child { width:62%; }.desktop-song-table th:last-child { width:38%; }.desktop-song-select .desktop-cover { width:44px; height:44px; }.desktop-song-select b { font-size:13px; }.desktop-library-heading-actions button { font-size:12px; padding:6px 8px; }.desktop-library-row-actions { gap:4px; }.desktop-library-row-actions>button { padding:5px 6px; } }
+
+.uta-desktop .desktop-task-panel>footer,.uta-desktop .desktop-sing-appearance>footer { background:var(--desktop-surface); color:var(--desktop-muted); }
+.uta-desktop .desktop-song-inspector>button.desktop-inspector-close { width:28px; height:28px; min-height:28px; padding:4px; margin:0; border:0; background:transparent; }
+.uta-desktop .desktop-sing-appearance input { accent-color:var(--desktop-accent); }
+.uta-desktop .desktop-sing-appearance output { color:var(--desktop-muted); }
+
+/* Phase three: consistent import/review dialogs with a single main scroll area. */
+.uta-desktop .song-import-dialog:not(.batch-import-dialog) { width:min(1120px,calc(100vw - 40px)); height:min(860px,calc(100dvh - 72px)); max-height:calc(100dvh - 72px); display:flex; flex-direction:column; overflow:hidden; padding:24px 26px 0; }
+.uta-desktop .song-import-dialog:not(.batch-import-dialog)>h2 { font-size:22px; margin:0 0 16px; }.uta-desktop .song-import-dialog>.eyebrow { display:none; }
+.desktop-import-steps { display:flex; gap:22px; border-bottom:1px solid var(--desktop-border); margin:0 -26px; padding:0 26px; flex-shrink:0; }
+.desktop-import-steps button { border:0; border-bottom:2px solid transparent; border-radius:0; background:transparent; color:var(--desktop-muted); padding:12px 0; cursor:pointer; font-size:13px; }
+.desktop-import-steps button[aria-pressed=true] { color:var(--desktop-accent); border-bottom-color:var(--desktop-accent); font-weight:600; }
+.single-import-scroll { flex:1; min-height:0; overflow:auto; padding:20px 0; scrollbar-gutter:stable; }.single-import-scroll>section[hidden] { display:none; }
+.uta-desktop .song-import-dialog .song-import-actions { flex-shrink:0; margin:0 -26px; padding:12px 26px; border-top:1px solid var(--desktop-border); background:var(--desktop-surface); }
+.uta-desktop .song-import-dialog input,.uta-desktop .song-import-dialog select { font-size:14px; }.uta-desktop .song-import-intro,.uta-desktop .song-file-field small { font-size:12px; line-height:1.6; }
+.uta-desktop .single-import-scroll .lrc-review-scroll,.uta-desktop .batch-import-content .lrc-review-scroll { max-height:none; overflow:visible; }
+.uta-desktop .batch-import-dialog { width:min(1120px,calc(100vw - 40px)); }.uta-desktop .batch-import-content { scrollbar-gutter:stable; }.uta-desktop .batch-import-row { padding:16px; border:1px solid var(--desktop-border); border-radius:9px; background:var(--desktop-surface); margin-bottom:12px; }
+.uta-desktop .batch-import-toolbar { font-size:13px; background:var(--desktop-soft); color:var(--desktop-ink); padding:12px; border-radius:7px; }.uta-desktop .batch-import-heading h2 { font-size:22px; }.uta-desktop .batch-import-footer { background:var(--desktop-surface); }
+.uta-desktop .desktop-line-refresh { width:min(920px,calc(100vw - 40px)); height:min(820px,calc(100dvh - 72px)); max-height:calc(100dvh - 72px); display:flex; flex-direction:column; overflow:hidden; padding:20px 24px 0; }
+.desktop-line-refresh>header { flex-shrink:0; margin-bottom:14px; }.desktop-line-refresh>header h2 { font-size:22px; margin:6px 0 0; }.desktop-line-refresh>header small { font-size:12px; color:var(--desktop-muted); }
+.line-editor-tabs { display:flex; gap:22px; border-bottom:1px solid var(--desktop-border); flex-shrink:0; }.line-editor-tabs button { border:0; border-bottom:2px solid transparent; padding:12px 0; border-radius:0; color:var(--desktop-muted); background:transparent; cursor:pointer; font-size:13px; }
+.line-editor-tabs button[aria-pressed=true] { color:var(--desktop-accent); border-bottom-color:var(--desktop-accent); font-weight:600; }
+.desktop-line-refresh .line-editor-scroll { flex:1; min-height:0; overflow:auto; padding:20px 4px 20px 0; scrollbar-gutter:stable; }.desktop-line-refresh .line-editor-scroll>section[hidden] { display:none; }
+.desktop-line-refresh .line-editor-live { padding:18px; border-radius:9px; background:var(--desktop-bg); margin-bottom:20px; }.desktop-line-refresh .line-editor-live>p[lang=ja] { font-family:var(--desktop-font-family); font-size:var(--lyric-font-size,24px); }.desktop-line-refresh .line-editor-live .translation { margin:10px 0 0; }
+.desktop-line-refresh .line-editor-readings { overflow:visible; max-height:none; }.desktop-line-refresh .line-editor-word { padding:14px 0; }.desktop-line-refresh .line-editor-word input { font-size:14px; }.desktop-line-refresh .line-editor-romaji { font-family:var(--desktop-romaji-font); font-size:14px; color:var(--desktop-muted); }
+.desktop-line-refresh label,.desktop-line-refresh small,.desktop-line-refresh p { font-size:12px; color:var(--desktop-muted); line-height:1.65; }.desktop-line-refresh textarea { font-size:15px; min-height:75px; }.desktop-line-refresh .line-editor-annotation-note { margin:14px 0; }
+.uta-desktop .desktop-line-refresh>footer { margin:0 -24px; padding:12px 24px; border-top:1px solid var(--desktop-border); background:var(--desktop-surface); flex-shrink:0; }.desktop-line-refresh>footer button { min-height:35px; font-size:14px; }.desktop-line-refresh .line-editor-error { flex-shrink:0; max-height:70px; overflow:auto; font-size:13px; }
+.uta-desktop .segmentation-dialog { border-color:var(--desktop-border); background:var(--desktop-surface); color:var(--desktop-ink); }.uta-desktop .segmentation-dialog p { font-size:13px; color:var(--desktop-muted); }.uta-desktop .segmentation-dialog footer { background:var(--desktop-surface); }.uta-desktop .segmentation-glyph { font-family:var(--desktop-font-family); }.uta-desktop .segmentation-boundary { color:var(--desktop-border); }.uta-desktop .segmentation-boundary.active { color:var(--desktop-accent); }
+.desktop-review-cards { margin-top:22px; }.desktop-review-cards>header h3 { font-size:17px; display:flex; gap:8px; align-items:center; }.desktop-review-cards>header span { font-size:12px; color:var(--desktop-accent); background:var(--desktop-soft); border-radius:4px; padding:3px 6px; }
+.desktop-review-cards>nav { display:flex; gap:7px; margin:14px 0; }.desktop-review-cards>nav button,.desktop-review-restore-all { font-size:12px; padding:6px 9px; border:1px solid var(--desktop-border); color:var(--desktop-muted); border-radius:5px; background:var(--desktop-surface); cursor:pointer; }.desktop-review-cards>nav button[aria-pressed=true] { background:var(--desktop-soft); color:var(--desktop-accent); }
+.desktop-review-card { border:1px solid var(--desktop-border); border-radius:9px; background:var(--desktop-surface); padding:15px; margin:12px 0; }.desktop-review-card>small { font-size:12px; color:var(--desktop-muted); }.desktop-review-card>p[lang=ja] { font-family:var(--desktop-font-family); font-size:18px; line-height:1.7; margin:12px 0; }
+.desktop-review-compare { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }.desktop-review-compare>div { border:1px solid var(--desktop-border); border-radius:6px; padding:10px; min-width:0; }.desktop-review-compare>div:last-child { border-color:var(--desktop-accent); background:var(--desktop-bg); }.desktop-review-compare small { display:block; font-size:11px; color:var(--desktop-muted); margin-bottom:6px; }.desktop-review-compare strong { display:block; font-size:14px; line-height:1.65; overflow-wrap:anywhere; }
+.desktop-review-card .desktop-review-reason { font-size:12px; color:var(--desktop-muted); line-height:1.7; margin:12px 0; }.desktop-review-card>footer { display:flex; justify-content:flex-end; gap:8px; padding:0; background:var(--desktop-surface); }.desktop-review-card>footer button { border:1px solid var(--desktop-border); background:var(--desktop-surface); color:var(--desktop-accent); border-radius:5px; padding:6px 10px; min-height:32px; font-size:12px; cursor:pointer; }.desktop-review-card>footer button:last-child { background:var(--desktop-accent); color:white; }.desktop-review-empty { font-size:12px; color:var(--desktop-muted); }
+@media(max-width:720px) { .uta-desktop .song-import-dialog:not(.batch-import-dialog),.uta-desktop .desktop-line-refresh { width:calc(100vw - 16px); padding:16px 16px 0; max-height:calc(100dvh - 54px); }.desktop-import-steps { gap:14px; margin:0 -16px; padding:0 16px; }.desktop-import-steps button,.line-editor-tabs button { font-size:12px; }.uta-desktop .song-import-dialog .song-import-actions,.uta-desktop .desktop-line-refresh>footer { margin:0 -16px; padding:10px 16px; }.line-editor-tabs { gap:16px; }.desktop-line-refresh .line-editor-timing { grid-template-columns:1fr; } }
+
+.uta-desktop .word-panel:has(.desktop-review-cards) .desktop-word-empty { display:none; }
+.uta-desktop .word-panel:has(.desktop-word-empty):has(.desktop-review-cards)>.panel-head { display:none; }
+
+/* Use the same panel DOM when changing between docked and modal layouts. */
+.desktop-pane:not([open]) { display:contents; }
+.desktop-pane[open] {
+  position:fixed;
+  inset:42px 0 24px auto;
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  width:min(345px,calc(100vw - 16px));
+  max-width:none;
+  max-height:none;
+  height:calc(100dvh - 66px);
+  border:1px solid var(--desktop-border);
+  border-radius:9px 0 0 9px;
+  background:var(--desktop-surface);
+  color:var(--desktop-ink);
+  box-shadow:0 12px 36px var(--desktop-shadow);
+  overflow:hidden;
+}
+.desktop-pane::backdrop { background:#15231f55; }
+.desktop-pane-left[open] { inset:42px auto 24px 0; width:min(245px,calc(100vw - 16px)); border-radius:0 9px 9px 0; }
+.desktop-pane-left[open] .desktop-sidebar { height:100%; position:relative; overflow:auto; padding-top:20px; }
+.desktop-pane-right[open] .word-panel { height:100%; }
+.desktop-pane :is(.word-panel,.desktop-sidebar) { scroll-padding-block:10px; }
+.desktop-nav-dismiss,.desktop-word-panel-bar button {
+  display:grid; place-items:center; width:32px; height:32px; padding:0;
+  border:0; border-radius:5px; background:transparent; color:var(--desktop-ink);
+}
+.desktop-nav-dismiss { position:absolute; right:10px; top:10px; }
+.desktop-nav-dismiss:hover,.desktop-word-panel-bar button:hover { background:var(--desktop-soft); }
+.desktop-word-panel-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.uta-desktop .desktop-word-panel-bar+.panel-head { border-bottom:0; padding-bottom:0; }
+.uta-desktop .desktop-word-panel-bar+.panel-head .eyebrow,
+.uta-desktop .desktop-word-panel-bar+.panel-head h2 { display:none; }
+.desktop-sidebar-compact .desktop-sidebar { padding:14px 6px 8px; overflow:auto; }
+.desktop-sidebar-compact .desktop-product { padding:5px 0 18px; justify-content:center; }
+.desktop-sidebar-compact .desktop-product > div,
+.desktop-sidebar-compact .desktop-sidebar-section,
+.desktop-sidebar-compact .desktop-sidebar-bottom > small,
+.desktop-sidebar-compact .desktop-sidebar nav button > span,
+.desktop-sidebar-compact .desktop-sidebar nav button > small,
+.desktop-sidebar-compact .desktop-sidebar-bottom > button > span { display:none; }
+.desktop-sidebar-compact .desktop-sidebar nav button,
+.desktop-sidebar-compact .desktop-sidebar-bottom > button { justify-content:center; padding:8px 0; }
+.desktop-sidebar-compact .desktop-edit-checkpoint { padding:6px; overflow-wrap:anywhere; }
+.uta-desktop .lyrics-list { scroll-padding-block:8px; }
+.uta-desktop .lyrics-list:focus-visible { outline:2px solid var(--desktop-accent); outline-offset:-2px; }
+.uta-desktop .desktop-shortcuts-trigger {
+  min-height:32px; padding:4px 8px; border:1px solid var(--desktop-border);
+  border-radius:5px; background:var(--desktop-surface); color:var(--desktop-ink); font-size:12px;
+}
+.desktop-shortcuts header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.desktop-shortcuts dl { display:grid; grid-template-columns:max-content 1fr; gap:8px 14px; }
+.desktop-shortcuts dd { margin:0; color:var(--desktop-muted); }
+.desktop-shortcuts kbd { font:inherit; padding:1px 4px; background:var(--desktop-soft); border-radius:3px; }
+@media (max-width:759px) {
+  .desktop-titlebar { padding-left:10px; }
+  .desktop-titlebar .desktop-menu { margin-left:4px; }
+  .desktop-titlebar .desktop-menu button { padding-inline:6px; white-space:nowrap; }
+  .desktop-titlebar .desktop-title-context { display:none; }
+  .desktop-titlebar .desktop-pane-toggles { margin-left:auto; }
+  .uta-desktop .desktop-lesson-controls { flex-wrap:wrap; justify-content:flex-start; }
+}
+
+
+/* Keep invalid fields and their recovery actions together in Windows settings. */
+.uta-desktop .settings-field-error { display:block; color:var(--desktop-danger,#9d283c); font-size:12px; margin-top:4px; }
+.uta-desktop .settings-validation-summary {
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+  color:var(--desktop-ink); background:var(--desktop-bg); padding:8px 12px;
+  border:1px solid var(--desktop-border); border-radius:6px; margin:0 0 12px;
+}
+.uta-desktop .settings-validation-summary button {
+  border:0; background:none; padding:4px 6px; color:var(--desktop-strong); text-decoration:underline;
+}
+.uta-desktop .settings-dialog input[aria-invalid=true] { border-color:var(--desktop-danger,#9d283c); }
+.uta-desktop .settings-ai-fields,.uta-desktop .settings-content { scroll-padding-block:12px; }
+
+.uta-desktop .desktop-task-current .desktop-task-review-trigger { background:var(--desktop-accent); color:#fff; border-color:var(--desktop-accent); }
+.uta-desktop .desktop-task-current .desktop-task-review-trigger:hover:not(:disabled) { background:var(--desktop-strong); }
+
+/* Whole-song sub-editors keep their changes in the owning song draft. */
+.uta-desktop .song-draft-dialog {
+  border:0; padding:0; overflow:visible; background:transparent; color:var(--desktop-ink);
+  width:min(760px,calc(100vw - 28px)); max-width:none; max-height:calc(100dvh - 26px);
+}
+.song-draft-dialog::backdrop { background:#18212b65; }
+.uta-desktop .song-draft-reading .line-editor-backdrop { display:block; position:static; padding:0; background:transparent; }
+.uta-desktop .song-draft-reading .line-editor { width:100%; max-height:calc(100dvh - 32px); }
+.uta-desktop .song-draft-artwork .artwork-edit-dialog { width:100%; padding:18px; max-height:calc(100dvh - 30px); }
+.uta-desktop .song-draft-cover-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.uta-desktop .song-draft-cover-heading h2 { margin:0; font:600 20px var(--sans); }
+.uta-desktop .song-draft-cover-heading button { border:0; background:transparent; color:var(--desktop-ink); min-height:32px; }
+.song-editor-cover-card { display:flex; align-items:center; gap:13px; padding:12px; margin:12px 0; border:1px solid var(--desktop-border); border-radius:7px; }
+.song-editor-cover-card img,.song-editor-cover-placeholder { width:66px; height:66px; border-radius:6px; object-fit:cover; flex:none; }
+.song-editor-cover-placeholder { display:grid; place-items:center; background:var(--desktop-soft); color:var(--desktop-accent); }
+.song-editor-cover-card p { margin:3px 0 6px; color:var(--desktop-muted); font-size:12px; }
+.uta-desktop .song-editor-cover-card button,.uta-desktop .song-editor-line-reading button { display:inline-flex; align-items:center; gap:6px; min-height:31px; border:1px solid var(--desktop-border); padding:4px 8px; border-radius:5px; color:var(--desktop-accent); background:var(--desktop-surface); }
+.song-editor-line-reading { display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+.song-editor-line-reading small { color:var(--desktop-muted); }
+.lrc-review-issue-groups { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+.lrc-review-issue-groups>div { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:5px 8px; border:1px solid var(--desktop-border); border-radius:6px; background:var(--desktop-surface); }
+.lrc-review-issue-groups button { min-height:28px; padding:3px 6px; border:1px solid var(--desktop-border); border-radius:4px; color:var(--desktop-accent); background:var(--desktop-bg); }
+.lrc-review-rows>li.is-located { outline:2px solid var(--desktop-accent); outline-offset:-2px; scroll-margin:8px; }
+
+.uta-desktop dialog.song-draft-split { box-sizing:border-box; width:100vw; height:100dvh; max-width:none; max-height:none; margin:0; border:0; color:var(--desktop-ink); }
+.song-draft-split::backdrop { background:transparent; }
+
+
+.uta-desktop :is(.desktop-song-copy,.desktop-sing-heading) .desktop-song-title {
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  text-wrap:pretty;
+}
+.uta-desktop .desktop-full-song-title {
+  min-height:24px;
+  padding:1px 6px;
+  margin:0 0 4px;
+  border:1px solid var(--desktop-border);
+  border-radius:5px;
+  background:var(--desktop-surface);
+  color:var(--desktop-strong);
+  font-size:11px;
+}
+.uta-desktop .desktop-full-song-title[hidden] { display:none; }
+.uta-desktop .desktop-full-song-title:hover { background:var(--desktop-soft); }
+.desktop-full-song-dialog header { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.desktop-full-song-dialog p { overflow-wrap:anywhere; font-size:17px; line-height:1.6; }
+.uta-desktop .desktop-pane-limit {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:5px 9px;
+  flex-shrink:0;
+  margin:0 0 5px;
+  padding:4px 8px;
+  border-radius:5px;
+  background:var(--desktop-soft);
+  color:var(--desktop-strong);
+  font-size:12px;
+}
+.desktop-pane-limit button {
+  min-height:24px;
+  border:1px solid var(--desktop-border);
+  border-radius:5px;
+  padding:1px 6px;
+  background:var(--desktop-surface);
+  color:var(--desktop-strong);
+}
+.desktop-pane-limit button:hover,.desktop-resize-handle[data-space-limit] { background:var(--desktop-highlight); }
+.desktop-resize-handle[data-space-limit]::after { background:var(--desktop-accent); }
+@media (max-width:759px) {
+  .uta-desktop .desktop-song-header { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; }
+  .uta-desktop .desktop-song-header .desktop-song-actions { flex-wrap:wrap; justify-content:flex-end; }
+  .uta-desktop .desktop-lesson-controls { margin-left:0; }
+}
+
+
+.uta-desktop .desktop-lesson-volume { display:inline-grid; flex:none; place-items:center; width:34px; }
+.uta-desktop .desktop-lesson-volume-panel {
+  inset:auto; margin:6px 0; position-area:block-end span-inline-start;
+  position-try-fallbacks:flip-block, flip-inline;
+  border:1px solid var(--desktop-border); border-radius:7px; padding:10px 12px;
+  background:var(--desktop-surface); color:var(--desktop-ink); box-shadow:0 8px 22px var(--desktop-shadow);
+}
+.desktop-lesson-volume-panel label { display:flex; justify-content:space-between; gap:10px; font-size:13px; }
+.desktop-lesson-volume-panel input { display:block; width:148px; margin:7px 0 0; accent-color:var(--desktop-accent); }
+.uta-desktop .desktop-data-sections { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 18px; }
+.uta-desktop .desktop-data-sections button {
+  min-height:32px; padding:4px 10px; border:1px solid var(--desktop-border); border-radius:5px;
+  color:var(--desktop-ink); background:var(--desktop-surface);
+}
+.uta-desktop .desktop-data-sections button[aria-pressed=true] {
+  border-color:var(--desktop-accent); background:var(--desktop-soft); color:var(--desktop-strong);
+}
+.uta-desktop .desktop-data-sections + .cross-platform-panel { padding:0; overflow:visible; }
+.desktop-help-settings h4 { margin:0 0 6px; font-size:14px; color:var(--desktop-heading); }
+.desktop-help-settings p { margin:0 0 8px; font-size:13px; line-height:1.7; color:var(--desktop-muted); }
+.desktop-help-settings dl { display:grid; grid-template-columns:max-content minmax(0,1fr); gap:6px 12px; font-size:13px; }
+.desktop-help-settings dd { margin:0; color:var(--desktop-muted); }
