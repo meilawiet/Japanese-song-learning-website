@@ -384,7 +384,15 @@ export default function App() {
   const [artworkEditError, setArtworkEditError] = useState('')
   const [importError, setImportError] = useState('')
   const [librarySearch, setLibrarySearch] = useState('')
+  // 关闭为 false；封面和播放器分别打开完整歌曲库与快捷列表。
   const [songPickerOpen, setSongPickerOpen] = useState(false)
+  const quickStudyPickerRef = useRef(null)
+  useEffect(() => {
+    if (songPickerOpen !== 'quick') return undefined
+    const trigger = document.querySelector('.study-player-actions .study-song-trigger')
+    quickStudyPickerRef.current?.focus({ preventScroll: true })
+    return () => trigger?.focus({ preventScroll: true })
+  }, [songPickerOpen])
   const [songPickerSearch, setSongPickerSearch] = useState('')
   const [deletingSongId, setDeletingSongId] = useState('')
   // 安卓删除先展示适配本机文案的圆角确认框；确认前不修改歌曲数据。
@@ -1218,10 +1226,28 @@ export default function App() {
     enterRecentLearning()
   }
 
-  function openStudySongPicker() {
-    stopLinePlayback()
-    setSongPickerSearch('')
-    setSongPickerOpen(true)
+  function openStudySongPicker(kind) {
+    // 原来只有完整选歌：停止播放、清空搜索后打开。快捷列表打开时可继续听当前歌曲。
+    if (kind !== 'quick') {
+      stopLinePlayback()
+      setSongPickerSearch('')
+    }
+    setSongPickerOpen(previous => kind === 'quick' ? (previous === 'quick' ? false : 'quick') : 'library')
+  }
+
+  // 两个选歌入口共用本机切歌和云端补下载流程。
+  function chooseStudySong(id) {
+    if (songPickerOpen === 'quick' && id === activeSong.id) {
+      setSongPickerOpen(false)
+      return
+    }
+    if (askCloudSong(id, ready => {
+      chooseSong(ready, true)
+      setSongPickerOpen(false)
+    })) return
+    chooseSong(id)
+    setSongPickerOpen(false)
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
   function showLessonPage() {
@@ -2349,7 +2375,39 @@ export default function App() {
   return <>
     {/* 云目录歌曲按首确认下载，完整校验和本机保存完成后再取消暗色状态。 */}
     {cloudSongRequest&&<div className="line-editor-backdrop" onClick={()=>{if(!cloudSongBusy)setCloudSongRequest(null)}}><section className="line-editor cloud-song-download" role="dialog" aria-modal="true" aria-labelledby="cloud-song-download-title" onClick={event=>event.stopPropagation()}><header><h2 id="cloud-song-download-title">下载歌曲音频</h2></header><p>《{cloudSongRequest.song.title}》的歌词、封面和学习进度已恢复。是否下载这首歌的音频？约 {(cloudSongRequest.song.cloudAudio.size/1048576).toFixed(1)} MB。</p>{cloudSongBusy&&<p role="status">正在下载与校验…{cloudSongProgress}%</p>}{cloudSongError&&<p role="alert" className="line-editor-error">{cloudSongError}</p>}<footer><button type="button" disabled={cloudSongBusy} onClick={()=>setCloudSongRequest(null)}>取消</button><button type="button" disabled={cloudSongBusy} onClick={downloadRequestedCloudSong}>{cloudSongBusy?'下载中…':'确认下载'}</button></footer></section></div>}
-    {IS_ANDROID_APP && songPickerOpen && <div className="study-song-picker" role="dialog" aria-modal="true" aria-label="选择歌曲"><button className="study-picker-close" type="button" onClick={() => setSongPickerOpen(false)} aria-label="返回当前练习">‹ 返回</button><AndroidSongLibrary selectionMode songs={allSongs.filter((song) => !song.isDemo && normalizeSongSearch(`${song.title}${song.artist}`).includes(normalizeSongSearch(songPickerSearch)))} total={androidLibraryTotal} search={songPickerSearch} onSearch={setSongPickerSearch} artworkFor={artworkForSong} learnedBySong={learnedBySong} activeSongId={activeSong.id} onOpen={(id) => { if(askCloudSong(id,ready=>{chooseSong(ready,true);setSongPickerOpen(false)}))return;chooseSong(id); setSongPickerOpen(false); window.scrollTo({ top: 0, behavior: 'instant' }) }} /></div>}
+    {/* 原选歌窗口只有完整歌曲库，以前内联的切歌回调移至 chooseStudySong。 */}
+    {IS_ANDROID_APP && songPickerOpen === 'library' && <div className="study-song-picker" role="dialog" aria-modal="true" aria-label="选择歌曲"><button className="study-picker-close" type="button" onClick={() => setSongPickerOpen(false)} aria-label="返回当前练习">‹ 返回</button><AndroidSongLibrary selectionMode songs={allSongs.filter((song) => !song.isDemo && normalizeSongSearch(`${song.title}${song.artist}`).includes(normalizeSongSearch(songPickerSearch)))} total={androidLibraryTotal} search={songPickerSearch} onSearch={setSongPickerSearch} artworkFor={artworkForSong} learnedBySong={learnedBySong} activeSongId={activeSong.id} onOpen={chooseStudySong} /></div>}
+    {IS_ANDROID_APP && songPickerOpen === 'quick' && <div className="study-quick-picker-backdrop" onClick={() => setSongPickerOpen(false)}>
+      <section ref={quickStudyPickerRef} className="study-quick-picker" role="dialog" aria-modal="true" aria-label="快捷选歌" tabIndex={-1}
+        onClick={event => event.stopPropagation()}
+        onKeyDown={event => {
+          if (event.key === 'Escape') { setSongPickerOpen(false); return }
+          // 键盘焦点在歌曲列表内循环，关闭后回到触发按钮。
+          if (event.key !== 'Tab') return
+          const rows = event.currentTarget.querySelectorAll('li button')
+          const first = rows[0]
+          const last = rows[rows.length - 1]
+          if (!first || (event.shiftKey && (event.target === first || event.target === event.currentTarget)) || (!event.shiftKey && event.target === last)) {
+            event.preventDefault()
+            const next = event.shiftKey ? last : first
+            next?.focus()
+          }
+        }}>
+        {/* 原表头放标题和关闭按钮。现在关闭动作并入播放器上的三横线。
+        <header>
+          <button type="button" className="refined-icon" aria-label="关闭快捷选歌" autoFocus onClick={() => setSongPickerOpen(false)}><X size={20}/></button>
+        </header> */}
+        <ul>
+          {!androidLibraryTotal && <li className="study-quick-picker-empty">歌曲库还是空的</li>}
+          {allSongs.filter(song => !song.isDemo).map(song => <li key={song.id}>
+            <button type="button" aria-current={song.id === activeSong.id ? 'true' : undefined} onClick={() => chooseStudySong(song.id)}>
+              <strong>{song.title}</strong>
+              <small>{song.artist || '未知歌手'}</small>
+            </button>
+          </li>)}
+        </ul>
+      </section>
+    </div>}
     {/* 长按后只露出编辑入口；完整编辑窗口按需打开。 */}
     {/* 长按抬手会产生一次兼容点击；短暂忽略背景点击，避免刚弹出的菜单自动关闭。 */}
     {/* 长按只用于编辑；单句和多句收藏统一放在双击选区工具栏。 */}
@@ -2443,7 +2501,7 @@ export default function App() {
       {/* 原播放器传参保留对照：
       {unifiedStudy && <AndroidStudyPlayer song={activeSong} onLanguage={changeSongLanguage} readingOptions={activeSongSettings} onReadingOptions={updateSongSettings} transport={study.transport} rate={playbackRate} onRate={choosePlaybackRate} readingStyle={readingStyle} onReadingStyle={setReadingStyle} showTranslation={showStudyTranslation} onTranslation={setShowStudyTranslation} ready={readySentenceCount} total={activeSong.lines.length} generating={Boolean(sentenceExplanationJob)} onGenerate={generateCurrentSongExplanations} onReview={() => { stopLinePlayback(); setLyricAiReviewSong(activeSong) }} chat={<LyricChat key={activeSong.id} song={activeSong} lineId={activeLine.id} annotations={annotations} corrections={corrections} />} />}
       */}
-      {unifiedStudy && <AndroidStudyPlayer timestampEditing={timestampEditing} onTimestampEditing={setTimestampEditing} timestampBusy={timestampBusy} song={activeSong} onChooseSong={openStudySongPicker} onLanguage={changeSongLanguage} readingOptions={activeSongSettings} onReadingOptions={updateSongSettings} transport={study.transport} rate={playbackRate} onRate={choosePlaybackRate} readingStyle={readingStyle} onReadingStyle={setReadingStyle} showTranslation={showStudyTranslation} onTranslation={setShowStudyTranslation} ready={readySentenceCount} total={activeSong.lines.length} generating={Boolean(sentenceExplanationJob)} onGenerate={()=>generateCurrentSongExplanations(false)} onRegenerate={()=>generateCurrentSongExplanations(true)} onDeleteAnalyses={()=>setSentenceDeleteTarget({songId:activeSong.id,lineId:null})} hasAnalyses={Object.keys(currentSentenceCache).length>0} generationProgress={sentenceExplanationJob?.songId===activeSong.id?sentenceExplanationJob:null} onReview={() => { stopLinePlayback(); setLyricAiReviewSong(activeSong) }} chat={<LyricChat key={activeSong.id} song={activeSong} lineId={activeLine.id} annotations={annotations} corrections={corrections} />} />}
+      {unifiedStudy && <AndroidStudyPlayer timestampEditing={timestampEditing} onTimestampEditing={setTimestampEditing} timestampBusy={timestampBusy} song={activeSong} onChooseSong={() => openStudySongPicker('quick')} quickPickerOpen={songPickerOpen === 'quick'} onLanguage={changeSongLanguage} readingOptions={activeSongSettings} onReadingOptions={updateSongSettings} transport={study.transport} rate={playbackRate} onRate={choosePlaybackRate} readingStyle={readingStyle} onReadingStyle={setReadingStyle} showTranslation={showStudyTranslation} onTranslation={setShowStudyTranslation} ready={readySentenceCount} total={activeSong.lines.length} generating={Boolean(sentenceExplanationJob)} onGenerate={()=>generateCurrentSongExplanations(false)} onRegenerate={()=>generateCurrentSongExplanations(true)} onDeleteAnalyses={()=>setSentenceDeleteTarget({songId:activeSong.id,lineId:null})} hasAnalyses={Object.keys(currentSentenceCache).length>0} generationProgress={sentenceExplanationJob?.songId===activeSong.id?sentenceExplanationJob:null} onReview={() => { stopLinePlayback(); setLyricAiReviewSong(activeSong) }} chat={<LyricChat key={activeSong.id} song={activeSong} lineId={activeLine.id} annotations={annotations} corrections={corrections} />} />}
       {/* 已按用户要求移除逐句页顶部返回按钮；系统返回手势和底部导航继续可用。 */}
       <section className="hero anime-hero" aria-labelledby="song-title" style={{ '--hero-art': `url(${twilightStation})` }}>
         <div className="hero-art" aria-hidden="true" />

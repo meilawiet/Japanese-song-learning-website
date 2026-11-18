@@ -6,6 +6,8 @@ import manifest from './remoteFontManifest.json' with { type: 'json' }
 const REMOTE_FACES = {
   flyflower: { family: 'UTA FlyFlower', weight: '400' },
   maoken: { family: 'UTA Maoken', weight: '400' },
+  // 原版 SC 常规字重；缺字由应用字体栈补齐。
+  lxgw975yuan: { family: 'UTA LXGW 975 Yuan', weight: '400' },
   aidian: { family: 'UTA Aidian', weight: '400' },
   kinghwa: { family: 'UTA KingHwa', weight: '400' },
   sourcehan_extralight: { family: 'UTA SourceHan ExtraLight', weight: '200' },

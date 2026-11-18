@@ -9,7 +9,9 @@ test('外观设置具有四套主题与受限的独立字号', () => {
   assert.equal(THEMES.length, 4)
   // 原断言检查14个平铺选项；主列表仍为六种，思源宋体第二层恢复八档。
   // assert.equal(FONTS.length, 14)
-  assert.deepEqual(FONTS.map(font => font.id), ['system', 'yan', 'flyflower', 'maoken', 'aidian', 'kinghwa', 'sourcehan'])
+  // 霞鹜 975 圆体与其他按需字体一起列在预设内。
+  // 原顺序：['system', 'yan', 'flyflower', 'maoken', 'aidian', 'kinghwa', 'sourcehan']
+  assert.deepEqual(FONTS.map(font => font.id), ['system', 'yan', 'flyflower', 'maoken', 'lxgw975yuan', 'aidian', 'kinghwa', 'sourcehan'])
   assert.deepEqual(SOURCE_HAN_WEIGHTS.map(font => font.id), ['sourcehan_extralight', 'sourcehan_light', 'sourcehan', 'sourcehan_medium', 'sourcehan_semibold', 'sourcehan_bold', 'sourcehan_heavy', 'sourcehan_sc_heavy'])
   assert.deepEqual(normalizeAppearance(), DEFAULT_APPEARANCE)
   // 原断言缺少字体字段；新增字段不改变字号和主题的既有边界。
@@ -47,16 +49,23 @@ test('字体切换保留安卓根节点选择器并写入当前字体', () => {
   try {
     const declaration = ['--uta-selected-font']
     declaration.getPropertyValue = property => property === '--uta-selected-font' ? '"UTA Maoken"' : ''
+    // 带倍率变量的横屏字号应由 CSS 缩放一次。
+    const scaledSize = ['font-size']
+    scaledSize.getPropertyValue = property => property === 'font-size' ? 'calc(14px * var(--ref-font-scale, 1))' : ''
     const output = { textContent: '' }
     globalThis.document = {
       getElementById: () => output,
-      styleSheets: [{ ownerNode: {}, cssRules: [{ type: 1, selectorText: ':root.uta-android-font[data-uta-font="maoken"]', style: declaration }] }],
+      styleSheets: [{ ownerNode: {}, cssRules: [
+        { type: 1, selectorText: ':root.uta-android-font[data-uta-font="maoken"]', style: declaration },
+        { type: 1, selectorText: '.tablet-caption', style: scaledSize },
+      ] }],
       documentElement: { dataset: {} },
     }
     globalThis.window = { dispatchEvent() {} }
-    applyAppearance({ font: 'maoken' })
+    applyAppearance({ font: 'maoken', textSize: 130 })
     assert.match(output.textContent, /:root\.uta-android-font\[data-uta-font="maoken"\]\{--uta-selected-font:"UTA Maoken"\}/)
     assert.doesNotMatch(output.textContent, /:root:root/)
+    assert.doesNotMatch(output.textContent, /\.tablet-caption/)
     assert.equal(globalThis.document.documentElement.dataset.utaFont, 'maoken')
   } finally {
     globalThis.document = originalDocument

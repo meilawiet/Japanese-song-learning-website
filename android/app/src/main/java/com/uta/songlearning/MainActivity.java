@@ -1,5 +1,7 @@
 package com.uta.songlearning;
 
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
 
@@ -29,7 +31,25 @@ public class MainActivity extends BridgeActivity {
         // 已停用兔小巢，不向前端注册原生反馈接口；原调用保留供对照。
         // registerPlugin(FeedbackPlugin.class);
         super.onCreate(savedInstanceState);
+        applyScreenOrientation(getResources().getConfiguration());
         // 头像选图先复制到应用缓存，避免三星相册重复选图时 WebView 读不到临时文件。
         bridge.getWebView().setWebChromeClient(new AvatarWebChromeClient(bridge));
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration configuration) {
+        super.onConfigurationChanged(configuration);
+        // 折叠屏切换内外屏或显示配置变化时，重新判断是否需要锁定竖屏。
+        applyScreenOrientation(configuration);
+    }
+
+    private void applyScreenOrientation(Configuration configuration) {
+        // 按最小宽度区分手机与平板，避免把已转为横屏的手机当作平板。
+        int orientation = configuration.smallestScreenWidthDp >= 600
+            ? ActivityInfo.SCREEN_ORIENTATION_USER
+            : ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
+        if (getRequestedOrientation() != orientation) {
+            setRequestedOrientation(orientation);
+        }
     }
 }

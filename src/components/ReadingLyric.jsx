@@ -38,10 +38,14 @@ export default function ReadingLyric({ text, tokens, corrections, songId, lineId
         <span className="word-aligned-original" lang="ja">{surface}</span>
       </span>
     })}
-    {/* 来源无法可靠分配到词时仍显示完整来源，明确区分尚未词级对齐。 */}
-    {/* 来源仍单独显示。假名模式说明词典回退，避免把词典读法当成原唱。 */}
+    {/* 学习页隐藏假名模式的来源对齐提示，保留词组上的词典注音和罗马音模式中的来源正文。 */}
+    {/* 原显示逻辑：
     {prepared.hasSource&&!prepared.aligned&&<small className="word-aligned-unresolved">
       {readingStyle==='hiragana'?'来源读音未对齐，词典注音仅供参考。':`来源罗马音（未按词对齐，逐词注音可参考词典）：${importedRomaji}`}
+    </small>}
+    */}
+    {readingStyle!=='hiragana'&&prepared.hasSource&&!prepared.aligned&&<small className="word-aligned-unresolved">
+      {`来源罗马音（未按词对齐，逐词注音可参考词典）：${importedRomaji}`}
     </small>}
   </span>
   return prepared.tokens.map((token) => {

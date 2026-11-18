@@ -13,6 +13,7 @@
 .refined-page-heading{display:flex;align-items:center;justify-content:space-between;min-height:var(--ref-touch);margin-block-end:var(--ref-4)}
 .refined-page-heading h1{margin:0;font-size:var(--ref-title);font-weight:720;letter-spacing:-.025em;line-height:1.4}
 .refined-icon{display:grid;place-items:center;min-width:var(--ref-touch);min-height:var(--ref-touch);padding:0;border:0;background:transparent;color:var(--ref-accent);border-radius:var(--ref-radius-sm)}
+/* 原版资料条和独立统计栏使用以下布局，保留作对照。
 .refined-identity{position:relative;display:flex;align-items:center;gap:var(--ref-3);margin-block:var(--ref-2) var(--ref-6);min-height:var(--ref-avatar)}
 :root.uta-android-font.uta-refined .refined-identity .local-profile-centered{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:var(--ref-4);margin:0;padding:0;flex:1;min-width:0;text-align:start}
 :root.uta-android-font.uta-refined .refined-identity .local-profile-view{flex:none;width:var(--ref-avatar);height:var(--ref-avatar);min-height:var(--ref-avatar);margin:0;border-radius:50%;background:var(--ref-tint);color:var(--ref-accent)}
@@ -22,9 +23,10 @@
 .refined-statistics{display:flex;justify-content:space-around;padding-block:var(--ref-4);margin-block-end:var(--ref-6);border-block:var(--ref-hairline) solid var(--ref-line)}
 .refined-statistics>span{display:flex;flex:1;align-items:center;flex-direction:column;gap:var(--ref-1)}
 .refined-statistics strong{font-size:var(--ref-title);line-height:1.4;font-weight:650;color:var(--ref-text)}.refined-statistics small{font-size:var(--ref-small);line-height:1.5;color:var(--ref-muted)}
+*/
 .refined-shortcuts{overflow:hidden;border-radius:var(--ref-radius);background:var(--ref-surface);border:var(--ref-hairline) solid var(--ref-line)}
 .refined-shortcuts>button{display:flex;align-items:center;gap:var(--ref-4);width:100%;min-height:var(--ref-song-row);padding:var(--ref-3) var(--ref-4);border:0;border-block-end:var(--ref-hairline) solid var(--ref-line);border-radius:0;background:transparent;color:var(--ref-text);text-align:start}
-/* 原 68px 高的五个入口会伸到横屏底栏。短屏压缩上下留白，保留至少 48px 的触控区域。 */
+/* 短屏压缩功能列表上下留白，保留至少 48px 的触控区域。 */
 @media (max-height: 720px) {
   .refined-mine .refined-shortcuts > button {
     min-height: var(--ref-touch);
@@ -32,6 +34,76 @@
   }
 }
 .refined-shortcuts>button:last-child{border-block-end:0}.refined-shortcuts>button>svg:first-child{color:var(--ref-accent)}.refined-shortcuts>button>svg:last-child{color:var(--ref-muted)}.refined-shortcuts>button>span{flex:1;min-width:0}.refined-shortcuts strong{display:block;font-size:var(--ref-body);line-height:1.5;font-weight:620}.refined-shortcuts small{display:block;font-size:var(--ref-small);line-height:1.5;color:var(--ref-muted);margin-block-start:var(--ref-1)}
+/* 头像、昵称和两项统计共用资料卡。 */
+:root.uta-android-font.uta-refined .refined-identity {
+  --profile-avatar-size: 76px;
+  display: grid;
+  grid-template-columns: var(--profile-avatar-size) minmax(0, 1fr) auto;
+  grid-template-areas: "avatar name edit" "avatar metrics metrics";
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  gap: var(--ref-1) var(--ref-3);
+  margin-block: var(--ref-2) var(--ref-6);
+  padding: var(--ref-4);
+  border-radius: var(--ref-radius);
+  background: linear-gradient(
+    120deg,
+    rgba(var(--uta-tint-rgb, 233, 237, 249), var(--profile-card-opacity, 1)),
+    rgba(var(--uta-surface-rgb, 255, 255, 255), var(--profile-card-opacity, 1))
+  );
+}
+/* 只调渐变两端的底色透明度，头像、昵称和操作按钮保持正常对比度。 */
+:root.uta-android-font.uta-refined[data-uta-background=on] .refined-identity {
+  --profile-card-opacity: var(--uta-card-opacity, .9);
+}
+/* 复用头像预览组件，将头像和昵称分别放入资料卡网格。 */
+:root.uta-android-font.uta-refined .refined-identity .local-profile-centered { display: contents; }
+:root.uta-android-font.uta-refined .refined-identity .local-profile-view {
+  grid-area: avatar;
+  width: var(--profile-avatar-size);
+  height: var(--profile-avatar-size);
+  min-height: 0;
+  margin: 0;
+  border: 2px solid var(--ref-surface);
+  border-radius: 50%;
+  background: var(--ref-tint);
+  color: var(--ref-accent);
+}
+:root.uta-android-font.uta-refined .refined-identity .local-profile-view > svg { width: 44%; height: 44%; }
+:root.uta-android-font.uta-refined .refined-identity .local-profile-centered > strong {
+  grid-area: name;
+  align-self: end;
+  margin: 0;
+  color: var(--ref-text);
+  font-size: var(--ref-title);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.refined-profile-link {
+  grid-area: edit;
+  align-self: end;
+  display: flex;
+  align-items: center;
+  gap: var(--ref-1);
+  min-height: var(--ref-touch);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ref-muted);
+  font-size: var(--ref-small);
+}
+.refined-statistics {
+  grid-area: metrics;
+  align-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ref-1) var(--ref-4);
+  color: var(--ref-muted);
+  font-size: var(--ref-small);
+  line-height: 1.4;
+}
+.refined-statistics strong { color: var(--ref-text); font-size: var(--ref-body); }
 /* 学习首页不再用宣传标题和重复复习提醒占据屏幕；只有实际封面、歌曲和导入。 */
 .refined-continue{position:relative;isolation:isolate;display:block;width:100%;height:var(--ref-hero);padding:0;overflow:hidden;border:0;border-radius:var(--ref-radius);text-align:start;color:var(--ref-on-cover)}
 .refined-cover{display:grid;place-items:center;flex:none;overflow:hidden;border-radius:var(--ref-radius-sm);background:var(--ref-tint);color:var(--ref-accent)}.refined-cover img{display:block;width:100%;height:100%;object-fit:cover}
@@ -53,6 +125,10 @@
 /* 歌词页固定紧凑页头，只有歌词正文滚动，消除重复大封面、进度条和说明行。 */
 :root.uta-android-font.uta-refined .android-main.unified-study-page{display:flex;flex-direction:column;height:calc(100vh - var(--study-player-height,130px));min-height:0;overflow:hidden;padding:0 var(--ref-4)}
 .refined-study-header{flex:none;padding-block:var(--ref-2) 0;background:transparent;color:var(--ref-text)}.refined-study-identity{display:flex;align-items:center;gap:var(--ref-2);min-height:var(--ref-touch)}.refined-study-identity>.refined-icon{flex:none}.refined-study-cover{width:var(--ref-cover);height:var(--ref-touch);flex:none;padding:0;border:0;border-radius:var(--ref-radius-sm);overflow:hidden;display:grid;place-items:center;background:var(--ref-tint);color:var(--ref-accent)}.refined-study-cover img{display:block;width:100%;height:100%;object-fit:cover}.refined-study-identity>div{min-width:0;flex:1}.refined-study-identity h1{margin:0;font-size:var(--ref-heading);line-height:1.4;font-weight:660;overflow-wrap:anywhere}.refined-study-identity p{margin:var(--ref-1) 0 0;font-size:var(--ref-small);line-height:1.5;color:var(--ref-muted)}
+/* 封面图覆盖占位图标，加载失败时显示占位。 */
+.refined-study-cover > svg,
+.refined-study-cover > img { grid-area: 1 / 1; }
+.refined-study-cover > img[hidden] { display: none; }
 .refined-study-navigation{display:flex;align-items:center;justify-content:space-between;border-block-end:var(--ref-hairline) solid var(--ref-line);margin-block:var(--ref-2) var(--ref-3);gap:var(--ref-2)}.refined-study-navigation>div{display:flex;gap:var(--ref-4)}.refined-study-navigation button{min-height:var(--ref-touch);padding:0 var(--ref-1);border:0;border-block-end:var(--ref-focus) solid transparent;border-radius:0;background:transparent;color:var(--ref-muted);font-size:var(--ref-small)}.refined-study-navigation button[aria-pressed=true]{color:var(--ref-accent);border-block-end-color:var(--ref-accent);font-weight:700}.refined-study-navigation>span{font-size:var(--ref-small);color:var(--ref-muted);white-space:nowrap}.refined-study-error{font-size:var(--ref-small);line-height:1.5;color:var(--ref-danger);margin:var(--ref-2) 0}
 :root.uta-android-font.uta-refined .unified-study-page .practice-layout{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 0 var(--ref-5);margin:0;scrollbar-width:none}:root.uta-android-font.uta-refined .unified-study-page .lyrics-panel{background:transparent;border:0;border-radius:0;padding:0;box-shadow:none}:root.uta-android-font.uta-refined .unified-study-page .lyrics-list{margin:0;padding:0;background:transparent;border:0}
 /* 原 margin:0 取消了歌词列的水平居中。宽屏保留可读行宽，歌词与播放器共用居中的内容列。 */
@@ -77,9 +153,109 @@
 /* 模式、选歌、更多已在页头各保留一次，底栏保留倍速/播放/问AI，原真实弹窗逻辑不改。 */
 :root.uta-android-font.uta-refined .unified-study-player{padding:var(--ref-2) var(--ref-6) calc(var(--ref-3) + env(safe-area-inset-bottom));border:0;background:var(--ref-page);box-shadow:none}:root.uta-android-font.uta-refined .study-timeline-note:empty{display:none}:root.uta-android-font.uta-refined .study-seek{min-height:var(--ref-touch);font-size:var(--ref-small)}:root.uta-android-font.uta-refined .study-seek input{height:var(--ref-touch);accent-color:var(--ref-accent)}:root.uta-android-font.uta-refined .study-player-controls{display:grid;grid-template-columns:minmax(0,1fr) var(--ref-avatar) minmax(0,1fr);gap:var(--ref-2)}:root.uta-android-font.uta-refined .study-player-left,:root.uta-android-font.uta-refined .study-player-right .study-more-trigger{display:none}:root.uta-android-font.uta-refined .study-player-right{display:contents}:root.uta-android-font.uta-refined .study-central-play{grid-column:2;grid-row:1;justify-self:center;width:var(--ref-avatar);height:var(--ref-avatar)}:root.uta-android-font.uta-refined .study-rate-trigger{grid-column:1;grid-row:1;justify-self:start;min-width:var(--ref-touch);min-height:var(--ref-touch);border:0;background:transparent}:root.uta-android-font.uta-refined .study-floating-chat{grid-column:3;grid-row:1;justify-self:end;min-width:var(--ref-touch);min-height:var(--ref-touch);border:0;background:transparent}
 /* 其余页面同步收敛装饰眉题、重复提示和边框密度，功能入口保留。 */
+/* 快捷选歌紧邻播放键，问 AI 靠右，保留原播放键中心线。 */
+:root.uta-android-font.uta-refined .study-player-actions {
+  grid-column: 3;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+:root.uta-android-font.uta-refined .study-player-actions .study-song-trigger {
+  display: grid;
+  place-items: center;
+  min-width: var(--ref-touch);
+  min-height: var(--ref-touch);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ref-accent);
+}
+:root.uta-android-font.uta-refined .study-player-actions .study-song-trigger[aria-expanded=true] {
+  border-radius: 50%;
+  background: var(--ref-tint);
+}
+:root.uta-android-font.uta-refined .study-player-actions .study-floating-chat {
+  white-space: nowrap;
+}
+/* 竖屏把纯文字歌曲列表放在播放器上方。 */
+.study-quick-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 42;
+}
+.study-quick-picker {
+  position: absolute;
+  inset-inline-end: var(--ref-4);
+  /* 原先避开整个播放器，和触发按钮之间隔了时间轴。现在贴近按钮上缘。 */
+  bottom: calc(var(--ref-avatar) + var(--ref-6) + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  width: min(420px, calc(100vw - 2 * var(--ref-4)));
+  max-height: min(49vh, 360px);
+  border: 1px solid var(--ref-line);
+  border-radius: var(--ref-radius);
+  background: var(--ref-surface);
+  color: var(--ref-text);
+  box-shadow: 0 6px 10px #15151b12, 0 16px 36px #15151b24;
+  outline: none;
+}
+/* 原方案给关闭按钮单独占一行。
+.study-quick-picker header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: none;
+}
+.study-quick-picker header .refined-icon { min-height: 40px; }
+*/
+.study-quick-picker ul {
+  min-height: 0;
+  margin: 0;
+  padding: var(--ref-2);
+  border-radius: inherit;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.study-quick-picker li + li { margin-top: var(--ref-1); }
+.study-quick-picker li > button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: var(--ref-touch);
+  padding: var(--ref-2) var(--ref-3);
+  border: 0;
+  border-inline-start: 3px solid transparent;
+  border-radius: var(--ref-radius-sm);
+  background: transparent;
+  color: var(--ref-text);
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+.study-quick-picker li > button[aria-current=true] {
+  background: var(--ref-tint);
+  border-inline-start-color: var(--ref-accent);
+}
+.study-quick-picker li > button:active { background: var(--ref-tint); }
+.study-quick-picker li > button:focus-visible { outline-offset: -2px; }
+.study-quick-picker li :is(strong, small) {
+  /* 歌名和歌手各最多两行，辅助功能仍读取原始文字。 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.study-quick-picker strong { font-size: var(--ref-body); line-height: 1.35; }
+.study-quick-picker small { color: var(--ref-muted); font-size: var(--ref-small); line-height: 1.35; }
+.study-quick-picker-empty { padding: var(--ref-4); color: var(--ref-muted); }
 :root.uta-android-font.uta-refined .android-review-book>.android-home-eyebrow,:root.uta-android-font.uta-refined .android-library-kicker,:root.uta-android-font.uta-refined .library-backup-bar,:root.uta-android-font.uta-refined .settings-heading .eyebrow{display:none}:root.uta-android-font.uta-refined .review-heading h1,:root.uta-android-font.uta-refined .android-library-heading h1{font-size:var(--ref-title)}:root.uta-android-font.uta-refined .android-review-book{padding:var(--ref-4) var(--ref-6)}:root.uta-android-font.uta-refined .review-heading{margin-block-end:var(--ref-5)}:root.uta-android-font.uta-refined .review-today{border:0;box-shadow:none}:root.uta-android-font.uta-refined .song-import-dialog .import-extra{padding-block:var(--ref-3)}:root.uta-android-font.uta-refined .song-import-dialog .artwork-picker,:root.uta-android-font.uta-refined .song-import-dialog .import-meta-fields input{border-radius:var(--ref-radius-sm)}:root.uta-android-font.uta-refined .review-knowledge-workspace{border-color:var(--ref-line)}
 @supports(height:100dvh){:root.uta-android-font.uta-refined .android-main.unified-study-page{height:calc(100dvh - var(--study-player-height,130px))}}
-@media(max-height:700px){:root.uta-refined{--ref-hero:160px}.refined-page-heading{margin-block-end:var(--ref-2)}.refined-identity{margin-block-end:var(--ref-4)}.refined-statistics{padding-block:var(--ref-3);margin-block-end:var(--ref-4)}}
+/* 原独立统计栏短屏留白：.refined-statistics{padding-block:var(--ref-3);margin-block-end:var(--ref-4)} */
+@media(max-height:700px){:root.uta-refined{--ref-hero:160px}.refined-page-heading{margin-block-end:var(--ref-2)}:root.uta-android-font.uta-refined .refined-identity{margin-block-end:var(--ref-4)}}
 @media(prefers-reduced-motion:reduce){:root.uta-android-font.uta-refined *,:root.uta-android-font.uta-refined *::before,:root.uta-android-font.uta-refined *::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 /* 「熟」用斜置印章，保留足够大的触摸区并沿用当前主题。 */
 .mastered-word-label { display:inline-flex; align-items:center; gap:0 3px; }

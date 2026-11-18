@@ -23,7 +23,7 @@ export function AndroidStudyHeader({ song, artwork, learned, onChoose, error }) 
 // 原组件参数保留对照：AndroidStudyPlayer({ transport, rate, onRate, readingStyle, onReadingStyle, showTranslation, onTranslation, chat, onReview, ready, total, generating, onGenerate, song, onLanguage, readingOptions = {}, onReadingOptions })
 // 原参数保留，新增整曲解析管理与任务进度。
 // export default function AndroidStudyPlayer({ transport, rate, onRate, onChooseSong, readingStyle, onReadingStyle, showTranslation, onTranslation, chat, onReview, ready, total, generating, onGenerate, song, onLanguage, readingOptions = {}, onReadingOptions }) {
-export default function AndroidStudyPlayer({ transport, rate, onRate, onChooseSong, readingStyle, onReadingStyle, showTranslation, onTranslation, chat, onReview, ready, total, generating, onGenerate, onRegenerate, onDeleteAnalyses, hasAnalyses=false, generationProgress, timestampEditing=false, onTimestampEditing, timestampBusy=false, song, onLanguage, readingOptions = {}, onReadingOptions }) {
+export default function AndroidStudyPlayer({ transport, rate, onRate, onChooseSong, quickPickerOpen=false, readingStyle, onReadingStyle, showTranslation, onTranslation, chat, onReview, ready, total, generating, onGenerate, onRegenerate, onDeleteAnalyses, hasAnalyses=false, generationProgress, timestampEditing=false, onTimestampEditing, timestampBusy=false, song, onLanguage, readingOptions = {}, onReadingOptions }) {
   const state = useSyncExternalStore(transport.subscribe, transport.getSnapshot, transport.getSnapshot)
   const [panel, setPanel] = useState(null)
   // 页头的更多按钮打开同一业务面板，不另造一套设置。
@@ -67,13 +67,23 @@ export default function AndroidStudyPlayer({ transport, rate, onRate, onChooseSo
     */}
     <div className="study-player-controls">
       <div className="study-player-left">
-        {/* 当前模式点一次切到另一模式；三横线复用封面已有的选歌弹窗。 */}
+        {/* 原三横线在这里打开完整选歌页，现移到播放键右侧打开快捷列表。
+        <button type="button" className="study-song-trigger" aria-label="选择其他歌曲" title="选择其他歌曲" onClick={onChooseSong}><Menu size={21} strokeWidth={1.8} /></button> */}
         <button type="button" className="study-mode-trigger" aria-label={state.mode === 'sentence' ? '切换到跟唱练习' : '切换到逐句学习'} onClick={() => transport.setMode(state.mode === 'sentence' ? 'continuous' : 'sentence')}>{state.mode === 'sentence' ? '逐句学习' : '跟唱练习'}</button>
-        <button type="button" className="study-song-trigger" aria-label="选择其他歌曲" title="选择其他歌曲" onClick={onChooseSong}><Menu size={21} strokeWidth={1.8} /></button>
       </div>
       {/* 原 disabled={!state.ready}；尚待选终点时保持暂停，完成后继续复用原播放按钮。 */}
       <button className="study-central-play" type="button" aria-label={state.busy ? '取消载入' : state.playing ? '暂停播放' : '开始播放'} disabled={!state.ready || state.rangeAnchorId != null} onClick={transport.toggle}>{state.busy ? <LoaderCircle size={24} className="spin" /> : state.playing ? <Pause size={24} fill="currentColor" /> : <Play size={25} fill="currentColor" />}</button>
-      <div className="study-player-right"><button type="button" className="study-rate-trigger" aria-label="选择播放倍速" aria-expanded={panel === 'rate'} onClick={() => setPanel(panel === 'rate' ? null : 'rate')}>{rate}×</button>{chat}<button type="button" className="study-more-trigger" aria-label="更多学习选项" aria-expanded={panel === 'more'} onClick={() => setPanel(panel === 'more' ? null : 'more')}><MoreHorizontal size={21} /></button></div>
+      <div className="study-player-right">
+        <button type="button" className="study-rate-trigger" aria-label="选择播放倍速" aria-expanded={panel === 'rate'} onClick={() => setPanel(panel === 'rate' ? null : 'rate')}>{rate}×</button>
+        {/* 右侧两个入口共用一列，播放键保持居中。 */}
+        <div className="study-player-actions">
+          <button type="button" className="study-song-trigger" aria-label={quickPickerOpen?'关闭快捷选歌':'快捷选歌'} aria-haspopup="dialog" aria-expanded={quickPickerOpen} onClick={onChooseSong}>
+            {quickPickerOpen?<X size={22} strokeWidth={1.8}/>:<Menu size={22} strokeWidth={1.8}/>}
+          </button>
+          {chat}
+        </div>
+        <button type="button" className="study-more-trigger" aria-label="更多学习选项" aria-expanded={panel === 'more'} onClick={() => setPanel(panel === 'more' ? null : 'more')}><MoreHorizontal size={21} /></button>
+      </div>
     </div>
     {/* 原模式选单保留对照：{panel === 'mode' ? <div className="study-mode-options">{[['sentence', '逐句学习', '播放选中句，句末停下'], ['continuous', '连续跟唱', '按时间轴连续播放后续歌词']].map(([value, label, note]) => <button type="button" key={value} aria-pressed={state.mode === value} onClick={() => { transport.setMode(value); setPanel(null) }}><strong>{label}</strong><small>{note}</small></button>)}</div> */}
     {/* 原更多面板整曲解析只有生成按钮；下面保留源码对照。 */}

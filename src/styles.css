@@ -33,6 +33,8 @@
 :root.uta-android-font { --uta-selected-font:"UTA YanZhenQing"; --serif:var(--uta-selected-font),"UTA SourceHan","UTA YanZhenQing","Noto Serif JP",Georgia,serif; --sans:var(--uta-selected-font),"UTA SourceHan","UTA YanZhenQing","Noto Sans JP",Arial,sans-serif; --mono:var(--uta-selected-font),"UTA SourceHan","UTA YanZhenQing","DM Mono",monospace; }
 :root.uta-android-font[data-uta-font="flyflower"] { --uta-selected-font:"UTA FlyFlower"; }
 :root.uta-android-font[data-uta-font="maoken"] { --uta-selected-font:"UTA Maoken"; }
+/* 霞鹜 975 圆体下载后通过 FontFace 注册，未覆盖字符沿用备用字库。 */
+:root.uta-android-font[data-uta-font="lxgw975yuan"] { --uta-selected-font:"UTA LXGW 975 Yuan"; }
 :root.uta-android-font[data-uta-font="aidian"] { --uta-selected-font:"UTA Aidian"; }
 :root.uta-android-font[data-uta-font="kinghwa"] { --uta-selected-font:"UTA KingHwa"; }
 :root.uta-android-font[data-uta-font="sourcehan"] { --uta-selected-font:"UTA SourceHan"; }
@@ -1179,8 +1181,9 @@ body { background:radial-gradient(circle at 8% 4%,rgba(252,217,184,.45),transpar
 .study-player-left .study-song-trigger{display:grid;place-items:center;width:40px;padding:0}
 .study-central-play{display:grid;place-items:center;justify-self:center;width:52px;height:52px;padding:0;border:0;border-radius:50%;color:white;background:#426550}
 .study-central-play:disabled{opacity:.45}
-.study-player-right>.study-floating-chat{position:static;z-index:auto;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2px;width:auto;min-height:44px;padding:3px 2px;box-shadow:none;font-size:11px}
-.study-player-right>.study-floating-chat svg{width:13px;height:13px;flex:none}
+/* 问 AI 进入右侧操作组后，仍沿用播放器内的横排样式。 */
+.study-player-right>.study-floating-chat,.study-player-actions>.study-floating-chat{position:static;z-index:auto;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2px;width:auto;min-height:44px;padding:3px 2px;box-shadow:none;font-size:11px}
+.study-player-right>.study-floating-chat svg,.study-player-actions>.study-floating-chat svg{width:13px;height:13px;flex:none}
 .unified-options-backdrop{padding:12px 12px calc(var(--study-player-height,130px) + 8px)}
 /* 原 max-height:calc(100dvh - var(--study-player-height,130px) - 32px) 在旧内核含var时会使vh回退失效。
    新增位置选项后弹窗更长，必须限制高度并在卡片内部滚动。 */

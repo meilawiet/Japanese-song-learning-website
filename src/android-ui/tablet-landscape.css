@@ -1,0 +1,294 @@
+/* 横屏额外歌曲仅在平板卡片区显示。 */
+.refined-song.tablet-extra-song {
+  display: none;
+}
+
+@media (orientation: landscape) and (min-height: 480px) and (min-width: 760px) {
+  :root.uta-android-font.uta-refined {
+    --tablet-rail: 88px;
+    --tablet-gap: clamp(20px, 3vw, 44px);
+    /* 原本只放大学习和我的标题；复习本订阅同一个横屏字号。 */
+    --ref-page-heading-size: calc(28px * var(--ref-font-scale, 1));
+  }
+
+  /* 学习、复习和我的沿用同一导航状态，导航搬到左侧。 */
+  :root.uta-android-font.uta-refined .refined-nav {
+    inset: 0 auto 0 0;
+    width: var(--tablet-rail);
+    height: auto;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+    padding: 14px 8px;
+    border: 0;
+    border-inline-end: 1px solid var(--ref-line);
+    background: var(--ref-surface);
+  }
+  :root.uta-android-font.uta-refined .refined-nav > button {
+    flex: 0 0 clamp(62px, 15vh, 100px);
+    width: 100%;
+  }
+  :root.uta-android-font.uta-refined .android-home-main {
+    padding-inline-start: var(--tablet-rail);
+  }
+  :root.uta-android-font.uta-refined .android-home-pager[data-expanded="false"] .android-home-pane {
+    bottom: 0;
+  }
+  :root.uta-android-font.uta-refined .refined-home {
+    max-width: 1180px;
+    padding: 14px var(--tablet-gap) 20px;
+  }
+  /* 原固定作用于学习和我的的横屏标题规则。
+  :root.uta-android-font.uta-refined .refined-page-heading h1 {
+    font-size: calc(28px * var(--ref-font-scale, 1));
+  }
+  */
+  :root.uta-android-font.uta-refined .refined-continue {
+    /* 原高度为 clamp(124px, 27vh, 230px)，封面铺满横幅。横屏改成方形封面与歌曲信息并排。 */
+    --tablet-continue-cover-size: clamp(96px, 20vh, 132px);
+    display: flex;
+    align-items: center;
+    gap: var(--ref-5);
+    height: auto;
+    padding: var(--ref-3);
+    background: var(--ref-surface);
+    color: var(--ref-text);
+  }
+  :root.uta-android-font.uta-refined .refined-continue > .refined-cover {
+    position: static;
+    width: var(--tablet-continue-cover-size);
+    height: var(--tablet-continue-cover-size);
+  }
+  /* 图片背景开启时，只让继续学习卡的底色随设置变化。 */
+  :root.uta-android-font.uta-refined[data-uta-background=on] .refined-continue {
+    background-color: rgba(var(--uta-surface-rgb), var(--uta-card-opacity, .9));
+  }
+  :root.uta-android-font.uta-refined .refined-continue > .refined-cover-shade { display: none; }
+  :root.uta-android-font.uta-refined .refined-continue-copy {
+    position: static;
+    flex: 1;
+    min-width: 0;
+    color: var(--ref-text) !important;
+  }
+  :root.uta-android-font.uta-refined .refined-continue-play {
+    position: static;
+    flex: none;
+    background: var(--ref-tint) !important;
+  }
+  :root.uta-android-font.uta-refined .refined-song-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  :root.uta-android-font.uta-refined .refined-song {
+    position: relative;
+    display: block;
+    height: clamp(125px, 25vh, 230px);
+    isolation: isolate;
+    overflow: hidden;
+    padding: 0;
+    border-radius: 12px;
+  }
+  :root.uta-android-font.uta-refined .refined-song > .refined-cover {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+  :root.uta-android-font.uta-refined .refined-song > span:nth-child(2) {
+    position: absolute;
+    inset: auto 0 0;
+    padding: 24px 12px 10px;
+    background: linear-gradient(transparent, #15151be8);
+  }
+  :root.uta-android-font.uta-refined .refined-song :is(strong, small) {
+    color: white !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  :root.uta-android-font.uta-refined .refined-song > svg {
+    display: none;
+  }
+  /* 原底部继续学习条样式：
+  :root.uta-android-font.uta-refined .tablet-resume-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    text-align: start;
+    gap: 12px;
+    width: 100%;
+    min-height: 58px;
+    margin-top: 12px;
+    padding: 7px 14px;
+    border: 1px solid var(--ref-line);
+    border-radius: 14px;
+    background: var(--ref-surface);
+    color: var(--ref-text);
+    box-shadow: 0 5px 22px #17192224;
+  }
+  .tablet-resume-bar > .refined-cover { width: 40px; height: 40px; border-radius: 50%; }
+  .tablet-resume-bar > span:nth-child(2) { min-width: 0; flex: 1; }
+  .tablet-resume-bar :is(strong, small) { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tablet-resume-bar .tablet-resume-action { display: flex; align-items: center; gap: 4px; color: var(--ref-accent); }
+  */
+  :root.uta-android-font.uta-refined .refined-mine .refined-identity {
+    /* 横屏沿用共用资料卡底色，并放大头像。 */
+    /* background: linear-gradient(120deg, var(--ref-tint), var(--ref-surface)); */
+    --profile-avatar-size: clamp(104px, 15vw, 156px);
+    column-gap: 24px;
+    padding: 24px;
+  }
+  :root.uta-android-font.uta-refined .refined-mine .refined-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* 歌曲库保留原搜索和列表操作，横屏展开为宽标题区与列表。 */
+  /* 用现有路由属性定位，兼容不支持 :has() 的平板 WebView。 */
+  :root.uta-android-font.uta-refined .android-main[data-demo-route="library"] .library-page {
+    /* 主题底色已移至横竖屏共用规则，横屏在此调整间距。 */
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 14px 0 32px;
+    border: 0;
+  }
+  :root.uta-android-font.uta-refined .library-page .android-library-song {
+    /* 歌曲库是实色页面，卡片不透出全局壁纸。 */
+    background: var(--ref-surface) !important;
+  }
+  :root.uta-android-font.uta-refined .library-page .demo-library-back {
+    color: var(--ref-accent);
+  }
+  :root.uta-android-font.uta-refined .android-library {
+    max-width: 1180px;
+    padding-inline: var(--tablet-gap);
+  }
+  :root.uta-android-font.uta-refined .android-library-heading {
+    border-radius: 16px;
+    padding: 22px;
+    background: linear-gradient(120deg, var(--ref-tint), var(--ref-surface));
+  }
+
+  /* 同一份播放器和歌词 DOM 横排，旋转时不会重挂 WebView 或播放器。 */
+  :root.uta-android-font.uta-refined .android-main.unified-study-page {
+    display: grid;
+    grid-template-columns: minmax(270px, 41%) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    column-gap: var(--tablet-gap);
+    height: 100vh;
+    height: 100dvh;
+    padding: 12px var(--tablet-gap) max(10px, env(safe-area-inset-bottom));
+  }
+  :root.uta-android-font.uta-refined .unified-study-page .refined-study-header {
+    --tablet-study-cover-size: min(27vw, 34vh, 260px);
+    grid-column: 1;
+    grid-row: 1;
+    /* 原唱片下方只显示练习模式，现在工具栏、方形封面、歌名和模式依次排列。 */
+    display: grid;
+    grid-template-columns: var(--ref-touch) minmax(0, 1fr) var(--ref-touch);
+    grid-template-rows: auto minmax(min-content, 1fr) auto auto;
+    min-height: 0;
+    overflow: auto;
+  }
+  /* 原横屏曾隐藏小封面，单独绘制带底衬的唱片，样式保留作对照。
+  .refined-study-header .refined-study-cover { display: none; }
+  .refined-study-header .refined-study-navigation { order: 2; }
+  .refined-study-header .refined-study-error { order: 3; }
+  :root.uta-android-font.uta-refined .tablet-record {
+    --tablet-record-size: min(27vw, 34vh, 260px);
+    display: grid;
+    place-items: center;
+    align-self: center;
+    margin: auto;
+    flex: 0 0 auto;
+    width: var(--tablet-record-size);
+    height: var(--tablet-record-size);
+    padding: 0;
+    border: 1px solid #343439;
+    border-radius: 50%;
+    color: white;
+    background: repeating-radial-gradient(circle, #222225 0 2px, #19191c 3px 5px);
+    box-shadow: 0 12px 28px #1212184a;
+  }
+  .tablet-record-art {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 65%;
+    height: 65%;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--ref-accent);
+  }
+  .tablet-record-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+  */
+  .refined-study-header .refined-study-identity { display: contents; }
+  .refined-study-header .refined-study-identity > .refined-icon:first-child { grid-area: 1 / 1; }
+  .refined-study-header .refined-study-identity > .refined-icon:last-child { grid-area: 1 / 3; }
+  .refined-study-header .refined-study-cover {
+    grid-area: 2 / 1 / 3 / -1;
+    align-self: end;
+    justify-self: center;
+    width: var(--tablet-study-cover-size);
+    height: var(--tablet-study-cover-size);
+    margin-top: var(--ref-3);
+    border-radius: var(--ref-radius-sm);
+    background: transparent;
+  }
+  .refined-study-header .refined-study-cover > svg { width: 32px; height: 32px; }
+  .refined-study-header .refined-study-title {
+    grid-area: 3 / 1 / 4 / -1;
+    margin: var(--ref-3) 0 var(--ref-2);
+    text-align: center;
+  }
+  .refined-study-header .refined-study-navigation { grid-area: 4 / 1 / 5 / -1; }
+  .refined-study-header .refined-study-error { grid-area: 5 / 1 / 6 / -1; }
+  :root.uta-android-font.uta-refined .unified-study-page .unified-study-player {
+    position: relative;
+    inset: auto;
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+    padding: 4px 6px 6px;
+    border-radius: 14px;
+    background: var(--ref-surface);
+  }
+  /* 横屏弹窗停在播放键右上方的左栏内。 */
+  .study-quick-picker {
+    --study-quick-width: clamp(210px, 23vw, 310px);
+    inset-inline-start: calc(41vw - var(--study-quick-width) - var(--ref-1));
+    inset-inline-end: auto;
+    width: var(--study-quick-width);
+  }
+  /* 只在横屏显示与按钮对齐的短尖角，指向当前操作。 */
+  .study-quick-picker::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -6px;
+    width: 10px;
+    height: 10px;
+    transform: translateX(-50%) rotate(45deg);
+    border-right: 1px solid var(--ref-line);
+    border-bottom: 1px solid var(--ref-line);
+    background: var(--ref-surface);
+    pointer-events: none;
+  }
+  :root.uta-android-font.uta-refined .unified-study-page .practice-layout {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+    padding: 10px clamp(10px, 2vw, 24px);
+    border-radius: 18px;
+    background: var(--ref-surface);
+  }
+  :root.uta-android-font.uta-refined .unified-study-page .translation {
+    font-size: calc(14px * var(--ref-font-scale, 1));
+  }
+}

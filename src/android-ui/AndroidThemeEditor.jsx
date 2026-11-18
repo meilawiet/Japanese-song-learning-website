@@ -42,7 +42,8 @@ export default function AndroidThemeEditor({appearance,onChange}){
       <button type="button" className="gesture-position-button" onClick={()=>setAdjusting(true)}>调整位置与缩放<span>单指拖动 · 双指缩放</span></button>
       {[['veil','背景遮罩',70,95,'%'],['blur','模糊程度',0,12,'px'],['cardOpacity','卡片底色不透明度',0,100,'%']].map(([key,label,min,max,unit])=><SafeRange key={key} id={'background-'+key} label={label} min={min} max={max} unit={unit} value={background[key]} onPreview={next=>setPreviewPatch(previous=>{const patch={...previous};if(next==null)delete patch[key];else patch[key]=next;return patch})} onChange={next=>changeBackground({[key]:next})}/>)}
       <p className="theme-section-note">横向拖动调整数值，上下滑动只翻页。</p>
-      <p className="theme-section-note">0% 透明，100% 实心，文字不变淡。作用于当前歌词、歌曲、复习及解析卡片；背景遮罩较高时，差别会减弱。</p>
+      {/* 原说明仅列当前歌词、歌曲、复习和解析卡片。 */}
+      <p className="theme-section-note">0% 透明，100% 实心，文字不变淡。作用于个人资料、当前歌词、歌曲、复习及解析卡片。背景遮罩较高时，差别会减弱。</p>
     </div>}</>}
     </section>{adjusting&&image?.url&&<BackgroundGestureDialog image={image} background={background} onChange={changeBackground} onClose={()=>setAdjusting(false)}/>}{error&&<p className="theme-editor-error" role="alert">{error}</p>}
   </div>

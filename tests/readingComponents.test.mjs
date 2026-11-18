@@ -83,7 +83,10 @@ test('主题字体列表显示所有字体粗细并去除刻明朝', async () =>
       const html = renderToStaticMarkup(createElement(ThemePanel))
       const main = html.match(/<select aria-label="应用字体"[^>]*>([\s\S]*?)<\/select>/)?.[1]
       assert.ok(main)
-      assert.equal((main.match(/<option /g) || []).length, 7)
+      // 加入新的按需圆体预设后，主列表共有八项。
+      // assert.equal((main.match(/<option /g) || []).length, 7)
+      assert.equal((main.match(/<option /g) || []).length, 8)
+      assert.match(main, /霞鹜 975 圆体/)
       assert.ok(main.includes('思源宋体'))
       assert.ok(!main.includes('刻明朝') && !main.includes('思源宋体·'))
       const label = font.startsWith('sourcehan') ? '思源宋体' : font === 'yan' ? '颜真卿多宝塔碑' : font === 'kinghwa' ? '京华老宋体' : '飞花宋体'
@@ -306,12 +309,14 @@ test('学习播放器直接切换模式并显示三横线选歌入口',async()=>
   const props={transport,rate:1,song:{title:'原创测试',language:'ja',lines:[]},ready:0,total:0}
   const sentence=renderToStaticMarkup(createElement(Player,props))
   assert.match(sentence,/aria-label="切换到跟唱练习"/)
-  assert.match(sentence,/class="study-song-trigger" aria-label="选择其他歌曲"/)
+  // 原三横线在左侧打开完整选歌页；新版入口应在播放键之后。
+  assert.match(sentence,/class="study-central-play"[\s\S]*class="study-song-trigger" aria-label="快捷选歌"/)
   assert.doesNotMatch(sentence,/aria-label="选择练习模式"/)
   transport.setMode('continuous')
   const continuous=renderToStaticMarkup(createElement(Player,props))
   assert.match(continuous,/aria-label="切换到逐句学习"/)
   assert.match(continuous,/>跟唱练习<\/button>/)
+  assert.match(continuous,/aria-label="快捷选歌"/)
 })
 
 // 来源、字典、括号及人工读音先确定优先级，再映射汉字显示；保存数据不可被显示层改写。
@@ -334,6 +339,17 @@ test('所有来源最终只在汉字上显示假名，来源和人工读音仍�
   const corrections={'test:0:0':'かかえ'},tokens=[{index:0,surface:'抱え',reading:'ほうえ'}],snapshot=JSON.stringify(corrections)
   const html=renderToStaticMarkup(createElement(Reading,{tokens,corrections,songId:'test',lineId:0,readingStyle:'both',stacked:true,importedRomaji:'houe'}))
   assert.ok(html.includes('>かか</span>'));assert.equal(JSON.stringify(corrections),snapshot)
+})
+
+// 来源无法对齐时，假名模式仍显示词典假名，但歌词下方没有提示。
+test('假名模式隐藏未对齐提示并保留词典假名',async()=>{
+  const Reading=(await server.ssrLoadModule('/src/components/ReadingLyric.jsx')).default
+  const props={tokens:[{index:0,surface:'君',reading:'きみ'},{index:1,surface:'は',reading:'は'},{index:2,surface:'夢',reading:'ゆめ'}],songId:'test',lineId:0,stacked:true,importedRomaji:'to ra wa re ta'}
+  const hiragana=renderToStaticMarkup(createElement(Reading,{...props,readingStyle:'hiragana'}))
+  assert.match(hiragana,/>きみ<\/span>/)
+  assert.doesNotMatch(hiragana,/word-aligned-unresolved/)
+  const both=renderToStaticMarkup(createElement(Reading,{...props,readingStyle:'both'}))
+  assert.match(both,/word-aligned-unresolved.*to ra wa re ta/)
 })
 
 // 使用手机同款词典验证真实分类，再校验最终汉字段显示，避免只靠手写助词标签掩盖问题。

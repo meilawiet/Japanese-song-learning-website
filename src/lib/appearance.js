@@ -32,6 +32,8 @@ export const FONTS = [
   { id: 'yan', name: '颜真卿多宝塔碑' },
   { id: 'flyflower', name: '飞花宋体' },
   { id: 'maoken', name: '猫啃珠圆体' },
+  // 霞鹜 975 圆体由用户选中后按需下载。
+  { id: 'lxgw975yuan', name: '霞鹜 975 圆体' },
   { id: 'aidian', name: '爱点风雅黑' },
   { id: 'kinghwa', name: '京华老宋体' },
   // 思源宋体在主字体列表只占一项，粗细由下方独立选择框管理。
@@ -123,7 +125,8 @@ export function applyAppearance(value) {
     const semanticAccent = /android-mode-(?:card|icon|action)|android-home-link-icon\.settings|sentence-explain-link|sentence-inline-analysis/.test(rule.selectorText)
     const fontSize = rule.style.getPropertyValue('font-size')
     // em 已继承父级字号，不重复缩放，避免小注音被放大两次。
-    if (fontSize && /\d(?:px|rem)/.test(fontSize)) declarations.push(`font-size:${fontSize.replace(/(\d*\.?\d+)(px|rem)/g, (_, size, unit) => `calc(${size}${unit} * ${scale})`)}`)
+    // 旧判断只检查 px/rem；已使用外观倍率的字号需保留原声明，避免二次缩放。
+    if (fontSize && /\d(?:px|rem)/.test(fontSize) && !fontSize.includes('--ref-font-scale') && !fontSize.includes('--ref-lyric-scale')) declarations.push(`font-size:${fontSize.replace(/(\d*\.?\d+)(px|rem)/g, (_, size, unit) => `calc(${size}${unit} * ${scale})`)}`)
     // 含字体变量的 font 简写在 CSSOM 中不能展开字号，需覆盖原简写。
     const shorthand = rule.style.getPropertyValue('font')
     if (!fontSize && shorthand && /\d(?:px|rem)/.test(shorthand)) declarations.push(`font:${shorthand.replace(/(\d*\.?\d+)(px|rem)/g, (_, size, unit) => `calc(${size}${unit} * ${scale})`)}`)

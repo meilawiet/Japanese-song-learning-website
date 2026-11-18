@@ -14,6 +14,8 @@ import './android-ui/refined.css'
 import './android-ui/secondary.css'
 import './android-ui/gestures.css'
 import './android-ui/regressions.css'
+// 平板横屏样式放在现有安卓界面之后，便于试用和回收。
+import './android-ui/tablet-landscape.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

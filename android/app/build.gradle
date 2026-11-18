@@ -75,8 +75,9 @@ android {
         // 2.0.0整合新版界面、主题图片手势及既有修复，允许原签名保留数据升级。
         // 旧正式版：versionCode 30 / versionName "2.0.0"。
         // 旧正式版：versionCode 31 / versionName "2.1.0"。
-        versionCode 32
-        versionName "2.1.1"
+        // 旧正式版：versionCode 32 / versionName "2.1.1"。
+        versionCode 33
+        versionName "2.1.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

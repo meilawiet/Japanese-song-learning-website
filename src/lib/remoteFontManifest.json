@@ -451,6 +451,48 @@
           "url": "https://gitee.com/git277992790/UTA/raw/master/parts/kinghwa/part-08.bin"
         }
       ]
+    },
+    {
+      "id": "lxgw975yuan",
+      "name": "霞鹜 975 圆体",
+      "weight": "常规",
+      "format": "ttf",
+      "originalPath": "fonts/lxgw-975-yuan/LXGW975YuanSC-400W.ttf",
+      "bytes": 14525950,
+      "sha256": "d14f5a453a221525f0db4887412712cbc03a84d0dc44ce2d22d51d1c136ed9a1",
+      "license": "OFL-1.1",
+      "parts": [
+        {
+          "path": "parts/lxgw975yuan/part-01.bin",
+          "bytes": 3145728,
+          "sha256": "776dd295940508cbf59cc88eabd91fb5c62edc229ab49d4ce49570019f7b9623",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/lxgw975yuan/part-01.bin"
+        },
+        {
+          "path": "parts/lxgw975yuan/part-02.bin",
+          "bytes": 3145728,
+          "sha256": "e509c4ed403d4e23b89fcae018d52f84078df4906843181215cb77c6c12e898f",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/lxgw975yuan/part-02.bin"
+        },
+        {
+          "path": "parts/lxgw975yuan/part-03.bin",
+          "bytes": 3145728,
+          "sha256": "7ee6d15ee6d238e3b58afdfe545e7540f9498c4b78aaa72c13dd2e50b9da5211",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/lxgw975yuan/part-03.bin"
+        },
+        {
+          "path": "parts/lxgw975yuan/part-04.bin",
+          "bytes": 3145728,
+          "sha256": "7661e7bfaf93d911cc56246efd94e046e4803493a45f16b6638ef90fc2346224",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/lxgw975yuan/part-04.bin"
+        },
+        {
+          "path": "parts/lxgw975yuan/part-05.bin",
+          "bytes": 1943038,
+          "sha256": "653219ed2d14d4662a134ef99f2299ecd255e6b43c331a30a550423b28c3f86b",
+          "url": "https://gitee.com/git277992790/UTA/raw/master/parts/lxgw975yuan/part-05.bin"
+        }
+      ]
     }
   ]
 }
