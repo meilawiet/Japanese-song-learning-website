@@ -22,16 +22,16 @@
     }
   },
   "lastPublished": {
-    "version": "2.1.1",
-    "versionCode": 32,
-    "commit": "3876e9df51b584eded73cc206915daa90c405b0f",
-    "tag": "v2.1.1",
-    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.1",
-    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.1",
-    "asset": "UTA-Android-2.1.1.apk",
-    "size": 31425879,
-    "sha256": "60076181999a026167e0452abdf3a8f0c64f87ad6b1be25a26fe4981aa527f5e",
-    "publishedOn": "2026-11-14",
+    "version": "2.1.2",
+    "versionCode": 33,
+    "commit": "97bbd29b901ffe8272d0b36e3d4e2c42464ba330",
+    "tag": "v2.1.2",
+    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.2",
+    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.2",
+    "asset": "UTA-Android-2.1.2.apk",
+    "size": 31430123,
+    "sha256": "6e000c470e3530ddce594eae78683adbe529a731da64ba68a48c2255fadf9fab",
+    "publishedOn": "2026-11-18",
     "branch": "android-dev"
   },
   "currentLocalInstall": {
@@ -66,7 +66,7 @@
       "FIX-20261116-092"
     ],
     "lastRemindedOn": "2026-11-18",
-    "userDecision": "累计 10 项待发布，已逐项提醒，等候本批发布安排。"
+    "userDecision": "用户授权上传代码并发布 2.1.2，双平台已发布并结转本批 10 项。"
   },
   "items": [
     {
@@ -74,7 +74,7 @@
       "type": "fix",
       "title": "修复主题切换时的复习标题和控件配色",
       "summary": "学习、复习本和我的标题共用字号与字体层级；复习提示及歌曲库标题使用正文色，导入等表单单选框、复选框和滑块跟随强调色，已响应字号设置的规则避免重复缩放。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-18",
       "completedOn": "2026-11-18",
       "verification": [
@@ -85,106 +85,246 @@
         "src/android-ui/tablet-landscape.css",
         "src/lib/appearance.js",
         "tests/appearance.test.mjs"
-      ]
+      ],
+      "releasedOn": "2026-11-18",
+      "release": {
+        "version": "2.1.2",
+        "versionCode": 33,
+        "commit": "97bbd29b901ffe8272d0b36e3d4e2c42464ba330",
+        "tag": "v2.1.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.2",
+        "asset": "UTA-Android-2.1.2.apk",
+        "size": 31430123,
+        "sha256": "6e000c470e3530ddce594eae78683adbe529a731da64ba68a48c2255fadf9fab",
+        "publishedOn": "2026-11-18",
+        "branch": "android-dev"
+      }
     },
     {
       "id": "FEAT-20261118-100",
       "type": "feature",
       "title": "播放键旁增加横竖屏快捷选歌",
       "summary": "三横线打开贴近播放器的文字歌曲列表，当前曲目有标记。选择后直接切歌，按钮、系统返回或点空白处可关闭。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-18",
       "completedOn": "2026-11-18",
       "verification": ["32 项相关测试与安卓构建通过。华为平板机主原签名覆盖，横竖屏实拍核对无可见标题和封面、播放器按钮位置，并实测两种方向切歌及竖屏返回关闭。"],
-      "files": ["src/App.jsx", "src/components/AndroidStudyPlayer.jsx", "src/android-ui/refined.css", "src/android-ui/tablet-landscape.css", "src/styles.css", "tests/readingComponents.test.mjs"]
+      "files": ["src/App.jsx", "src/components/AndroidStudyPlayer.jsx", "src/android-ui/refined.css", "src/android-ui/tablet-landscape.css", "src/styles.css", "tests/readingComponents.test.mjs"],
+      "releasedOn": "2026-11-18",
+      "release": {
+        "version": "2.1.2",
+        "versionCode": 33,
+        "commit": "97bbd29b901ffe8272d0b36e3d4e2c42464ba330",
+        "tag": "v2.1.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.2",
+        "asset": "UTA-Android-2.1.2.apk",
+        "size": 31430123,
+        "sha256": "6e000c470e3530ddce594eae78683adbe529a731da64ba68a48c2255fadf9fab",
+        "publishedOn": "2026-11-18",
+        "branch": "android-dev"
+      }
     },
     {
       "id": "FIX-20261118-099",
       "type": "fix",
       "title": "平板横屏歌词页改用方形封面",
       "summary": "移除圆形唱片底衬，歌名和歌手移到方形封面下方。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-18",
       "completedOn": "2026-11-18",
       "verification": ["24 项相关测试及安卓构建通过。华为平板实拍核对方形无底衬封面和标题位置，点击封面可打开选歌页。"],
-      "files": ["src/android-ui/StudyHeader.jsx", "src/android-ui/refined.css", "src/android-ui/tablet-landscape.css"]
+      "files": ["src/android-ui/StudyHeader.jsx", "src/android-ui/refined.css", "src/android-ui/tablet-landscape.css"],
+      "releasedOn": "2026-11-18",
+      "release": {
+        "version": "2.1.2",
+        "versionCode": 33,
+        "commit": "97bbd29b901ffe8272d0b36e3d4e2c42464ba330",
+        "tag": "v2.1.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.2",
+        "asset": "UTA-Android-2.1.2.apk",
+        "size": 31430123,
+        "sha256": "6e000c470e3530ddce594eae78683adbe529a731da64ba68a48c2255fadf9fab",
+        "publishedOn": "2026-11-18",
+        "branch": "android-dev"
+      }
     },
     {
       "id": "FIX-20261118-098",
       "type": "fix",
       "title": "横屏继续学习卡跟随底色不透明度",
       "summary": "页首继续学习卡的底色跟随设置，移除底部重复入口。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-18",
       "completedOn": "2026-11-18",
       "verification": ["华为平板实测 0% 和 100% 的卡片底色，封面保持清晰。首页只显示一个继续学习入口，滑块恢复原 58%。"],
-      "files": ["src/android-ui/AndroidHome.jsx", "src/android-ui/tablet-landscape.css"]
+      "files": ["src/android-ui/AndroidHome.jsx", "src/android-ui/tablet-landscape.css"],
+      "releasedOn": "2026-11-18",
+      "release": {
+        "version": "2.1.2",
+        "versionCode": 33,
+        "commit": "97bbd29b901ffe8272d0b36e3d4e2c42464ba330",
+        "tag": "v2.1.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.2",
+        "asset": "UTA-Android-2.1.2.apk",
+        "size": 31430123,
+        "sha256": "6e000c470e3530ddce594eae78683adbe529a731da64ba68a48c2255fadf9fab",
+        "publishedOn": "2026-11-18",
+        "branch": "android-dev"
+      }
     },
     {
       "id": "FIX-20261118-097",
       "type": "fix",
       "title": "修复竖屏歌曲库黑底",
       "summary": "横竖屏歌曲库共用当前主题的页面底色，兼容旧 WebView。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-18",
       "completedOn": "2026-11-18",
       "verification": ["安卓构建与验签通过。华为平板机主覆盖，竖屏对比实拍确认黑底消失，切回横屏后主题底色仍正常。"],
-      "files": ["src/android-ui/regressions.css", "src/android-ui/tablet-landscape.css"]
+      "files": ["src/android-ui/regressions.css", "src/android-ui/tablet-landscape.css"],
+      "releasedOn": "2026-11-18",
+      "release": {
+        "version": "2.1.2",
+        "versionCode": 33,
+        "commit": "97bbd29b901ffe8272d0b36e3d4e2c42464ba330",
+        "tag": "v2.1.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.2",
+        "asset": "UTA-Android-2.1.2.apk",
+        "size": 31430123,
+        "sha256": "6e000c470e3530ddce594eae78683adbe529a731da64ba68a48c2255fadf9fab",
+        "publishedOn": "2026-11-18",
+        "branch": "android-dev"
+      }
     },
     {
       "id": "FIX-20261118-096",
       "type": "fix",
       "title": "平板横屏学习页封面比例",
       "summary": "继续学习卡使用独立方形封面。歌词页的唱片使用同一宽高并缩小占位。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-18",
       "completedOn": "2026-11-18",
       "verification": ["24 项学习界面及最近歌曲测试、安卓构建通过。华为平板机主覆盖后，实拍核对方形封面，并进入歌词页核对唱片为 520×520 像素。"],
-      "files": ["src/android-ui/tablet-landscape.css"]
+      "files": ["src/android-ui/tablet-landscape.css"],
+      "releasedOn": "2026-11-18",
+      "release": {
+        "version": "2.1.2",
+        "versionCode": 33,
+        "commit": "97bbd29b901ffe8272d0b36e3d4e2c42464ba330",
+        "tag": "v2.1.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.2",
+        "asset": "UTA-Android-2.1.2.apk",
+        "size": 31430123,
+        "sha256": "6e000c470e3530ddce594eae78683adbe529a731da64ba68a48c2255fadf9fab",
+        "publishedOn": "2026-11-18",
+        "branch": "android-dev"
+      }
     },
     {
       "id": "FIX-20261118-095",
       "type": "fix",
       "title": "个人资料卡跟随不透明度并展示学习统计",
       "summary": "昵称下展示歌曲数与已掌握句数，隐藏复习单元数。资料卡底色随图片背景的卡片不透明度调整。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-18",
       "completedOn": "2026-11-18",
       "verification": ["337 项 Node 测试和安卓构建通过。华为平板核对横竖屏统计位置及资料卡下方入口，横屏实拍对照 0% 与 100% 并恢复原设置。"],
-      "files": ["src/android-ui/AndroidHome.jsx", "src/android-ui/refined.css", "src/android-ui/tablet-landscape.css", "src/android-ui/AndroidThemeEditor.jsx"]
+      "files": ["src/android-ui/AndroidHome.jsx", "src/android-ui/refined.css", "src/android-ui/tablet-landscape.css", "src/android-ui/AndroidThemeEditor.jsx"],
+      "releasedOn": "2026-11-18",
+      "release": {
+        "version": "2.1.2",
+        "versionCode": 33,
+        "commit": "97bbd29b901ffe8272d0b36e3d4e2c42464ba330",
+        "tag": "v2.1.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.2",
+        "asset": "UTA-Android-2.1.2.apk",
+        "size": 31430123,
+        "sha256": "6e000c470e3530ddce594eae78683adbe529a731da64ba68a48c2255fadf9fab",
+        "publishedOn": "2026-11-18",
+        "branch": "android-dev"
+      }
     },
     {
       "id": "FEAT-20261118-094",
       "type": "feature",
       "title": "平板旋转与横屏界面 Demo",
       "summary": "小屏锁定竖屏，大屏跟随系统旋转。横屏提供左侧导航、封面卡片、双栏学习页和跟随主题的歌曲库底色。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-18",
       "completedOn": "2026-11-18",
       "verification": ["337 项 Node 测试及安卓构建通过。华为平板机主用户原签名覆盖，同曲横竖切换、横屏三张歌曲卡片和浅色歌曲库实拍已核对。手机竖屏锁定尚无独立真机验证。"],
-      "files": ["android/app/src/main/java/com/uta/songlearning/MainActivity.java", "src/android-ui/AndroidHome.jsx", "src/android-ui/StudyHeader.jsx", "src/android-ui/tablet-landscape.css", "src/main.jsx"]
+      "files": ["android/app/src/main/java/com/uta/songlearning/MainActivity.java", "src/android-ui/AndroidHome.jsx", "src/android-ui/StudyHeader.jsx", "src/android-ui/tablet-landscape.css", "src/main.jsx"],
+      "releasedOn": "2026-11-18",
+      "release": {
+        "version": "2.1.2",
+        "versionCode": 33,
+        "commit": "97bbd29b901ffe8272d0b36e3d4e2c42464ba330",
+        "tag": "v2.1.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.2",
+        "asset": "UTA-Android-2.1.2.apk",
+        "size": 31430123,
+        "sha256": "6e000c470e3530ddce594eae78683adbe529a731da64ba68a48c2255fadf9fab",
+        "publishedOn": "2026-11-18",
+        "branch": "android-dev"
+      }
     },
     {
       "id": "FEAT-20261117-093",
       "type": "feature",
       "title": "新增霞鹜 975 圆体按需字体预设",
       "summary": "主题设置可选择霞鹜 975 圆体 SC 常规并从 Gitee 下载。沿用本机缓存和缺字回退。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-17",
       "completedOn": "2026-11-17",
       "verification": ["核对简中、日文、罗马音覆盖及已知缺字；Gitee 五段匿名下载并核对全文件摘要。337 项测试和安卓构建通过。三星机主原签名覆盖，真机验证下载、学习页显示与重启后的缓存恢复。"],
-      "files": ["README.md", "src/lib/appearance.js", "src/lib/remoteFontManifest.json", "src/lib/remoteFonts.js", "src/styles.css", "tests/appearance.test.mjs", "tests/readingComponents.test.mjs"]
+      "files": ["README.md", "src/lib/appearance.js", "src/lib/remoteFontManifest.json", "src/lib/remoteFonts.js", "src/styles.css", "tests/appearance.test.mjs", "tests/readingComponents.test.mjs"],
+      "releasedOn": "2026-11-18",
+      "release": {
+        "version": "2.1.2",
+        "versionCode": 33,
+        "commit": "97bbd29b901ffe8272d0b36e3d4e2c42464ba330",
+        "tag": "v2.1.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.2",
+        "asset": "UTA-Android-2.1.2.apk",
+        "size": 31430123,
+        "sha256": "6e000c470e3530ddce594eae78683adbe529a731da64ba68a48c2255fadf9fab",
+        "publishedOn": "2026-11-18",
+        "branch": "android-dev"
+      }
     },
     {
       "id": "FIX-20261116-092",
       "type": "fix",
       "title": "假名模式隐藏来源读音未对齐提示",
       "summary": "学习页不再在歌词和翻译之间显示来源未对齐提示，词组上的词典假名继续显示。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-16",
       "completedOn": "2026-11-16",
       "verification": ["337 项 Node 测试通过。原签名构建并覆盖三星机主用户；安装前后核对原有歌曲的四处提示，确认提示消失、假名和翻译保留，无新增分身。"],
-      "files": ["src/components/ReadingLyric.jsx", "tests/readingComponents.test.mjs"]
+      "files": ["src/components/ReadingLyric.jsx", "tests/readingComponents.test.mjs"],
+      "releasedOn": "2026-11-18",
+      "release": {
+        "version": "2.1.2",
+        "versionCode": 33,
+        "commit": "97bbd29b901ffe8272d0b36e3d4e2c42464ba330",
+        "tag": "v2.1.2",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.2",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.2",
+        "asset": "UTA-Android-2.1.2.apk",
+        "size": 31430123,
+        "sha256": "6e000c470e3530ddce594eae78683adbe529a731da64ba68a48c2255fadf9fab",
+        "publishedOn": "2026-11-18",
+        "branch": "android-dev"
+      }
     },
     {
       "id": "FIX-20261114-091",
