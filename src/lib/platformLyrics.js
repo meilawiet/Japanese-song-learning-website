@@ -95,9 +95,20 @@ export async function searchPlatformSongs(provider, query, signal, request = pla
     // if (data.code !== 0 || data.req?.code !== 0) throw new Error('QQ 音乐搜索受限，请换一个来源。')
     // result = (data.req?.data?.body?.song?.list || []).filter(row => /^[a-z0-9]{8,32}$/i.test(row.mid || '')).map(row => song(provider, row.mid, row.name, (row.singer || []).map(item => item.name).join(' / '), row.album?.name, row.interval))
     const module='music.search.SearchCgiService'
-    const data = await json(endpoint('https://u.y.qq.com/cgi-bin/musicu.fcg', {data:JSON.stringify({[module]:{module,method:'DoSearchForQQMusicDesktop',param:{query:keyword,num_per_page:20,page_num:1,search_type:0}}})}),provider,signal,request)
-    const block=data[module]
-    if(data.code!==0||block?.code!==0)throw new Error('QQ 音乐搜索受限，请换一个来源。')
+    const url = endpoint('https://u.y.qq.com/cgi-bin/musicu.fcg', {data:JSON.stringify({[module]:{module,method:'DoSearchForQQMusicDesktop',param:{query:keyword,num_per_page:20,page_num:1,search_type:0}}})})
+    let data = await json(url, provider, signal, request)
+    abort(signal)
+    // 旧逻辑将所有非零响应直接报告为搜索受限。实测模块返回 2001 后，同一请求有时可以恢复。
+    // 只对顶层成功且模块返回 2001 的情况重试一次，HTTP 错误和其他业务状态沿用原处理。
+    if (data?.code === 0 && data[module]?.code === 2001) {
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      abort(signal)
+      data = await json(url, provider, signal, request)
+      abort(signal)
+    }
+    const block=data?.[module]
+    if(data?.code === 0 && block?.code === 2001) throw new Error('QQ 音乐搜索暂未成功，请稍后重试或换一个来源。')
+    if(data?.code!==0||block?.code!==0)throw new Error('QQ 音乐搜索受限，请换一个来源。')
     const rows=block.data?.body?.song?.list
     if(!Array.isArray(rows))throw new Error('QQ 音乐搜索返回格式异常。')
     result=rows.filter(row=>/^[a-z0-9]{8,32}$/i.test(row.mid||'')).map(row=>({...song(provider,row.mid,row.title||row.name,(row.singer||[]).map(item=>item.name).join(' / '),row.album?.name,row.interval),...(Number.isSafeInteger(row.id)&&row.id>0?{songId:row.id}:{})}))
@@ -190,9 +201,27 @@ export async function fetchPlatformLyrics(record, signal, request = platformRequ
     const data = await json(endpoint('https://lyrics.kugou.com/download', { ver: 1, client: 'pc', id: candidate.id, accesskey: candidate.accesskey, fmt: 'lrc', charset: 'utf8' }), provider, signal, request)
     original = decodeBase64(data.content)
   } else if (provider === 'kuwo' && /^\d+$/.test(id)) {
-    const data = await json(endpoint('https://m.kuwo.cn/newh5/singles/songinfoandlrc', { musicId: id }), provider, signal, request)
-    if (!Array.isArray(data.data?.lrclist)) throw new Error('酷我音乐没有返回可用歌词。')
-    original = data.data.lrclist.filter(row => Number.isFinite(Number(row.time)) && Number(row.time) >= 0).map(row => `${timestamp(Math.round(Number(row.time) * 1000))}${String(row.lineLyric || '').replace(/\r?\n/g, ' ')}`).join('\n')
+    // 原实现只询问移动站。状态 301「音乐查询失败」时，官网同一路径可能仍有同一歌曲的歌词。
+    let queryFailures = 0
+    for (const [attempt, host] of ['m.kuwo.cn', 'www.kuwo.cn', 'www.kuwo.cn'].entries()) {
+      // 两端都出现过同一 ID 间歇返回 301，仅在两次均为此状态时短暂等待再试一次。
+      if (attempt === 2) {
+        if (queryFailures !== 2) break
+        await new Promise(resolve => setTimeout(resolve, 450))
+        abort(signal)
+      }
+      const data = await json(endpoint(`https://${host}/newh5/singles/songinfoandlrc`, { musicId: id }), provider, signal, request)
+      abort(signal)
+      // 仅对普通查询缺失尝试官网，明确限流、权限类响应直接结束。
+      if (data?.status != null && ![200, 301].includes(Number(data.status))) break
+      if (Number(data?.status) === 301) queryFailures++
+      const rows = data?.data?.lrclist
+      if (!Array.isArray(rows)) continue
+      original = rows.filter(row => row?.time != null && Number.isFinite(Number(row.time)) && Number(row.time) >= 0 && typeof row.lineLyric === 'string' && row.lineLyric.trim())
+        .map(row => `${timestamp(Math.round(Number(row.time) * 1000))}${row.lineLyric.replace(/\r?\n/g, ' ')}`).join('\n')
+      if (original) break
+    }
+    if (!original) throw new Error('酷我音乐没有返回可用歌词，请选择其他版本或来源。')
   } else throw new Error('当前来源或歌曲标识不可用。')
   abort(signal)
   // 旧返回仅统计平台原始轨道行数；预览会过滤署名，并解析混排的翻译行。

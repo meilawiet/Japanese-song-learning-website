@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedOn": "2026-11-18",
+  "updatedOn": "2026-11-23",
   "reminderThreshold": 10,
   "policy": {
     "reminderPresentation": "达到10项待发布内容时，发版提醒必须同时逐项展示当前全部verified条目的名称和简要说明；不包含released或cancelled条目。",
@@ -69,6 +69,33 @@
     "userDecision": "用户授权上传代码并发布 2.1.2，双平台已发布并结转本批 10 项。"
   },
   "items": [
+    {
+      "id": "FIX-20261123-103",
+      "type": "fix",
+      "title": "QQ 音乐歌词搜索遇到 2001 时自动重试",
+      "summary": "QQ 搜索模块偶发返回 2001 时，短暂等待并重试同一关键词一次。持续失败时提示稍后再试。",
+      "status": "verified",
+      "startedOn": "2026-11-23",
+      "completedOn": "2026-11-23",
+      "verification": ["339 项 Node 测试及 Android 前端构建通过。联网六次均获取歌词，《晴天》一次由 2001 自动重试恢复，读到 59 句。"],
+      "files": ["src/lib/platformLyrics.js", "tests/qqLyrics.test.mjs"]
+    },
+    {
+      "id": "FIX-20261121-102",
+      "type": "fix",
+      "title": "酷我歌词查询失败时补取同一版本",
+      "summary": "酷我移动站无正文时尝试官网的同一歌曲 ID，两端均返回普通查询失败时短暂重试一次。失败时保留其他版本和来源选择。",
+      "status": "verified",
+      "startedOn": "2026-11-21",
+      "completedOn": "2026-11-21",
+      "verification": [
+        "最终 14 项相关测试通过，原签名构建覆盖三星机主，无新增分身。真机选用《青花瓷》周杰伦版本成功生成导入歌词文件。联网原版样本 10 次成功 9 次。"
+      ],
+      "files": [
+        "src/lib/platformLyrics.js",
+        "tests/platformLyrics.test.mjs"
+      ]
+    },
     {
       "id": "FIX-20261118-101",
       "type": "fix",

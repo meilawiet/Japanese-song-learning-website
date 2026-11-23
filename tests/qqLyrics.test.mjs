@@ -42,6 +42,41 @@ test('QQ 搜索使用有效模块封装、保留不同 MID 候选及数字歌曲
   await assert.rejects(searchPlatformSongs('qq','原创',undefined,async()=>({code:0,'music.search.SearchCgiService':{code:0,data:{}}})),/格式异常/)
 })
 
+// 实测的 2001 只允许一次同关键词重试，正常空结果、明确限制和取消各走原流程。
+test('QQ 搜索遇到 2001 会补一次同一请求',async()=>{
+  const key='music.search.SearchCgiService'
+  const response=(code,list=[])=>({code:0,[key]:{code,data:{body:{song:{list}}}}})
+  const requests=[]
+  const records=await searchPlatformSongs('qq','原创歌',undefined,async url=>{
+    requests.push(url)
+    return requests.length===1 ? response(2001) : response(0,[{id:100,mid,title:'原创歌'}])
+  })
+  assert.equal(records[0].songId,100)
+  assert.equal(requests.length,2)
+  assert.equal(requests[1],requests[0])
+
+  let misses=0
+  await assert.rejects(searchPlatformSongs('qq','原创歌',undefined,async()=>{
+    misses++
+    return response(2001)
+  }),/暂未成功/)
+  assert.equal(misses,2)
+
+  let other=0
+  assert.deepEqual(await searchPlatformSongs('qq','原创歌',undefined,async()=>{other++;return response(0)}),[])
+  await assert.rejects(searchPlatformSongs('qq','原创歌',undefined,async()=>{other++;return response(429)}),/受限/)
+  assert.equal(other,2)
+
+  const controller=new AbortController()
+  let cancelled=0
+  await assert.rejects(searchPlatformSongs('qq','原创歌',controller.signal,async()=>{
+    cancelled++
+    setTimeout(()=>controller.abort(),10)
+    return response(2001)
+  }),{name:'AbortError'})
+  assert.equal(cancelled,1)
+})
+
 test('QQ 原文、翻译与 QRC 来源注音按时间匹配后完整进入导入预览',async()=>{
   const record={provider:'qq',platformId:mid,songId:100,title:'原创歌',artist:'UTA'}
   const ready=await fetchPlatformLyrics(record,undefined,async url=>{

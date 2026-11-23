@@ -79,6 +79,40 @@ test('混排平台歌词的三轨数量与导入预览一致', async () => {
   assert.deepEqual(parsed.lines.map(line=>[line.text,line.translation]),[['空を見よう','看看天空'],['星光 夜空','星光和夜空']])
 })
 
+// 移动站查询不到时，官网应请求同一个 ID，且不重试明确拒绝或取消的请求。
+test('酷我官网补取同一歌曲，保留找不到和取消状态', async () => {
+  const record = { provider:'kuwo', platformId:'12', title:'原创', artist:'UTA' }
+  const requests = []
+  const missing = { status:301, msg:'音乐查询失败', data:null }
+  const result = await fetchPlatformLyrics(record, undefined, async url => {
+    const address = new URL(url)
+    requests.push([address.hostname, address.searchParams.get('musicId')])
+    return address.hostname === 'm.kuwo.cn' ? missing : { status:200, data:{ lrclist:[{time:'1.25',lineLyric:'空を見よう'}] } }
+  })
+  assert.deepEqual(requests, [['m.kuwo.cn','12'],['www.kuwo.cn','12']])
+  assert.equal(result.lyrics, '[00:01.250]空を見よう')
+  let missingRequests = 0
+  await assert.rejects(fetchPlatformLyrics(record, undefined, async () => {
+    missingRequests++
+    return missing
+  }), /没有返回可用歌词/)
+  assert.equal(missingRequests, 3)
+  let deniedRequests = 0
+  await assert.rejects(fetchPlatformLyrics(record, undefined, async () => {
+    deniedRequests++
+    return { status:403 }
+  }), /没有返回可用歌词/)
+  assert.equal(deniedRequests, 1)
+  const controller = new AbortController()
+  let cancelledRequests = 0
+  await assert.rejects(fetchPlatformLyrics(record, controller.signal, async () => {
+    cancelledRequests++
+    controller.abort()
+    return missing
+  }), {name:'AbortError'})
+  assert.equal(cancelledRequests, 1)
+})
+
 // 模拟酷我旧参数只返回一个翻奏版本，网页参数返回完整候选；同名不同 ID 不能误去重。
 test('酷我完整搜索参数保留原唱及同名不同版本的全部候选',async()=>{
   const candidates=Array.from({length:8},(_,index)=>({MUSICRID:`MUSIC_${100+index}`,NAME:index<2?'原创测试歌':`原创测试歌 版本${index+1}`,ARTIST:index<2?'原创歌手':`测试演奏者${index}`,DURATION:'180'}))
