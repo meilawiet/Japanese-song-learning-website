@@ -22,16 +22,16 @@
     }
   },
   "lastPublished": {
-    "version": "2.1.2",
-    "versionCode": 33,
-    "commit": "97bbd29b901ffe8272d0b36e3d4e2c42464ba330",
-    "tag": "v2.1.2",
-    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.2",
-    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.2",
-    "asset": "UTA-Android-2.1.2.apk",
+    "version": "2.1.3",
+    "versionCode": 34,
+    "commit": "106d34090c09879daa1c0b5e6ee160163af5d050",
+    "tag": "v2.1.3",
+    "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.3",
+    "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.3",
+    "asset": "UTA-Android-2.1.3.apk",
     "size": 31430123,
-    "sha256": "6e000c470e3530ddce594eae78683adbe529a731da64ba68a48c2255fadf9fab",
-    "publishedOn": "2026-11-18",
+    "sha256": "b14106daf7c87a0c1528ad11161055f7be70a3a13466666142e5e96920b5db1a",
+    "publishedOn": "2026-11-23",
     "branch": "android-dev"
   },
   "currentLocalInstall": {
@@ -66,7 +66,7 @@
       "FIX-20261116-092"
     ],
     "lastRemindedOn": "2026-11-18",
-    "userDecision": "用户授权上传代码并发布 2.1.2，双平台已发布并结转本批 10 项。"
+    "userDecision": "用户授权发布 2.1.3，双平台已发布并结转本批两项歌词源修复。"
   },
   "items": [
     {
@@ -74,18 +74,32 @@
       "type": "fix",
       "title": "QQ 音乐歌词搜索遇到 2001 时自动重试",
       "summary": "QQ 搜索模块偶发返回 2001 时，短暂等待并重试同一关键词一次。持续失败时提示稍后再试。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-23",
       "completedOn": "2026-11-23",
       "verification": ["339 项 Node 测试及 Android 前端构建通过。联网六次均获取歌词，《晴天》一次由 2001 自动重试恢复，读到 59 句。"],
-      "files": ["src/lib/platformLyrics.js", "tests/qqLyrics.test.mjs"]
+      "files": ["src/lib/platformLyrics.js", "tests/qqLyrics.test.mjs"],
+      "releasedOn": "2026-11-23",
+      "release": {
+        "version": "2.1.3",
+        "versionCode": 34,
+        "commit": "106d34090c09879daa1c0b5e6ee160163af5d050",
+        "tag": "v2.1.3",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.3",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.3",
+        "asset": "UTA-Android-2.1.3.apk",
+        "size": 31430123,
+        "sha256": "b14106daf7c87a0c1528ad11161055f7be70a3a13466666142e5e96920b5db1a",
+        "publishedOn": "2026-11-23",
+        "branch": "android-dev"
+      }
     },
     {
       "id": "FIX-20261121-102",
       "type": "fix",
       "title": "酷我歌词查询失败时补取同一版本",
       "summary": "酷我移动站无正文时尝试官网的同一歌曲 ID，两端均返回普通查询失败时短暂重试一次。失败时保留其他版本和来源选择。",
-      "status": "verified",
+      "status": "released",
       "startedOn": "2026-11-21",
       "completedOn": "2026-11-21",
       "verification": [
@@ -94,7 +108,21 @@
       "files": [
         "src/lib/platformLyrics.js",
         "tests/platformLyrics.test.mjs"
-      ]
+      ],
+      "releasedOn": "2026-11-23",
+      "release": {
+        "version": "2.1.3",
+        "versionCode": 34,
+        "commit": "106d34090c09879daa1c0b5e6ee160163af5d050",
+        "tag": "v2.1.3",
+        "url": "https://github.com/meilawiet/Japanese-song-learning-website/releases/tag/v2.1.3",
+        "giteeUrl": "https://gitee.com/git277992790/UTA/releases/tag/v2.1.3",
+        "asset": "UTA-Android-2.1.3.apk",
+        "size": 31430123,
+        "sha256": "b14106daf7c87a0c1528ad11161055f7be70a3a13466666142e5e96920b5db1a",
+        "publishedOn": "2026-11-23",
+        "branch": "android-dev"
+      }
     },
     {
       "id": "FIX-20261118-101",
